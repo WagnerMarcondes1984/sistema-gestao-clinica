@@ -8,7 +8,9 @@ export default defineConfig({
     environment: "node",
     include: ["server/**/*.integration.test.ts"],
     testTimeout: 30_000,
-    hookTimeout: 30_000,
+    // Fixtures de agenda gravam várias disponibilidades em transações duráveis.
+    // Preparação e limpeza precisam terminar também em discos locais lentos.
+    hookTimeout: 120_000,
     pool: "forks",
     poolOptions: { forks: { singleFork: true } },
   },

@@ -7,15 +7,21 @@ import {
   fieldClass,
 } from "../components/patients/PatientSelector";
 export default function OnlineBooking() {
-  const context = trpc.publicMindos.scheduling.useQuery(undefined, {
-    retry: false,
-  });
+  const clinicSlug =
+    new URLSearchParams(window.location.search).get("clinic") || undefined;
+  const context = trpc.publicMindos.scheduling.useQuery(
+    clinicSlug ? { clinicSlug } : undefined,
+    {
+      retry: false,
+    }
+  );
   const [validation, setValidation] = useState("");
   const request = trpc.publicMindos.requestBooking.useMutation();
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const parsed = publicBookingInput.safeParse({
+      clinicSlug,
       name: form.get("name"),
       contactChannel: form.get("contactChannel"),
       contactValue: form.get("contactValue"),
@@ -35,9 +41,14 @@ export default function OnlineBooking() {
   return (
     <main className="min-h-screen bg-slate-50 p-5">
       <div className="mx-auto max-w-xl space-y-5">
-        <Link href="/" className="font-bold text-indigo-700">
-          MindOS
-        </Link>
+        <a
+          href={
+            clinicSlug ? `/site/${encodeURIComponent(clinicSlug)}` : "/site"
+          }
+          className="font-bold text-indigo-700"
+        >
+          {context.data?.clinicName || "Clínica"}
+        </a>
         <h1 className="text-3xl font-bold">Solicitar um horário</h1>
         <p className="text-slate-600">
           {context.data?.clinicName || "Clínica"}. Informe somente dados para

@@ -19,7 +19,6 @@ import {
   mindosPatients,
   mindosAppointments,
   mindosClinicalRecords,
-  mindosCmsVersions,
   mindosAccessAudits,
   mindosFinancialRules,
   mindosBookingRequests,
@@ -580,108 +579,6 @@ export async function getMindosPatient360(
   };
 }
 
-export async function listMindosCmsVersions(userId: number, userRole: string) {
-  const { tenant } = await assertMindosPermission(
-    userId,
-    userRole,
-    "MANAGE_PUBLIC_SITE"
-  );
-  const db = await getDb();
-  if (!db) throw new Error("Banco de dados não disponível");
-  return await db
-    .select()
-    .from(mindosCmsVersions)
-    .where(eq(mindosCmsVersions.tenantId, tenant.id))
-    .orderBy(desc(mindosCmsVersions.versionNumber));
-}
-
-export async function saveMindosCmsDraft(
-  userId: number,
-  userRole: string,
-  contentJson: string,
-  changeSummary?: string
-) {
-  const { tenant } = await assertMindosPermission(
-    userId,
-    userRole,
-    "MANAGE_PUBLIC_SITE"
-  );
-  const db = await getDb();
-  if (!db) throw new Error("Banco de dados não disponível");
-  const current = await db
-    .select()
-    .from(mindosCmsVersions)
-    .where(eq(mindosCmsVersions.tenantId, tenant.id))
-    .orderBy(desc(mindosCmsVersions.versionNumber))
-    .limit(1);
-  const versionNumber = (current[0]?.versionNumber || 0) + 1;
-  const [result] = await db.insert(mindosCmsVersions).values({
-    tenantId: tenant.id,
-    versionNumber,
-    status: "DRAFT",
-    contentJson,
-    changeSummary,
-    createdByUserId: userId,
-  });
-  return await db
-    .select()
-    .from(mindosCmsVersions)
-    .where(eq(mindosCmsVersions.id, Number((result as any).insertId)))
-    .limit(1);
-}
-
-export async function publishMindosCmsVersion(
-  userId: number,
-  userRole: string,
-  versionId: number
-) {
-  const { tenant } = await assertMindosPermission(
-    userId,
-    userRole,
-    "MANAGE_PUBLIC_SITE"
-  );
-  const db = await getDb();
-  if (!db) throw new Error("Banco de dados não disponível");
-  const target = await db
-    .select()
-    .from(mindosCmsVersions)
-    .where(
-      and(
-        eq(mindosCmsVersions.id, versionId),
-        eq(mindosCmsVersions.tenantId, tenant.id)
-      )
-    )
-    .limit(1);
-  if (!target[0]) throw new Error("Versão CMS não encontrada no tenant atual");
-  await db
-    .update(mindosCmsVersions)
-    .set({ status: "ARCHIVED" })
-    .where(
-      and(
-        eq(mindosCmsVersions.tenantId, tenant.id),
-        eq(mindosCmsVersions.status, "PUBLISHED")
-      )
-    );
-  await db
-    .update(mindosCmsVersions)
-    .set({
-      status: "PUBLISHED",
-      publishedAt: new Date(),
-      approvedByUserId: userId,
-    })
-    .where(eq(mindosCmsVersions.id, versionId));
-  await db.insert(mindosAccessAudits).values({
-    tenantId: tenant.id,
-    actorUserId: userId,
-    subjectType: "CMS_VERSION",
-    subjectId: versionId,
-    dataLayer: "PUBLIC",
-    action: "PUBLISH_CMS",
-    reason: "Publicação aprovada",
-  });
-  return true;
-}
-
 export async function listMindosFinancialRules(
   userId: number,
   userRole: string
@@ -702,97 +599,6 @@ export async function listMindosFinancialRules(
         eq(mindosFinancialRules.active, true)
       )
     );
-}
-
-export async function approveMindosCmsVersion(
-  userId: number,
-  userRole: string,
-  versionId: number
-) {
-  const { tenant } = await assertMindosPermission(
-    userId,
-    userRole,
-    "MANAGE_PUBLIC_SITE"
-  );
-  const db = await getDb();
-  if (!db) throw new Error("Banco de dados não disponível");
-  const target = await db
-    .select()
-    .from(mindosCmsVersions)
-    .where(
-      and(
-        eq(mindosCmsVersions.id, versionId),
-        eq(mindosCmsVersions.tenantId, tenant.id)
-      )
-    )
-    .limit(1);
-  if (!target[0]) throw new Error("Versão CMS não encontrada no tenant atual");
-  await db
-    .update(mindosCmsVersions)
-    .set({ status: "APPROVED", approvedByUserId: userId })
-    .where(eq(mindosCmsVersions.id, versionId));
-  await db.insert(mindosAccessAudits).values({
-    tenantId: tenant.id,
-    actorUserId: userId,
-    subjectType: "CMS_VERSION",
-    subjectId: versionId,
-    dataLayer: "PUBLIC",
-    action: "APPROVE_CMS",
-    reason: "Aprovação de conteúdo institucional",
-  });
-  return true;
-}
-
-export async function rollbackMindosCmsVersion(
-  userId: number,
-  userRole: string,
-  versionId: number
-) {
-  const { tenant } = await assertMindosPermission(
-    userId,
-    userRole,
-    "MANAGE_PUBLIC_SITE"
-  );
-  const db = await getDb();
-  if (!db) throw new Error("Banco de dados não disponível");
-  const target = await db
-    .select()
-    .from(mindosCmsVersions)
-    .where(
-      and(
-        eq(mindosCmsVersions.id, versionId),
-        eq(mindosCmsVersions.tenantId, tenant.id)
-      )
-    )
-    .limit(1);
-  if (!target[0]) throw new Error("Versão CMS não encontrada no tenant atual");
-  await db
-    .update(mindosCmsVersions)
-    .set({ status: "ARCHIVED" })
-    .where(
-      and(
-        eq(mindosCmsVersions.tenantId, tenant.id),
-        eq(mindosCmsVersions.status, "PUBLISHED")
-      )
-    );
-  await db
-    .update(mindosCmsVersions)
-    .set({
-      status: "PUBLISHED",
-      publishedAt: new Date(),
-      approvedByUserId: userId,
-    })
-    .where(eq(mindosCmsVersions.id, versionId));
-  await db.insert(mindosAccessAudits).values({
-    tenantId: tenant.id,
-    actorUserId: userId,
-    subjectType: "CMS_VERSION",
-    subjectId: versionId,
-    dataLayer: "PUBLIC",
-    action: "ROLLBACK_CMS",
-    reason: `Rollback para versão ${target[0].versionNumber}`,
-  });
-  return true;
 }
 
 export async function createMindosRecurringAppointments(
@@ -1046,19 +852,7 @@ export async function saveMindosInstitutionalProfile(
   );
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
-  await db
-    .insert(mindosInstitutionalProfiles)
-    .values({ tenantId: tenant.id, updatedByUserId: userId, ...input })
-    .onDuplicateKeyUpdate({ set: { ...input, updatedByUserId: userId } });
-  await db.insert(mindosAccessAudits).values({
-    tenantId: tenant.id,
-    actorUserId: userId,
-    subjectType: "INSTITUTIONAL_PROFILE",
-    dataLayer: "PUBLIC",
-    action: "UPDATE_INSTITUTIONAL_PROFILE",
-    reason: "Atualização SEO/GEO/AEO/LLM",
-  });
-  return true;
+  throw new TRPCError({code:"PRECONDITION_FAILED",message:"Use o rascunho versionado no Admin Studio; alterações públicas exigem aprovação e publicação."});
 }
 
 export async function listMindosServiceAreas() {

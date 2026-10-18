@@ -1,3 +1,4 @@
+import { siteSlug } from "./public-site";
 import { z } from "zod";
 export const positiveId = z.number().int().positive();
 export const civilDate = z
@@ -127,6 +128,7 @@ export const configInput = z
   );
 export const publicBookingInput = z
   .object({
+    clinicSlug: siteSlug.optional(),
     name: z.string().trim().min(2).max(160),
     contactChannel: z.enum(["EMAIL", "PHONE", "WHATSAPP_DISCREET"]),
     contactValue: z.string().trim().min(5).max(200),

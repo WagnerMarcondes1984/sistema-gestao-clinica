@@ -897,18 +897,16 @@ export async function listSchedule(
   };
 }
 
-export async function publicSchedule() {
+export async function publicSchedule(clinicSlug?: string) {
+  const slug = clinicSlug || process.env.PUBLIC_TENANT_SLUG;
   const db = await database();
-  if (!process.env.PUBLIC_TENANT_SLUG)
+  if (!slug)
     return failure("PRECONDITION_FAILED", "Clínica pública não configurada");
   const [clinic] = await db
     .select()
     .from(mindosTenants)
     .where(
-      and(
-        eq(mindosTenants.slug, process.env.PUBLIC_TENANT_SLUG),
-        eq(mindosTenants.status, "ACTIVE")
-      )
+      and(eq(mindosTenants.slug, slug), eq(mindosTenants.status, "ACTIVE"))
     );
   if (!clinic) return missing();
   const services = await db
@@ -938,7 +936,7 @@ export async function requestPublicBooking(
 ) {
   const input = publicBookingInput.parse(raw);
   if (input.website) return failure("BAD_REQUEST", "Solicitação inválida");
-  const context = await publicSchedule();
+  const context = await publicSchedule(input.clinicSlug);
   const db = await database();
   return db.transaction(async tx => {
     const [clinic] = await tx

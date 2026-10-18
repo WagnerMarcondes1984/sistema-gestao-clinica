@@ -22,10 +22,11 @@ const slug = "mindos-revisao-local",
   clinicName = "Clínica fictícia — revisão local",
   openId = "mindos-local-review-owner";
 const appId = "mindos-local-review";
+const studioReview = process.argv.includes("--studio");
 const crmReview = process.argv.includes("--crm");
 const financeReview = process.argv.includes("--finance");
 const careReview =
-  process.argv.includes("--care") || financeReview || crmReview;
+  process.argv.includes("--care") || financeReview || crmReview || studioReview;
 let reviewPatientId = 0;
 let patientToken = null;
 const db = await mysql.createConnection(process.env.DATABASE_URL);
@@ -587,6 +588,81 @@ try {
         openingBalance: 10000,
       });
   }
+  if (studioReview) {
+    let state = await api.mindos.cms.versions.query();
+    if (!state.versions.some(v => v.content)) {
+      const content = {
+        schemaVersion: 1,
+        brand: {
+          name: "Clínica fictícia — revisão do site",
+          logoText: "MO",
+          primary: "#4338CA",
+          accent: "#6366F1",
+        },
+        seo: {
+          title: "Clínica fictícia — site para revisão",
+          description:
+            "Página fictícia para conferir conteúdo, versões e publicação do sistema MindOS.",
+          publicOrigin: "",
+        },
+        contact: {
+          city: "Cidade fictícia",
+          address: "",
+          email: "site-revisao@example.com",
+          phone: "",
+        },
+        bookingEnabled: true,
+        portalEnabled: true,
+        blocks: [
+          {
+            id: randomUUID(),
+            kind: "HERO",
+            enabled: true,
+            title: "Bem-vindo ao site fictício de revisão",
+            body: "Conteúdo demonstrativo exclusivo da clínica fictícia de revisão local. Nenhum dado real.",
+            items: [],
+          },
+          {
+            id: randomUUID(),
+            kind: "FAQ",
+            enabled: true,
+            title: "Dúvidas sobre a demonstração",
+            body: "",
+            items: [
+              {
+                title: "Este site já está na internet?",
+                body: "Não. Esta demonstração funciona somente no ambiente local para revisão.",
+              },
+            ],
+          },
+          {
+            id: randomUUID(),
+            kind: "LOCATION",
+            enabled: true,
+            title: "Contato público",
+            body: "Dados fictícios para conferência.",
+            items: [],
+          },
+        ],
+      };
+      const draft = await api.mindos.cms.saveDraft.mutate({
+        content,
+        revision: state.revision,
+        requestKey: randomUUID(),
+        changeSummary: "Publicação fictícia para revisão local",
+      });
+      state = await api.mindos.cms.versions.query();
+      await api.mindos.cms.approve.mutate({
+        versionId: draft.id,
+        revision: state.revision,
+      });
+      state = await api.mindos.cms.versions.query();
+      await api.mindos.cms.publish.mutate({
+        versionId: draft.id,
+        revision: state.revision,
+      });
+    }
+  }
   if (crmReview) {
     let context = await api.crm.overview.query();
     const account = await api.auth.me.query();
@@ -701,13 +777,15 @@ try {
     },
     sessionId
   );
-  const reviewPath = crmReview
-    ? "/crm"
-    : financeReview
-      ? "/finance"
-      : careReview
-        ? `/clinical-records?patientId=${reviewPatientId}`
-        : "/agenda";
+  const reviewPath = studioReview
+    ? "/app/admin-studio"
+    : crmReview
+      ? "/crm"
+      : financeReview
+        ? "/finance"
+        : careReview
+          ? `/clinical-records?patientId=${reviewPatientId}`
+          : "/agenda";
   await cdp("Page.navigate", { url: `${base}${reviewPath}` }, sessionId);
   await cdp("Page.bringToFront", {}, sessionId);
   const deadline = Date.now() + 30000;
@@ -720,13 +798,15 @@ try {
     );
     if (
       result.result.value?.includes(
-        crmReview
-          ? "CRM administrativo"
-          : financeReview
-            ? "Resumo financeiro"
-            : careReview
-              ? "Prontuário psicológico"
-              : "Novo agendamento"
+        studioReview
+          ? "Admin Studio"
+          : crmReview
+            ? "CRM administrativo"
+            : financeReview
+              ? "Resumo financeiro"
+              : careReview
+                ? "Prontuário psicológico"
+                : "Novo agendamento"
       ) &&
       result.result.value.includes("Administrador fictício")
     ) {
@@ -787,6 +867,13 @@ try {
     console.log(
       "Revisão financeira: busca, paginação e resumo autenticados conferidos."
     );
+  }
+  if (studioReview) {
+    await cdp("Target.createTarget", { url: `${base}/site/${slug}` });
+    console.log(
+      `Site público fictício aberto: http://localhost:${new URL(base).port}/site/${slug}`
+    );
+    await cdp("Page.bringToFront", {}, sessionId);
   }
   console.log(`MindOS aberto para revisão: ${base}${reviewPath}`);
   console.log(

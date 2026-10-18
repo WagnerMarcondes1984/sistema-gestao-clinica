@@ -42,7 +42,7 @@ try {
   const tokenFor = (user, id = appId) =>
     new SignJWT({ openId: user.openId, appId: id, name: user.name })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-      .setExpirationTime("10m")
+      .setExpirationTime("20m")
       .sign(secret);
   const ownerToken = await tokenFor(owner);
   const patientToken = await tokenFor(patient);
@@ -1323,7 +1323,7 @@ try {
       `Campo indisponível: ${label}`
     );
     await evaluate(
-      `(()=>{const e=${get};Object.getOwnPropertyDescriptor(${tag === "select" ? "HTMLSelectElement" : "HTMLInputElement"}.prototype,'value').set.call(e,${JSON.stringify(String(value))});e.dispatchEvent(new Event(${JSON.stringify(tag === "select" ? "change" : "input")},{bubbles:true}));})()`
+      `(()=>{const e=${get};Object.getOwnPropertyDescriptor(${tag === "select" ? "HTMLSelectElement" : tag === "textarea" ? "HTMLTextAreaElement" : "HTMLInputElement"}.prototype,'value').set.call(e,${JSON.stringify(String(value))});e.dispatchEvent(new Event(${JSON.stringify(tag === "select" ? "change" : "input")},{bubbles:true}));})()`
     );
   };
   const closedDialog = () =>
@@ -1740,6 +1740,160 @@ try {
     "Chrome: lead, responsável, etapa, interação/histórico, tarefa vencida/edição/conclusão, conversão sem duplicação, importação conferida, preferências da equipe e paciente, lembretes sem envio, indicadores e leitura restrita aprovados."
   );
 
+  // Etapa 7: rascunho privado → aprovação → publicação → nova versão → restauração.
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/app/admin-studio` });
+  await waitForText("Nome público");
+  const siteName = `Clínica pública fictícia ${suffix}`,
+    siteTitle = `Site fictício ${suffix}`,
+    siteHero = `Apresentação pública fictícia ${suffix}`;
+  await fill("#site-name", siteName);
+  await click("Blocos de conteúdo");
+  await labelFill("Título do bloco", siteHero);
+  await labelFill(
+    "Texto do bloco",
+    "Texto público fictício, sem informações de pacientes.",
+    "textarea"
+  );
+  await click("Metadados e contato");
+  await fill("#site-seo-title", siteTitle);
+  await fill(
+    "#site-description",
+    "Descrição pública fictícia para verificar publicação e metadados do site.",
+    "textarea"
+  );
+  await fill("#site-summary", "Primeiro conteúdo público fictício revisado");
+  await click("Salvar novo rascunho");
+  await waitForText(
+    "Rascunho salvo. O site público continua na versão publicada."
+  );
+  let cmsState = await operation.mindos.cms.versions.query();
+  const firstSiteVersion = cmsState.versions[0];
+  assert.equal(firstSiteVersion.content.brand.name, siteName);
+  assert.equal((await fetch(`${base}/site/${fixture.publicSlug}`)).status, 404);
+  const previewUrl = `${base}/api/site-preview/${firstSiteVersion.id}`;
+  assert.equal((await fetch(previewUrl)).status, 403);
+  const preview = await fetch(previewUrl, {
+    headers: { Authorization: `Bearer ${operationToken}` },
+  });
+  assert.equal(preview.status, 200);
+  assert.ok(preview.headers.get("x-robots-tag").includes("noindex"));
+  assert.ok((await preview.text()).includes(siteHero));
+  assert.equal(
+    (
+      await fetch(previewUrl, {
+        headers: { Authorization: `Bearer ${ownerToken}` },
+      })
+    ).status,
+    404
+  );
+  await click("Versões e publicação");
+  const siteVersionClick = async (id, text) => {
+    const expr = `[...document.querySelector('[data-version-id="${id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled)`;
+    await waitForCondition(`!!(${expr})`, "Ação da versão não disponível");
+    await evaluate(`(${expr}).click()`);
+  };
+  const confirmSite = async () => {
+    await waitForCondition(
+      "!!document.querySelector('#site-action-ack')",
+      "Confirmação da versão ausente"
+    );
+    await evaluate("document.querySelector('#site-action-ack').click()");
+    await click("Confirmar operação");
+    await closedDialog();
+  };
+  await siteVersionClick(firstSiteVersion.id, "Aprovar versão");
+  await confirmSite();
+  assert.equal((await fetch(`${base}/site/${fixture.publicSlug}`)).status, 404);
+  await siteVersionClick(firstSiteVersion.id, "Publicar versão");
+  await confirmSite();
+  const publicUrl = `${base}/site/${fixture.publicSlug}`;
+  let publicResponse = await fetch(publicUrl);
+  assert.equal(publicResponse.status, 200);
+  const firstSiteHtml = await publicResponse.text();
+  assert.ok(firstSiteHtml.includes(`<title>${siteTitle}</title>`));
+  assert.ok(firstSiteHtml.includes(siteHero));
+  assert.ok(!firstSiteHtml.includes(opPatient.fullName));
+  assert.ok(!firstSiteHtml.includes("createdByUserId"));
+  assert.ok(
+    (await (await fetch(`${publicUrl}/llms.txt`)).text()).includes(siteHero)
+  );
+  await siteVersionClick(firstSiteVersion.id, "Carregar no editor");
+  await waitForText("Nome público");
+  await fill("#site-name", `${siteName} — nova versão`);
+  await fill("#site-summary", "Segunda marca pública fictícia revisada");
+  await click("Salvar novo rascunho");
+  await waitForText(
+    "Rascunho salvo. O site público continua na versão publicada."
+  );
+  assert.equal(await (await fetch(publicUrl)).text(), firstSiteHtml);
+  cmsState = await operation.mindos.cms.versions.query();
+  const secondSiteVersion = cmsState.versions[0];
+  await click("Versões e publicação");
+  await siteVersionClick(secondSiteVersion.id, "Aprovar versão");
+  await confirmSite();
+  await siteVersionClick(secondSiteVersion.id, "Publicar versão");
+  await confirmSite();
+  assert.ok(
+    (await (await fetch(publicUrl)).text()).includes(
+      `${siteName} — nova versão`
+    )
+  );
+  const brandedPortal = await client(
+    portalAccount.token
+  ).mindos.portalData.query();
+  assert.equal(brandedPortal.brand.name, `${siteName} — nova versão`);
+  await siteVersionClick(firstSiteVersion.id, "Restaurar versão");
+  await confirmSite();
+  assert.equal(await (await fetch(publicUrl)).text(), firstSiteHtml);
+  await takeScreenshot("mindos-admin-etapa7.png");
+  await page("Page.navigate", { url: publicUrl });
+  await waitForText(siteHero);
+  await takeScreenshot("mindos-site-etapa7.png");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await takeScreenshot("mindos-site-etapa7-mobile.png");
+  assert.ok(
+    await evaluate("document.documentElement.scrollWidth<=window.innerWidth")
+  );
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await page("Page.navigate", {
+    url: `${base}/book?clinic=${fixture.publicSlug}`,
+  });
+  await waitForText("Solicitar um horário");
+  await waitForText("Clínica fictícia de revisão operacional");
+  const cmsReader = await careAccount(
+    `browser-cms-reader-${randomUUID()}`,
+    `Consulta do site fictícia ${suffix}`,
+    "SALES",
+    ["VIEW_PUBLIC_SITE"]
+  );
+  await setCookie(cmsReader.token);
+  await page("Page.navigate", { url: `${base}/app/admin-studio` });
+  await waitForText("Somente consulta");
+  await click("Versões e publicação");
+  assert.equal(
+    await evaluate(
+      "[...document.querySelectorAll('button')].some(b=>['Aprovar versão','Publicar versão','Restaurar versão'].includes(b.textContent.trim()))"
+    ),
+    false
+  );
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/app/admin-studio` });
+  await waitForText("Permissão insuficiente");
+  console.log(
+    "Chrome: edição persistente de marca/blocos/SEO, rascunho separado do público, prévia privada entre clínicas, aprovação, publicação, restauração exata, marca no portal, metadados/llms.txt, agendamento por slug e consulta restrita aprovados."
+  );
+
   assert.deepEqual(exceptions, []);
   console.log(
     "Chrome: portal sem sessão, dados do paciente correto, documentos liberados e limpeza após logout aprovados."
@@ -1786,6 +1940,7 @@ try {
       [fixture.operationTenantId]
     );
     for (const table of [
+      "mindos_cms_versions",
       "mindos_crm_reminders",
       "mindos_contact_preferences",
       "mindos_crm_interactions",

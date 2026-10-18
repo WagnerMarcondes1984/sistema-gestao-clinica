@@ -15,7 +15,7 @@ Este plano complementa o `todo.md`. As marcações antigas não comprovam funcio
 - [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
 - [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
 - [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
-- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 156 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 157 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
 - [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
@@ -95,7 +95,7 @@ Aceite: pagamento em ambiente de testes do provedor atualiza uma única cobranç
 
 ## 6. Concluir CRM administrativo e comunicação — prioridade alta
 
-**Em andamento: CRM interno implementado; e-mail/WhatsApp a definir por decisão do usuário. Integrações e comprovação de entrega permanecem pendentes. Guia em `docs/ETAPA-6-CRM-E-COMUNICACAO.md`. Parar para revisão antes da etapa 7.**
+**CRM interno revisado pelo usuário; etapa 7 autorizada. E-mail/WhatsApp a definir: integrações, disparo e comprovação de entrega permanecem pendentes. Guia em `docs/ETAPA-6-CRM-E-COMUNICACAO.md`.**
 
 Depende da etapa 3 e das permissões da etapa 2.
 
@@ -111,14 +111,16 @@ Aceite: um lead entra, recebe responsável e tarefa, tem contato registrado e vi
 
 ## 7. Concluir administração e conteúdo público — prioridade média
 
+**Implementada e validada para revisão do usuário. Abrir localhost e parar antes da etapa 8. Domínio externo e integrações indisponíveis são identificados sem confirmação fictícia. Guia em `docs/ETAPA-7-ADMINISTRACAO-E-SITE-PUBLICO.md`.**
+
 Depende da etapa 2 e da definição das funcionalidades do lançamento.
 
-- [ ] Persistir identidade visual e configurações que hoje são apenas locais ou demonstrativas.
-- [ ] Completar edição de blocos e ligar o conteúdo publicado ao site público da clínica.
-- [ ] Conectar aprovação e rollback na interface, respeitando permissões e estados do CMS.
-- [ ] Mostrar situação real de domínio e publicação; remover indicadores fixos como DNS e SSL verificados.
-- [ ] Publicar metadados e conteúdo institucional configurados, sem incluir informações privadas.
-- [ ] Ocultar módulos não entregues ou explicar claramente sua indisponibilidade.
+- [x] Persistir identidade visual e configurações que hoje são apenas locais ou demonstrativas.
+- [x] Completar edição de blocos e ligar o conteúdo publicado ao site público da clínica.
+- [x] Conectar aprovação e rollback na interface, respeitando permissões e estados do CMS.
+- [x] Mostrar situação real de domínio e publicação; remover indicadores fixos como DNS e SSL verificados.
+- [x] Publicar metadados e conteúdo institucional configurados, sem incluir informações privadas.
+- [x] Ocultar módulos não entregues ou explicar claramente sua indisponibilidade.
 
 Aceite: salvar rascunho não altera o site publicado; publicação aprovada altera somente a clínica correta; rollback restaura uma versão anterior; a interface não afirma configurações que não foram verificadas.
 

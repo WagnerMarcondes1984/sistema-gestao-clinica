@@ -1,111 +1,829 @@
-import { useEffect, useState } from 'react';
-import { FinancialLayout } from '../components/FinancialLayout';
-import { useAuth } from '../_core/hooks/useAuth';
-import { trpc } from '../lib/trpc';
-import { useVertical } from '../contexts/VerticalContext';
+import { useState, type FormEvent } from "react";
+import { useAuth } from "../_core/hooks/useAuth";
+import { FinancialLayout } from "../components/FinancialLayout";
+import { SessionNotice } from "../components/patients/PatientSelector";
+import { trpc } from "../lib/trpc";
 import {
-  Check,
-  ChevronRight,
-  FileText,
-  Globe2,
-  Image,
-  LayoutTemplate,
-  LockKeyhole,
-  Palette,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Save,
-  Search,
-  Send,
-  Settings2,
-  ShieldCheck,
-  Sparkles,
-  Wand2,
-} from 'lucide-react';
-import { toast } from 'sonner';
-
-const studioItems = [
-  { id: 'overview', label: 'Visão geral', icon: LayoutTemplate },
-  { id: 'brand', label: 'Marca e aparência', icon: Palette },
-  { id: 'site', label: 'Site e páginas', icon: Globe2 },
-  { id: 'content', label: 'Textos e mídia', icon: FileText },
-  { id: 'seo', label: 'SEO / GEO / AEO', icon: Search },
-  { id: 'portal', label: 'Portal do paciente', icon: Wand2 },
-  { id: 'security', label: 'Segurança', icon: ShieldCheck },
-];
-
-const blocks = ['Hero', 'Sobre', 'Áreas de atendimento', 'Profissionais públicos', 'Serviços', 'FAQ', 'Localização', 'Agendamento', 'CTA', 'Footer'];
-
-export default function AdminStudio() {
-  const { currentVertical } = useVertical();
-  const { isAuthenticated } = useAuth();
-  const cmsQuery = trpc.mindos.cms.versions.useQuery(undefined, { enabled: isAuthenticated, retry: false });
-  const profileQuery = trpc.mindos.institutionalProfile.useQuery(undefined, { enabled: isAuthenticated, retry: false });
-  const saveProfileMutation = trpc.mindos.saveInstitutionalProfile.useMutation({ onSuccess: () => { profileQuery.refetch(); notify('Perfil institucional salvo com auditoria.'); } });
-  const saveDraftMutation = trpc.mindos.cms.saveDraft.useMutation({ onSuccess: () => { cmsQuery.refetch(); notify('Draft salvo com versionamento.'); } });
-  const publishMutation = trpc.mindos.cms.publish.useMutation({ onSuccess: () => { cmsQuery.refetch(); setDraftStatus('PUBLISHED'); notify('Versão publicada e registrada na auditoria.'); } });
-  const latestDraft = cmsQuery.data?.find((version) => version.status === 'DRAFT');
-  const latestPublished = cmsQuery.data?.find((version) => version.status === 'PUBLISHED');
-  const [active, setActive] = useState('overview');
-  const [draftStatus, setDraftStatus] = useState<'DRAFT' | 'PREVIEW' | 'PUBLISHED'>(latestPublished ? 'PUBLISHED' : 'DRAFT');
-  const [siteTitle, setSiteTitle] = useState('MindOS — Psicologia e Saúde Mental');
-  const [heroText, setHeroText] = useState('Cuidado psicológico com presença, segurança e continuidade.');
-  const [siteBlocks, setSiteBlocks] = useState(blocks);
-  useEffect(() => {
-    const version = latestDraft ?? latestPublished;
-    if (!version) return;
-    try {
-      const content = JSON.parse(version.contentJson) as { title?: string; hero?: string; sections?: string[] };
-      if (content.title) setSiteTitle(content.title);
-      if (content.hero) setHeroText(content.hero);
-      if (content.sections?.length) setSiteBlocks(content.sections);
-    } catch {
-      // Conteúdo legado inválido permanece em modo seguro com os blocos base.
-    }
-  }, [latestDraft?.id, latestPublished?.id]);
-
-  const notify = (message: string) => toast.success(message);
-  const saveCurrentDraft = () => {
-    const contentJson = JSON.stringify({ title: siteTitle, hero: heroText, sections: siteBlocks, status: 'DRAFT' });
-    if (isAuthenticated) {
-      saveDraftMutation.mutate({ contentJson, changeSummary: 'Atualização de marca e conteúdo institucional' });
-      saveProfileMutation.mutate({ title: siteTitle, metaDescription: heroText, city: currentVertical.city, faqJson: JSON.stringify([{ question: 'Como agendar?', answer: 'Escolha uma preferência e a equipe confirma o horário.' }]), llmsTxt: `MindOS é uma clínica de psicologia em ${currentVertical.city} com atendimento responsável.` });
-    } else {
-      notify('Modo de demonstração: draft preparado localmente.');
-    }
-  };
-
+  buttonClass,
+  fieldClass,
+} from "../components/patients/PatientSelector";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../components/ui/dialog";
+import {
+  BLOCK_KINDS,
+  BLOCK_LABELS,
+  defaultSite,
+  siteContent,
+  type SiteContent,
+} from "../../../shared/public-site";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+type Overview = inferRouterOutputs<AppRouter>["mindos"]["cms"]["versions"];
+const statuses = {
+  DRAFT: "Rascunho",
+  PREVIEW: "Prévia legada",
+  APPROVED: "Aprovada",
+  PUBLISHED: "Publicada",
+  ARCHIVED: "Arquivada",
+};
+function Field({
+  label,
+  ...props
+}: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <FinancialLayout>
-      <div className="flex flex-col lg:flex-row gap-6 min-h-[680px]">
-        <aside className="lg:w-64 shrink-0 bg-white rounded-3xl border border-slate-200 shadow-sm p-3 h-fit lg:sticky lg:top-28">
-          <div className="px-3 py-3 border-b border-slate-100 mb-2"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center"><Sparkles className="w-4 h-4" /></div><div><div className="text-sm font-extrabold text-slate-900">Admin Studio</div><div className="text-[10px] text-slate-500">MindOS White Label</div></div></div></div>
-          <nav className="space-y-1">{studioItems.map((item) => { const Icon = item.icon; return <button key={item.id} onClick={() => setActive(item.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition ${active === item.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}><Icon className="w-4 h-4" />{item.label}<ChevronRight className={`w-3.5 h-3.5 ml-auto ${active === item.id ? 'opacity-100' : 'opacity-0'}`} /></button> })}</nav>
-          <div className="mt-4 p-3 rounded-2xl bg-slate-50 border border-slate-100"><div className="flex items-center gap-2 text-[11px] font-bold text-slate-700"><LockKeyhole className="w-3.5 h-3.5 text-indigo-600" />Sem scripts arbitrários</div><p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed">O Site Builder usa blocos controlados para preservar segurança e desempenho.</p></div>
-        </aside>
-
-        <main className="flex-1 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"><div><div className="inline-flex items-center gap-2 text-[10px] font-bold tracking-wider uppercase text-indigo-600 mb-2"><Settings2 className="w-3.5 h-3.5" /> Configuração do tenant</div><h1 className="text-2xl font-extrabold text-slate-900">Admin Studio</h1><p className="text-sm text-slate-500 mt-1">Configure o site público, o portal e a identidade da {currentVertical.name} sem alterar código.</p></div><div className="flex gap-2"><button onClick={() => { setDraftStatus('PREVIEW'); notify('Preview preparado para validação.'); }} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"><Globe2 className="w-4 h-4" /> Preview</button><button onClick={() => { if (isAuthenticated && latestDraft) publishMutation.mutate({ versionId: latestDraft.id }); else { setDraftStatus('PUBLISHED'); notify('Modo de demonstração: publicação preparada.'); } }} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700"><Send className="w-4 h-4" /> Publicar</button></div></div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-1"><div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-[11px] font-semibold"><span className="w-2 h-2 rounded-full bg-slate-400" /> Editar</div><ChevronRight className="w-3.5 h-3.5 text-slate-300" /><div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-semibold ${draftStatus === 'DRAFT' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-600'}`}><span className="w-2 h-2 rounded-full bg-amber-400" /> Draft</div><ChevronRight className="w-3.5 h-3.5 text-slate-300" /><div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-semibold ${draftStatus === 'PREVIEW' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600'}`}><span className="w-2 h-2 rounded-full bg-indigo-500" /> Preview</div><ChevronRight className="w-3.5 h-3.5 text-slate-300" /><div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-semibold ${draftStatus === 'PUBLISHED' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600'}`}><span className="w-2 h-2 rounded-full bg-emerald-500" /> Publicado</div></div>
-
-          {active === 'overview' && <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="md:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm p-6"><div className="flex items-center justify-between mb-5"><div><h2 className="font-bold text-slate-900">Site público</h2><p className="text-xs text-slate-500 mt-1">Conteúdo institucional publicado para o tenant.</p></div><button onClick={() => setActive('site')} className="text-xs font-bold text-indigo-700">Editar site</button></div><div className="rounded-2xl bg-gradient-to-br from-indigo-950 to-violet-900 p-6 text-white"><div className="text-[10px] uppercase tracking-widest text-indigo-200">{siteTitle}</div><div className="text-2xl font-extrabold mt-4 max-w-md">{heroText}</div><div className="mt-5 inline-flex px-3 py-2 rounded-lg bg-white text-indigo-950 text-xs font-bold">Agendar conversa</div></div></div><div className="space-y-4"><div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm"><div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Status do conteúdo</div><div className="text-2xl font-extrabold text-slate-900 mt-2">{draftStatus === 'PUBLISHED' ? 'Publicado' : 'Em edição'}</div><div className="text-xs text-slate-500 mt-1">{profileQuery.data?.[0] ? 'Perfil institucional persistido' : 'Perfil em configuração'}</div></div><div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm"><div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Domínio</div><div className="font-bold text-slate-900 mt-2">mindos.clinic</div><div className="text-xs text-emerald-600 mt-1">SSL e DNS verificados</div></div></div></div>}
-
-          {active === 'brand' && <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6"><div><h2 className="font-bold text-slate-900">Marca e aparência</h2><p className="text-xs text-slate-500 mt-1">A identidade é aplicada ao site público, portal e comunicações autorizadas.</p></div><div className="grid grid-cols-1 md:grid-cols-2 gap-5"><label className="text-xs font-semibold text-slate-700">Nome público<input value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /></label><label className="text-xs font-semibold text-slate-700">Slogan<input value={heroText} onChange={(e) => setHeroText(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /></label></div><div className="grid grid-cols-2 md:grid-cols-4 gap-3">{[['Primária', currentVertical.primaryColor], ['Acento', currentVertical.accentColor], ['Fundo claro', '#F8FAFC'], ['Texto', '#1E1B4B']].map(([label, color]) => <div key={label} className="rounded-2xl border border-slate-200 p-3"><div className="h-12 rounded-xl" style={{ backgroundColor: color }} /><div className="text-xs font-bold text-slate-700 mt-2">{label}</div><div className="text-[10px] font-mono text-slate-400 mt-0.5">{color}</div></div>)}</div><button onClick={saveCurrentDraft} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold"><Save className="w-4 h-4" /> Salvar draft</button></section>}
-
-          {active === 'site' && <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6"><div className="flex items-center justify-between mb-5"><div><h2 className="font-bold text-slate-900">Section Builder</h2><p className="text-xs text-slate-500 mt-1">Blocos controlados e ordenáveis para criar páginas sem scripts arbitrários.</p></div><button onClick={() => { setSiteBlocks([...siteBlocks, `Bloco ${siteBlocks.length + 1}`]); notify('Novo bloco adicionado ao draft.'); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold"><Plus className="w-4 h-4" /> Novo bloco</button></div><div className="space-y-2">{siteBlocks.map((block, index) => <div key={block} className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"><div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold">{index + 1}</div><div className="flex-1"><div className="text-sm font-bold text-slate-800">{block}</div><div className="text-[11px] text-slate-500">Bloco configurável do site público</div></div><button onClick={() => notify(`Editando bloco ${block}.`)} className="p-2 rounded-lg hover:bg-white text-slate-400"><Pencil className="w-4 h-4" /></button></div>)}</div></section>}
-
-          {active === 'content' && <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6"><h2 className="font-bold text-slate-900">Textos e mídia</h2><p className="text-xs text-slate-500 mt-1 mb-6">Gerencie textos institucionais, profissionais públicos, FAQ, fotos e banners com histórico.</p><div className="grid grid-cols-2 md:grid-cols-4 gap-3">{[
-              { label: 'Textos', count: '12 itens', Icon: FileText },
-              { label: 'Imagens', count: '18 arquivos', Icon: Image },
-              { label: 'Profissionais', count: '6 perfis', Icon: Wand2 },
-              { label: 'FAQ', count: '8 perguntas', Icon: Search },
-            ].map(({ label, count, Icon }) => <button key={label} onClick={() => notify(`${label} aberto para edição.`)} className="text-left p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30"><Icon className="w-5 h-5 text-indigo-600 mb-4" /><div className="text-sm font-bold text-slate-800">{label}</div><div className="text-[11px] text-slate-500 mt-1">{count}</div></button>)}</div></section>}
-
-          {(active === 'seo' || active === 'portal' || active === 'security') && <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6"><div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">{active === 'security' ? <ShieldCheck className="w-5 h-5" /> : active === 'portal' ? <Wand2 className="w-5 h-5" /> : <Search className="w-5 h-5" />}</div><div><h2 className="font-bold text-slate-900">{active === 'seo' ? 'SEO, GEO, AEO e LLM' : active === 'portal' ? 'Portal do paciente' : 'Segurança por camada'}</h2><p className="text-xs text-slate-500 mt-1">Módulo configurável da experiência MindOS.</p></div></div><div className="space-y-3">{(active === 'seo' ? ['Title e meta description', 'Dados estruturados públicos', 'GEO por localização', 'AEO e perguntas frequentes', 'llms.txt institucional'] : active === 'portal' ? ['Agenda e próximas sessões', 'Reagendamento', 'Documentos explicitamente liberados', 'Consentimentos', 'Financeiro e dados pessoais', 'Teleatendimento por sessão'] : ['Administrative data', 'Clinical data', 'Highly restricted clinical notes', 'Financial data', 'Public data', 'Auditoria de acesso']).map((item) => <div key={item} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100"><Check className="w-4 h-4 text-emerald-600" /><span className="text-xs font-semibold text-slate-700">{item}</span></div>)}</div><button onClick={() => notify('Configuração salva como draft.')} className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold"><Save className="w-4 h-4" /> Salvar configuração</button></section>}
-        </main>
+    <label className="block text-sm font-medium space-y-1">
+      <span>{label}</span>
+      <input {...props} className={fieldClass} />
+    </label>
+  );
+}
+function Text({
+  label,
+  ...props
+}: { label: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <label className="block text-sm font-medium space-y-1">
+      <span>{label}</span>
+      <textarea {...props} className={fieldClass} rows={4} />
+    </label>
+  );
+}
+export default function AdminStudio() {
+  const auth = useAuth(),
+    q = trpc.mindos.cms.versions.useQuery(undefined, {
+      enabled: auth.isAuthenticated,
+      retry: false,
+    });
+  return (
+    <FinancialLayout
+      operatorName={auth.user?.name || undefined}
+      contextLabel="Administração do site"
+    >
+      <div className="space-y-5">
+        <h1 className="text-2xl font-bold">Admin Studio</h1>
+        <SessionNotice
+          loading={auth.loading}
+          authenticated={auth.isAuthenticated}
+        />
+        {q.error && <p role="alert">{q.error.message}</p>}
+        {q.isLoading && auth.isAuthenticated && (
+          <p role="status">Carregando versões do site…</p>
+        )}
+        {q.data && (
+          <Studio
+            data={q.data}
+            refresh={async () => {
+              const r = await q.refetch();
+              if (!r.data || r.error)
+                throw r.error || new Error("Falha ao atualizar versões");
+              return r.data;
+            }}
+          />
+        )}
       </div>
     </FinancialLayout>
+  );
+}
+function Studio({
+  data,
+  refresh,
+}: {
+  data: Overview;
+  refresh: () => Promise<Overview>;
+}) {
+  const initial =
+    data.versions.find(v => v.content && v.status === "DRAFT") ||
+    data.versions.find(v => v.id === data.publishedVersionId);
+  const [content, setContent] = useState<SiteContent>(() =>
+    structuredClone(initial?.content || defaultSite(data.clinicName))
+  );
+  const [revision, setRevision] = useState(data.revision),
+    [requestKey, setRequestKey] = useState(() => crypto.randomUUID()),
+    [summary, setSummary] = useState("");
+  const [selected, setSelected] = useState<number | null>(initial?.id || null),
+    [dirty, setDirty] = useState(false),
+    [tab, setTab] = useState("brand"),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [busy, setBusy] = useState(false);
+  const [action, setAction] = useState<{
+      kind: "approve" | "publish" | "rollback";
+      version: Overview["versions"][number];
+      revision: number;
+    } | null>(null),
+    [ack, setAck] = useState(false);
+  const utils = trpc.useUtils();
+  const save = trpc.mindos.cms.saveDraft.useMutation(),
+    approve = trpc.mindos.cms.approve.useMutation(),
+    publish = trpc.mindos.cms.publish.useMutation(),
+    rollback = trpc.mindos.cms.rollback.useMutation();
+  const change = (next: SiteContent) => {
+    setContent(next);
+    setDirty(true);
+    setNotice("");
+  };
+  const block = (
+    index: number,
+    update: Partial<SiteContent["blocks"][number]>
+  ) =>
+    change({
+      ...content,
+      blocks: content.blocks.map((b, i) =>
+        i === index ? { ...b, ...update } : b
+      ),
+    });
+  async function load(v: Overview["versions"][number] | null) {
+    if (dirty && !window.confirm("Descartar alterações não salvas do editor?"))
+      return;
+    const latest = await refresh();
+    setContent(structuredClone(v?.content || defaultSite(data.clinicName)));
+    setSelected(v?.id || null);
+    setRevision(latest.revision);
+    setRequestKey(crypto.randomUUID());
+    setSummary("");
+    setDirty(false);
+    setError("");
+    setNotice(
+      v
+        ? `Versão ${v.versionNumber} carregada. Alterações serão salvas em nova versão.`
+        : "Novo rascunho preparado."
+    );
+  }
+  async function saveDraft(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const parsed = siteContent.safeParse(content);
+      if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+      const r = await save.mutateAsync({
+        content: parsed.data,
+        revision,
+        requestKey,
+        changeSummary: summary,
+      });
+      const latest = await refresh();
+      setRevision(latest.revision);
+      setSelected(r.id);
+      setRequestKey(crypto.randomUUID());
+      setDirty(false);
+      setNotice("Rascunho salvo. O site público continua na versão publicada.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function confirmAction() {
+    if (!action) return;
+    setBusy(true);
+    setError("");
+    try {
+      const input = { versionId: action.version.id, revision: action.revision };
+      await (
+        action.kind === "approve"
+          ? approve
+          : action.kind === "publish"
+            ? publish
+            : rollback
+      ).mutateAsync(input);
+      const latest = await refresh();
+      await utils.mindos.brand.invalidate();
+      setRevision(latest.revision);
+      setAction(null);
+      setAck(false);
+      setNotice(
+        action.kind === "approve"
+          ? "Versão aprovada. A publicação é uma ação separada."
+          : "Site público atualizado na clínica atual."
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <p>
+        {data.clinicName} •{" "}
+        {data.canEdit ? "Edição autorizada" : "Somente consulta"}
+        {data.canPublish
+          ? " • Aprovação e publicação autorizadas"
+          : " • Publicação depende de administrador autorizado"}
+      </p>
+      <section className="border rounded-2xl bg-white p-5 space-y-3">
+        <h2 className="font-bold">Situação do site</h2>
+        <p>
+          {data.publishedVersionId
+            ? `Há uma versão publicada (#${data.versions.find(v => v.id === data.publishedVersionId)?.versionNumber || data.publishedVersionId}).`
+            : "Nenhum conteúdo desta entrega foi publicado."}
+        </p>
+        <p>
+          <a
+            href={data.publicPath}
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-indigo-700"
+          >
+            Abrir site público
+          </a>{" "}
+          • <code className="break-all">{data.publicPath}</code>
+        </p>
+        <p className="text-sm">
+          Domínio e certificado: DNS/TLS não verificados. O endereço canônico é
+          somente uma informação editorial; a conexão de domínio depende da
+          hospedagem.
+        </p>
+      </section>
+      <nav
+        aria-label="Seções do Admin Studio"
+        className="flex gap-2 overflow-x-auto"
+      >
+        {[
+          ["brand", "Marca e configurações"],
+          ["blocks", "Blocos de conteúdo"],
+          ["seo", "Metadados e contato"],
+          ["versions", "Versões e publicação"],
+          ["limits", "Integrações pendentes"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            aria-current={tab === id ? "page" : undefined}
+            className={
+              tab === id
+                ? buttonClass
+                : "border rounded-xl px-4 py-2 text-sm whitespace-nowrap"
+            }
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      {error && !action && (
+        <p role="alert" className="text-red-700">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p
+          role="status"
+          className="border rounded-xl bg-green-50 text-green-950 p-3"
+        >
+          {notice}
+        </p>
+      )}
+      {tab !== "versions" && tab !== "limits" && (
+        <form onSubmit={saveDraft} className="space-y-5">
+          <p className="text-sm">
+            Editor{" "}
+            {selected
+              ? `baseado na versão #${data.versions.find(v => v.id === selected)?.versionNumber || selected}`
+              : "de novo rascunho"}
+            . {dirty ? "Há alterações não salvas." : "Conteúdo carregado."}{" "}
+            Salvar cria uma nova versão; publicação exige aprovação.
+          </p>
+          <fieldset
+            disabled={busy || !data.canEdit}
+            className="border rounded-2xl bg-white p-5 space-y-5"
+          >
+            {tab === "brand" && (
+              <>
+                <Field
+                  label="Nome público"
+                  id="site-name"
+                  value={content.brand.name}
+                  required
+                  maxLength={160}
+                  onChange={e =>
+                    change({
+                      ...content,
+                      brand: { ...content.brand, name: e.target.value },
+                    })
+                  }
+                />
+                <Field
+                  label="Marca textual (até 12 caracteres)"
+                  value={content.brand.logoText}
+                  maxLength={12}
+                  onChange={e =>
+                    change({
+                      ...content,
+                      brand: { ...content.brand, logoText: e.target.value },
+                    })
+                  }
+                />
+                <div className="flex gap-5 flex-wrap">
+                  <Field
+                    label="Cor principal"
+                    type="color"
+                    value={content.brand.primary}
+                    onChange={e =>
+                      change({
+                        ...content,
+                        brand: { ...content.brand, primary: e.target.value },
+                      })
+                    }
+                  />
+                  <Field
+                    label="Cor de destaque"
+                    type="color"
+                    value={content.brand.accent}
+                    onChange={e =>
+                      change({
+                        ...content,
+                        brand: { ...content.brand, accent: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+                <p className="text-sm">
+                  A marca publicada aparece no site, no cabeçalho do sistema e
+                  no portal. Upload de imagens e scripts personalizados não está
+                  disponível nesta entrega.
+                </p>
+                <label className="block">
+                  <input
+                    type="checkbox"
+                    checked={content.bookingEnabled}
+                    onChange={e =>
+                      change({ ...content, bookingEnabled: e.target.checked })
+                    }
+                  />{" "}
+                  Exibir atalhos públicos para agendamento
+                </label>
+                <label className="block">
+                  <input
+                    type="checkbox"
+                    checked={content.portalEnabled}
+                    onChange={e =>
+                      change({ ...content, portalEnabled: e.target.checked })
+                    }
+                  />{" "}
+                  Exibir atalho público para o portal
+                </label>
+                <p className="text-sm">
+                  Essas opções controlam os atalhos do site; não revogam contas
+                  nem alteram as permissões dos módulos.
+                </p>
+              </>
+            )}
+            {tab === "blocks" && (
+              <>
+                <p>
+                  Publique somente informações institucionais. Profissionais e
+                  serviços destes blocos são textos públicos revisados;
+                  cadastros internos e prontuários não são importados.
+                </p>
+                {content.blocks.map((b, i) => (
+                  <section
+                    key={b.id}
+                    data-block-id={b.id}
+                    className="border rounded-xl p-4 space-y-3"
+                  >
+                    <h2 className="font-bold">
+                      Bloco {i + 1} — {BLOCK_LABELS[b.kind]}
+                    </h2>
+                    <label className="block">
+                      Tipo
+                      <select
+                        className={fieldClass}
+                        value={b.kind}
+                        onChange={e =>
+                          block(i, { kind: e.target.value as typeof b.kind })
+                        }
+                      >
+                        {BLOCK_KINDS.map(k => (
+                          <option key={k} value={k}>
+                            {BLOCK_LABELS[k]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <input
+                        type="checkbox"
+                        checked={b.enabled}
+                        onChange={e => block(i, { enabled: e.target.checked })}
+                      />{" "}
+                      Visível no site
+                    </label>
+                    <Field
+                      label="Título do bloco"
+                      value={b.title}
+                      maxLength={160}
+                      onChange={e => block(i, { title: e.target.value })}
+                    />
+                    <Text
+                      label="Texto do bloco"
+                      value={b.body}
+                      maxLength={3000}
+                      onChange={e => block(i, { body: e.target.value })}
+                    />
+                    {b.items.map((item, j) => (
+                      <div key={j} className="border-l-4 pl-3 space-y-2">
+                        <Field
+                          label={
+                            b.kind === "FAQ"
+                              ? `Pergunta ${j + 1}`
+                              : `Título do item ${j + 1}`
+                          }
+                          value={item.title}
+                          maxLength={160}
+                          onChange={e =>
+                            block(i, {
+                              items: b.items.map((x, n) =>
+                                n === j ? { ...x, title: e.target.value } : x
+                              ),
+                            })
+                          }
+                        />
+                        <Text
+                          label={
+                            b.kind === "FAQ"
+                              ? `Resposta ${j + 1}`
+                              : `Texto do item ${j + 1}`
+                          }
+                          value={item.body}
+                          maxLength={1500}
+                          onChange={e =>
+                            block(i, {
+                              items: b.items.map((x, n) =>
+                                n === j ? { ...x, body: e.target.value } : x
+                              ),
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            block(i, {
+                              items: b.items.filter((_, n) => n !== j),
+                            })
+                          }
+                        >
+                          Remover item {j + 1}
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap gap-4 text-sm underline">
+                      <button
+                        type="button"
+                        disabled={b.items.length >= 12}
+                        onClick={() =>
+                          block(i, {
+                            items: [...b.items, { title: "", body: "" }],
+                          })
+                        }
+                      >
+                        Adicionar item
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => {
+                          const a = [...content.blocks];
+                          [a[i - 1], a[i]] = [a[i], a[i - 1]];
+                          change({ ...content, blocks: a });
+                        }}
+                      >
+                        Mover acima
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === content.blocks.length - 1}
+                        onClick={() => {
+                          const a = [...content.blocks];
+                          [a[i + 1], a[i]] = [a[i], a[i + 1]];
+                          change({ ...content, blocks: a });
+                        }}
+                      >
+                        Mover abaixo
+                      </button>
+                      <button
+                        type="button"
+                        disabled={content.blocks.length === 1}
+                        onClick={() =>
+                          change({
+                            ...content,
+                            blocks: content.blocks.filter((_, n) => n !== i),
+                          })
+                        }
+                      >
+                        Remover bloco
+                      </button>
+                    </div>
+                  </section>
+                ))}
+                <button
+                  type="button"
+                  className={buttonClass}
+                  disabled={content.blocks.length >= 16}
+                  onClick={() =>
+                    change({
+                      ...content,
+                      blocks: [
+                        ...content.blocks,
+                        {
+                          id: crypto.randomUUID(),
+                          kind: "ABOUT",
+                          enabled: true,
+                          title: "",
+                          body: "",
+                          items: [],
+                        },
+                      ],
+                    })
+                  }
+                >
+                  Adicionar bloco
+                </button>
+              </>
+            )}
+            {tab === "seo" && (
+              <>
+                <Field
+                  id="site-seo-title"
+                  label="Título nos buscadores"
+                  required
+                  maxLength={100}
+                  value={content.seo.title}
+                  onChange={e =>
+                    change({
+                      ...content,
+                      seo: { ...content.seo, title: e.target.value },
+                    })
+                  }
+                />
+                <Text
+                  id="site-description"
+                  label="Descrição pública"
+                  required
+                  minLength={10}
+                  maxLength={300}
+                  value={content.seo.description}
+                  onChange={e =>
+                    change({
+                      ...content,
+                      seo: { ...content.seo, description: e.target.value },
+                    })
+                  }
+                />
+                <Field
+                  label="Origem canônica HTTPS (opcional)"
+                  maxLength={300}
+                  placeholder="https://clinica.example.com"
+                  value={content.seo.publicOrigin}
+                  onChange={e =>
+                    change({
+                      ...content,
+                      seo: { ...content.seo, publicOrigin: e.target.value },
+                    })
+                  }
+                />
+                {(
+                  [
+                    ["city", "Cidade", 120],
+                    ["address", "Endereço público", 300],
+                    ["email", "E-mail público", 200],
+                    ["phone", "Telefone público", 40],
+                  ] as const
+                ).map(([key, label, max]) => (
+                  <Field
+                    key={key}
+                    label={label}
+                    type={key === "email" ? "email" : "text"}
+                    maxLength={max}
+                    value={content.contact[key]}
+                    onChange={e =>
+                      change({
+                        ...content,
+                        contact: { ...content.contact, [key]: e.target.value },
+                      })
+                    }
+                  />
+                ))}
+                <p className="text-sm">
+                  Título, descrição, dados estruturados e llms.txt são gerados
+                  no servidor exclusivamente a partir da versão publicada. Não
+                  há índices, avaliações ou credenciais profissionais
+                  inventados.
+                </p>
+              </>
+            )}
+            <Field
+              id="site-summary"
+              label="Resumo da alteração (mínimo 8 caracteres)"
+              value={summary}
+              minLength={8}
+              maxLength={255}
+              required
+              onChange={e => setSummary(e.target.value)}
+            />
+            <button type="submit" className={buttonClass}>
+              Salvar novo rascunho
+            </button>
+          </fieldset>
+        </form>
+      )}
+      {tab === "versions" && (
+        <section className="space-y-4">
+          <p>
+            Prévia é privada e exige acesso ao site desta clínica. Versões
+            publicadas são imutáveis; editar salva uma nova versão. Conteúdo
+            legado exige novo rascunho revisado.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <button
+              className={buttonClass}
+              disabled={busy}
+              onClick={() => void load(null).catch(e => setError(e.message))}
+            >
+              Novo rascunho
+            </button>
+            <button
+              className="border rounded-xl p-2"
+              disabled={busy}
+              onClick={() => void refresh().catch(e => setError(e.message))}
+            >
+              Atualizar versões
+            </button>
+          </div>
+          {data.versions.map(v => (
+            <article
+              key={v.id}
+              data-version-id={v.id}
+              className="border rounded-2xl bg-white p-5 space-y-3"
+            >
+              <h2 className="font-bold">
+                Versão {v.versionNumber} • {statuses[v.status]}
+                {v.legacy ? " • Legada (não publicável)" : ""}
+              </h2>
+              <p>{v.changeSummary || "Sem resumo registrado"}</p>
+              <p className="text-sm">
+                Autor #{v.createdByUserId} •{" "}
+                {new Date(v.createdAt).toLocaleString("pt-BR", {
+                  timeZone: data.timezone,
+                })}
+                {v.approvedByUserId
+                  ? ` • Aprovação: conta #${v.approvedByUserId}`
+                  : ""}
+              </p>
+              <div className="flex gap-3 flex-wrap">
+                {v.content && (
+                  <>
+                    <a
+                      href={`/api/site-preview/${v.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="border rounded-xl p-2"
+                    >
+                      Abrir prévia privada
+                    </a>
+                    {data.canEdit && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="border rounded-xl p-2"
+                        onClick={() =>
+                          void load(v)
+                            .then(() => setTab("brand"))
+                            .catch(e => setError(e.message))
+                        }
+                      >
+                        Carregar no editor
+                      </button>
+                    )}
+                  </>
+                )}
+                {data.canPublish &&
+                  !v.legacy &&
+                  (v.status === "DRAFT" ||
+                    v.status === "APPROVED" ||
+                    (v.status === "ARCHIVED" &&
+                      v.publishedAt &&
+                      v.approvedAt)) && (
+                    <button
+                      type="button"
+                      disabled={busy || dirty}
+                      className={buttonClass}
+                      onClick={() => {
+                        setError("");
+                        setAck(false);
+                        setAction({
+                          kind:
+                            v.status === "DRAFT"
+                              ? "approve"
+                              : v.status === "APPROVED"
+                                ? "publish"
+                                : "rollback",
+                          version: v,
+                          revision: data.revision,
+                        });
+                      }}
+                    >
+                      {v.status === "DRAFT"
+                        ? "Aprovar versão"
+                        : v.status === "APPROVED"
+                          ? "Publicar versão"
+                          : "Restaurar versão"}
+                    </button>
+                  )}
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+      {tab === "limits" && (
+        <section className="border rounded-2xl bg-white p-5 space-y-3">
+          <h2 className="font-bold">Serviços ainda não configurados</h2>
+          <p>
+            Pagamentos bancários e emissão fiscal: provedores a definir. O
+            financeiro registra movimentos internos; emissão e estorno externos
+            dependem de integração.
+          </p>
+          <p>
+            E-mail e WhatsApp: provedores a definir. O CRM prepara lembretes sem
+            enviar mensagens.
+          </p>
+          <p>
+            Teleatendimento por vídeo, conexão de domínio e verificação DNS/TLS:
+            indisponíveis nesta entrega. Upload público de mídia não está
+            implementado.
+          </p>
+          <p>
+            Login Manus mantido; o fluxo real depende das credenciais do
+            ambiente. Configurações de privacidade, permissões e documentos são
+            geridas nos módulos próprios.
+          </p>
+        </section>
+      )}
+      <Dialog
+        open={!!action}
+        onOpenChange={v => {
+          if (!v && !busy) {
+            setAction(null);
+            setError("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {action?.kind === "approve"
+                ? "Aprovar conteúdo"
+                : action?.kind === "rollback"
+                  ? "Restaurar publicação"
+                  : "Publicar conteúdo"}
+            </DialogTitle>
+            <DialogDescription>
+              Confira a versão antes de confirmar. A operação vale somente para{" "}
+              {data.clinicName}.
+            </DialogDescription>
+          </DialogHeader>
+          <fieldset disabled={busy} className="space-y-4">
+            <p>
+              Versão {action?.version.versionNumber} —{" "}
+              {action?.version.content?.brand.name}
+            </p>
+            <p>{action?.version.changeSummary}</p>
+            <p>
+              {action?.kind === "approve"
+                ? "A aprovação preserva o site público atual. Publique em uma ação separada."
+                : "Esta versão substituirá o conteúdo público atual, inclusive marca e metadados."}
+            </p>
+            <label className="block">
+              <input
+                id="site-action-ack"
+                type="checkbox"
+                checked={ack}
+                onChange={e => setAck(e.target.checked)}
+              />{" "}
+              Conferi o conteúdo e autorizo esta operação.
+            </label>
+            {error && (
+              <p role="alert" className="text-red-700">
+                {error}
+              </p>
+            )}
+            <button
+              className={buttonClass}
+              disabled={!ack}
+              onClick={() => void confirmAction()}
+            >
+              Confirmar operação
+            </button>
+          </fieldset>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

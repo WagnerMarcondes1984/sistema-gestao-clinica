@@ -25,5 +25,5 @@ async function scan(directory) {
 }
 await scan("client/src/pages");
 await scan("client/src/components");
-await writeFile("docs/ACOES-DA-INTERFACE.md", `# Inventário das ações da interface\n\nLevantamento estático atualizado após o primeiro bloco da etapa 3. Gere novamente com \`node scripts/inventory-actions.mjs\`. Rotas em \`INVENTARIO-FUNCIONAL.md\`; evidências efetivas em \`EXECUCAO-DO-PLANO.md\`.\n\nCada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **${rows.length} handlers**.\n\n| Local | Evento | Situação estática | Handler (até 240 caracteres) |\n|---|---|---|---|\n${rows.join("\n")}\n`);
+await writeFile("docs/ACOES-DA-INTERFACE.md", `# Inventário das ações da interface\n\nLevantamento estático das ações atuais da interface. Gere novamente com \`node scripts/inventory-actions.mjs\`. Rotas em \`INVENTARIO-FUNCIONAL.md\`; evidências efetivas em \`EXECUCAO-DO-PLANO.md\`.\n\nCada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **${rows.length} handlers**.\n\n| Local | Evento | Situação estática | Handler (até 240 caracteres) |\n|---|---|---|---|\n${rows.join("\n")}\n`);
 console.log(`Inventário atualizado: ${rows.length} handlers.`);

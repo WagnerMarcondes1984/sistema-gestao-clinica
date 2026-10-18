@@ -56,3 +56,7 @@ Aplicar migração 0013, executar build e usar `node scripts/open-review.mjs --f
 ## Revisão do CRM — etapa 6
 
 Aplicar a migração 0014, executar build e iniciar `node scripts/open-review.mjs --crm`. Abre `/crm` e portal com contas fictícias separadas, na porta 3420. Não envia e-mail/WhatsApp e não exige novas credenciais: provedores a definir. Os vínculos existentes precisam de concessão explícita de CRM. Guia em [ETAPA-6-CRM-E-COMUNICACAO.md](ETAPA-6-CRM-E-COMUNICACAO.md). O patch `patches/seed-finance-guard.patch` preserva apenas a ampliação do guard financeiro/CRM do seed remoto; para checkout publicado, aplicar com `patch -p1 < patches/seed-finance-guard.patch` antes de usar seed, sempre em banco vazio. Não reaplicar sobre o seed local já atualizado.
+
+## Revisão do Admin Studio e site — etapa 7
+
+Aplicar migração 0015 e executar build; iniciar `node scripts/open-review.mjs --studio`. Abre Admin Studio, página pública e portal da clínica fictícia, normalmente em localhost:3420. O site público é servido diretamente pelo Express em `/site/<slug>`, inclusive metadados e `/site/<slug>/llms.txt`; prévia protegida em `/api/site-preview/<id>`. `/site` usa PUBLIC_TENANT_SLUG. Agendamento por `/book?clinic=<slug>` mantém a clínica do site explícita. Nenhuma variável secreta nova é necessária e nenhum domínio é provisionado. Guia: [ETAPA-7-ADMINISTRACAO-E-SITE-PUBLICO.md](ETAPA-7-ADMINISTRACAO-E-SITE-PUBLICO.md).

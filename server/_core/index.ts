@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { registerPublicSite } from "../public-site-http";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -41,6 +42,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  registerPublicSite(app);
   // tRPC API
   app.use(
     "/api/trpc",

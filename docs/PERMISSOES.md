@@ -37,3 +37,7 @@ Escritas financeiras verificam novamente associação ativa e MANAGE_FINANCIAL d
 ## Complemento da etapa 6
 
 `VIEW_CRM` permite consulta administrativa; `MANAGE_CRM` permite alterações, tarefas, interações, preferências registradas e preparação de lembretes. Converter lead exige também `MANAGE_PATIENTS`. Novos modelos de assistente, recepção e comercial incluem CRM; associações existentes exigem concessão explícita em Equipe. Paciente não recebe acesso ao CRM: consulta e altera somente suas próprias preferências por endpoints do portal, com identidade derivada da sessão. Revisão, chave idempotente e confirmação de identidade não substituem a autorização revalidada na transação da clínica. Histórico administrativo não retorna prontuário.
+
+## Complemento da etapa 7
+
+`VIEW_PUBLIC_SITE` consulta versões e prévia privada; `MANAGE_PUBLIC_SITE` salva novos rascunhos; `PUBLISH_PUBLIC_SITE` aprova, publica e restaura versões. Aprovação não publica automaticamente e não modifica o conteúdo do snapshot. Administradores com ALL operam somente na própria clínica e com associação ativa. Concessões existentes não são ampliadas; comercial pode receber consulta/edição explicitamente em Equipe. Publicação permanece com administradores autorizados. A prévia é autenticada, sem cache e isolada por clínica; o site público retorna somente a versão publicada validada.
