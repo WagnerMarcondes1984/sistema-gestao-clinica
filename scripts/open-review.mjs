@@ -22,8 +22,10 @@ const slug = "mindos-revisao-local",
   clinicName = "Clínica fictícia — revisão local",
   openId = "mindos-local-review-owner";
 const appId = "mindos-local-review";
+const crmReview = process.argv.includes("--crm");
 const financeReview = process.argv.includes("--finance");
-const careReview = process.argv.includes("--care") || financeReview;
+const careReview =
+  process.argv.includes("--care") || financeReview || crmReview;
 let reviewPatientId = 0;
 let patientToken = null;
 const db = await mysql.createConnection(process.env.DATABASE_URL);
@@ -585,6 +587,33 @@ try {
         openingBalance: 10000,
       });
   }
+  if (crmReview) {
+    let context = await api.crm.overview.query();
+    const account = await api.auth.me.query();
+    if (!context.leads.length)
+      await api.crm.create.mutate({
+        requestKey: randomUUID(),
+        fullName: "Lead fictício — revisão CRM",
+        email: "crm-revisao@example.com",
+        phone: "",
+        source: "MANUAL",
+        ownerUserId: account.id,
+        nextContactAt: new Date(Date.now() + 86400000),
+        preferredChannel: "EMAIL",
+        contactAllowed: false,
+      });
+    context = await api.crm.overview.query();
+    if (!context.tasks.length)
+      await api.crm.addTask.mutate({
+        requestKey: randomUUID(),
+        patientId: reviewPatientId,
+        title: "Retorno administrativo fictício",
+        kind: "RETURN",
+        ownerUserId: account.id,
+        dueAt: new Date(Date.now() + 86400000),
+      });
+    await api.crm.prepareReminders.mutate();
+  }
   profile = await mkdtemp(join(tmpdir(), "mindos-review-"));
   browser = spawn(
     "google-chrome",
@@ -672,11 +701,13 @@ try {
     },
     sessionId
   );
-  const reviewPath = financeReview
-    ? "/finance"
-    : careReview
-      ? `/clinical-records?patientId=${reviewPatientId}`
-      : "/agenda";
+  const reviewPath = crmReview
+    ? "/crm"
+    : financeReview
+      ? "/finance"
+      : careReview
+        ? `/clinical-records?patientId=${reviewPatientId}`
+        : "/agenda";
   await cdp("Page.navigate", { url: `${base}${reviewPath}` }, sessionId);
   await cdp("Page.bringToFront", {}, sessionId);
   const deadline = Date.now() + 30000;
@@ -689,11 +720,13 @@ try {
     );
     if (
       result.result.value?.includes(
-        financeReview
-          ? "Resumo financeiro"
-          : careReview
-            ? "Prontuário psicológico"
-            : "Novo agendamento"
+        crmReview
+          ? "CRM administrativo"
+          : financeReview
+            ? "Resumo financeiro"
+            : careReview
+              ? "Prontuário psicológico"
+              : "Novo agendamento"
       ) &&
       result.result.value.includes("Administrador fictício")
     ) {
@@ -703,17 +736,57 @@ try {
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   assert.ok(ready, "A sessão local não abriu a agenda autenticada.");
-  if(financeReview){
-    const waitExpression=async(expression,message)=>{const end=Date.now()+45000;while(Date.now()<end){const r=await cdp("Runtime.evaluate",{expression,returnByValue:true},sessionId);if(r.result.value)return;await new Promise(resolve=>setTimeout(resolve,250));}throw new Error(message);};
-    await cdp("Page.navigate",{url:`${base}/transactions`},sessionId);
-    await waitExpression("document.body.innerText.includes('Página 1') && document.body.innerText.includes('Exemplo fictício')","Listagem financeira de revisão não abriu");
-    await cdp("Runtime.evaluate",{expression:"(()=>{const e=document.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'busca-inexistente-ficticia-983732');e.dispatchEvent(new Event('input',{bubbles:true}));})()"},sessionId);
-    await waitExpression("document.body.innerText.includes('Nenhuma cobrança encontrada.')","Busca financeira não filtrou os registros");
-    await cdp("Runtime.evaluate",{expression:"(()=>{const e=document.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'');e.dispatchEvent(new Event('input',{bubbles:true}));})()"},sessionId);
-    await waitExpression("document.body.innerText.includes('Exemplo fictício') && document.body.innerText.includes('Página anterior')","Paginação financeira não recuperou a lista");
-    await cdp("Page.navigate",{url:`${base}/finance`},sessionId);
-    await waitExpression("document.body.innerText.includes('Resumo financeiro') && document.body.innerText.includes('Livro de movimentos')","Resumo não abriu para revisão");
-    console.log("Revisão financeira: busca, paginação e resumo autenticados conferidos.");
+  if (financeReview) {
+    const waitExpression = async (expression, message) => {
+      const end = Date.now() + 45000;
+      while (Date.now() < end) {
+        const r = await cdp(
+          "Runtime.evaluate",
+          { expression, returnByValue: true },
+          sessionId
+        );
+        if (r.result.value) return;
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+      throw new Error(message);
+    };
+    await cdp("Page.navigate", { url: `${base}/transactions` }, sessionId);
+    await waitExpression(
+      "document.body.innerText.includes('Página 1') && document.body.innerText.includes('Exemplo fictício')",
+      "Listagem financeira de revisão não abriu"
+    );
+    await cdp(
+      "Runtime.evaluate",
+      {
+        expression:
+          "(()=>{const e=document.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'busca-inexistente-ficticia-983732');e.dispatchEvent(new Event('input',{bubbles:true}));})()",
+      },
+      sessionId
+    );
+    await waitExpression(
+      "document.body.innerText.includes('Nenhuma cobrança encontrada.')",
+      "Busca financeira não filtrou os registros"
+    );
+    await cdp(
+      "Runtime.evaluate",
+      {
+        expression:
+          "(()=>{const e=document.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'');e.dispatchEvent(new Event('input',{bubbles:true}));})()",
+      },
+      sessionId
+    );
+    await waitExpression(
+      "document.body.innerText.includes('Exemplo fictício') && document.body.innerText.includes('Página anterior')",
+      "Paginação financeira não recuperou a lista"
+    );
+    await cdp("Page.navigate", { url: `${base}/finance` }, sessionId);
+    await waitExpression(
+      "document.body.innerText.includes('Resumo financeiro') && document.body.innerText.includes('Livro de movimentos')",
+      "Resumo não abriu para revisão"
+    );
+    console.log(
+      "Revisão financeira: busca, paginação e resumo autenticados conferidos."
+    );
   }
   console.log(`MindOS aberto para revisão: ${base}${reviewPath}`);
   console.log(

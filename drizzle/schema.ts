@@ -531,6 +531,7 @@ export const mindosFinancialRules = mysqlTable("mindos_financial_rules", {
 export type MindosFinancialRule = typeof mindosFinancialRules.$inferSelect;
 
 export const mindosBookingRequests = mysqlTable("mindos_booking_requests", {
+  crmLeadId: int("crmLeadId"),
   serviceId: int("serviceId"),
   patientId: int("patientId"),
   appointmentId: int("appointmentId"),
@@ -916,5 +917,143 @@ export const financialMovements = mysqlTable(
   t => [
     uniqueIndex("financial_movement_operation").on(t.operationId),
     index("financial_movements_tenant").on(t.tenantId),
+  ]
+);
+
+export const crmLeads = mysqlTable(
+  "mindos_crm_leads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    fullName: varchar("fullName", { length: 160 }).notNull(),
+    email: varchar("email", { length: 200 }),
+    phone: varchar("phone", { length: 40 }),
+    source: mysqlEnum("source", [
+      "MANUAL",
+      "PUBLIC_BOOKING",
+      "REFERRAL",
+      "OTHER",
+    ]).notNull(),
+    stage: mysqlEnum("stage", [
+      "NEW",
+      "CONTACTED",
+      "QUALIFIED",
+      "CONVERTED",
+      "LOST",
+    ])
+      .default("NEW")
+      .notNull(),
+    ownerUserId: int("ownerUserId"),
+    nextContactAt: timestamp("nextContactAt"),
+    patientId: int("patientId"),
+    contactAllowed: boolean("contactAllowed").default(false).notNull(),
+    preferredChannel: varchar("preferredChannel", { length: 32 }).notNull(),
+    lostReason: varchar("lostReason", { length: 500 }),
+    revision: int("revision").default(1).notNull(),
+    creationKey: varchar("creationKey", { length: 64 }).notNull(),
+    creationHash: varchar("creationHash", { length: 64 }).notNull(),
+    createdByUserId: int("createdByUserId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    convertedAt: timestamp("convertedAt"),
+  },
+  t => [
+    uniqueIndex("crm_lead_creation").on(t.tenantId, t.creationKey),
+    index("crm_leads_tenant").on(t.tenantId),
+  ]
+);
+export const crmTasks = mysqlTable(
+  "mindos_crm_tasks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    leadId: int("leadId"),
+    patientId: int("patientId"),
+    title: varchar("title", { length: 180 }).notNull(),
+    kind: mysqlEnum("kind", ["FOLLOW_UP", "RETURN"]).notNull(),
+    ownerUserId: int("ownerUserId").notNull(),
+    dueAt: timestamp("dueAt").notNull(),
+    status: mysqlEnum("status", ["OPEN", "DONE", "CANCELLED"])
+      .default("OPEN")
+      .notNull(),
+    revision: int("revision").default(1).notNull(),
+    creationKey: varchar("creationKey", { length: 36 }).notNull(),
+    creationHash: varchar("creationHash", { length: 64 }).notNull(),
+    createdByUserId: int("createdByUserId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    resolvedAt: timestamp("resolvedAt"),
+    resolvedByUserId: int("resolvedByUserId"),
+    resolution: varchar("resolution", { length: 500 }),
+  },
+  t => [
+    uniqueIndex("crm_task_creation").on(t.tenantId, t.creationKey),
+    index("crm_tasks_tenant_due").on(t.tenantId, t.dueAt),
+  ]
+);
+export const crmInteractions = mysqlTable(
+  "mindos_crm_interactions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    leadId: int("leadId"),
+    patientId: int("patientId"),
+    channel: varchar("channel", { length: 32 }).notNull(),
+    outcome: varchar("outcome", { length: 32 }).notNull(),
+    summary: varchar("summary", { length: 1000 }).notNull(),
+    actorUserId: int("actorUserId").notNull(),
+    creationKey: varchar("creationKey", { length: 64 }).notNull(),
+    creationHash: varchar("creationHash", { length: 64 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => [
+    uniqueIndex("crm_interaction_creation").on(t.tenantId, t.creationKey),
+    index("crm_interactions_tenant").on(t.tenantId),
+  ]
+);
+export const contactPreferences = mysqlTable(
+  "mindos_contact_preferences",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    patientId: int("patientId").notNull(),
+    emailAllowed: boolean("emailAllowed").default(false).notNull(),
+    whatsappAllowed: boolean("whatsappAllowed").default(false).notNull(),
+    revision: int("revision").default(1).notNull(),
+    source: mysqlEnum("source", ["STAFF_RECORDED", "PATIENT_PORTAL"]).notNull(),
+    recordedByUserId: int("recordedByUserId").notNull(),
+    reason: varchar("reason", { length: 500 }).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  t => [uniqueIndex("contact_preference_patient").on(t.tenantId, t.patientId)]
+);
+export const crmReminders = mysqlTable(
+  "mindos_crm_reminders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    patientId: int("patientId").notNull(),
+    appointmentId: int("appointmentId"),
+    appointmentRevision: int("appointmentRevision"),
+    taskId: int("taskId"),
+    kind: mysqlEnum("kind", [
+      "SESSION_REMINDER",
+      "CONFIRMATION",
+      "RETURN",
+    ]).notNull(),
+    channel: varchar("channel", { length: 32 }).notNull(),
+    dueAt: timestamp("dueAt").notNull(),
+    status: mysqlEnum("status", [
+      "WAITING_PROVIDER",
+      "SUPPRESSED",
+      "CANCELLED",
+    ]).notNull(),
+    reason: varchar("reason", { length: 180 }).notNull(),
+    templateText: varchar("templateText", { length: 320 }).notNull(),
+    dedupeKey: varchar("dedupeKey", { length: 64 }).notNull(),
+    createdByUserId: int("createdByUserId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => [
+    uniqueIndex("crm_reminder_dedupe").on(t.tenantId, t.dedupeKey),
+    index("crm_reminders_tenant").on(t.tenantId),
   ]
 );

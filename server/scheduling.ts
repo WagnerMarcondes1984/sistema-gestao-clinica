@@ -1109,6 +1109,10 @@ export async function processBookingRequest(
       request.id,
       `TRIAGE_${input.status}`
     );
+    if (patientId)
+      await (
+        await import("./crm")
+      ).bookingConverted(tx, clinic.id, request.id, patientId, user.id);
     return { appointmentId, patientId };
   });
 }

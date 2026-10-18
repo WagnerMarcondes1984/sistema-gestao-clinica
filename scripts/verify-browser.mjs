@@ -614,6 +614,8 @@ try {
   const operation = client(operationToken);
   const opPatient = await operation.patients.create.mutate({
     fullName: `Paciente operacional ${suffix}`,
+    email: `retorno-${suffix}@example.com`,
+    preferredChannel: "EMAIL",
     administrativeStatus: "ACTIVE",
   });
   const opSecond = await operation.patients.create.mutate({
@@ -1541,6 +1543,203 @@ try {
     "Chrome: criação de cobrança, parcelas, baixa e reversão manual, histórico, abertura, suprimento, sangria, dinheiro/troco, despesa, fechamento com diferença, relatório e acesso somente leitura aprovados."
   );
 
+  // Etapa 6: lead → interação → tarefa → conversão → preferências → lembretes.
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/crm` });
+  await waitForText("CRM administrativo");
+  await waitForText("Novo lead");
+  const crmName = `Lead CRM fictício ${suffix}`,
+    crmEmail = `crm-${suffix}@example.com`;
+  const crmLocal = d =>
+    new Intl.DateTimeFormat("sv-SE", {
+      timeZone: config.clinic.timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .format(d)
+      .replace(" ", "T");
+  await click("Novo lead");
+  await fill("#crm-name", crmName);
+  await fill("#crm-email", crmEmail);
+  await fill("#crm-owner", String(fixture.operationUserId), "select");
+  await fill("#crm-date", crmLocal(new Date(Date.now() + 86400000)));
+  await click("Salvar registro");
+  await closedDialog();
+  await waitForText(crmName);
+  let crmLead = (await operation.crm.overview.query()).leads.find(
+    l => l.fullName === crmName
+  );
+  const crmLeadClick = async text => {
+    const expr = `[...document.querySelector('[data-lead-id="${crmLead.id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)} && !b.disabled)`;
+    await waitForCondition(`!!(${expr})`, "Ação do lead não disponível");
+    await evaluate(`(${expr}).click()`);
+  };
+  await crmLeadClick("Gerenciar lead");
+  await fill("#crm-stage", "CONTACTED", "select");
+  await click("Salvar registro");
+  await closedDialog();
+  crmLead = (await operation.crm.overview.query()).leads.find(
+    l => l.id === crmLead.id
+  );
+  assert.equal(crmLead.stage, "CONTACTED");
+  await crmLeadClick("Registrar interação");
+  await fill(
+    "#crm-summary",
+    `Contato administrativo fictício ${suffix}`,
+    "textarea"
+  );
+  await click("Salvar registro");
+  await closedDialog();
+  await crmLeadClick("Histórico");
+  await waitForText(`Contato administrativo fictício ${suffix}`);
+  await evaluate(
+    "document.querySelector('[role=dialog] button[data-slot=dialog-close]').click()"
+  );
+  await crmLeadClick("Criar tarefa");
+  await fill("#crm-owner", String(fixture.operationUserId), "select");
+  await fill("#crm-date", crmLocal(new Date(Date.now() - 3600000)));
+  await fill("#crm-task-title", `Retorno CRM fictício ${suffix}`);
+  await click("Salvar registro");
+  await closedDialog();
+  await click("Tarefas");
+  await waitForText(`Retorno CRM fictício ${suffix}`);
+  await waitForText("Vencida");
+  await click("Editar tarefa");
+  await fill("#crm-date", crmLocal(new Date(Date.now() + 86400000)));
+  await click("Salvar registro");
+  await closedDialog();
+  await click("Concluir ou cancelar");
+  await fill(
+    "#crm-task-resolution",
+    "Retorno administrativo conferido no teste"
+  );
+  await click("Salvar registro");
+  await closedDialog();
+  await waitForText("Concluída");
+  await click("Leads");
+  await crmLeadClick("Converter em paciente");
+  await evaluate("document.querySelector('#crm-identity-ack').click()");
+  await click("Salvar registro");
+  await closedDialog();
+  crmLead = (await operation.crm.overview.query()).leads.find(
+    l => l.id === crmLead.id
+  );
+  assert.equal(crmLead.stage, "CONVERTED");
+  assert.ok(crmLead.patientId);
+  const publicCrm = await client().publicMindos.requestBooking.mutate({
+    name: crmName,
+    contactChannel: "EMAIL",
+    contactValue: crmEmail,
+    serviceId: service.id,
+    date: future,
+    time: "16:00",
+    consent: true,
+  });
+  const patientCount = (await operation.crm.overview.query()).patients.length;
+  await page("Page.reload");
+  await waitForText("Solicitações online");
+  await click("Solicitações online");
+  await click(`Importar solicitação #${publicCrm.requestId}`);
+  await fill("#crm-import-target", String(crmLead.id), "select");
+  await evaluate("document.querySelector('#crm-import-ack').click()");
+  await click("Salvar registro");
+  await closedDialog();
+  const imported = (await operation.scheduling.requests.query()).find(
+    r => r.id === publicCrm.requestId
+  );
+  assert.equal(imported.crmLeadId, crmLead.id);
+  assert.equal(
+    (await operation.crm.overview.query()).patients.length,
+    patientCount
+  );
+  await click("Pacientes e preferências");
+  await fill("#crm-patient", String(opPatient.id), "select");
+  await waitForText("Origem da preferência informada");
+  await fill(
+    "#crm-pref-reason",
+    "Preferência fictícia informada pelo paciente"
+  );
+  await click("E-mail: bloqueado");
+  await waitForText("E-mail: autorizado");
+  await click("WhatsApp: bloqueado");
+  await waitForText("WhatsApp: autorizado");
+  await click("Criar tarefa de retorno");
+  await fill("#crm-owner", String(fixture.operationUserId), "select");
+  await fill("#crm-date", crmLocal(new Date(Date.now() + 86400000)));
+  await fill("#crm-task-title", `Retorno ao paciente fictício ${suffix}`);
+  await click("Salvar registro");
+  await closedDialog();
+  await click("Lembretes");
+  await click("Preparar lembretes");
+  await waitForText("Aguardando provedor");
+  const beforeQueue = (await operation.crm.reminders.query()).items.length;
+  await click("Preparar lembretes");
+  await waitForCondition(
+    `!document.querySelector('fieldset[disabled]')`,
+    "Preparação ocupada"
+  );
+  assert.equal(
+    (await operation.crm.reminders.query()).items.length,
+    beforeQueue
+  );
+  assert.equal(
+    (await operation.crm.reminders.query()).providerConfigured,
+    false
+  );
+  await click("Indicadores");
+  await waitForText("Leads convertidos");
+  assert.equal((await operation.crm.metrics.query()).converted, 1);
+  await takeScreenshot("mindos-crm-etapa6.png");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await takeScreenshot("mindos-crm-etapa6-mobile.png");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/portal` });
+  await waitForText(`Olá, ${opPatient.fullName}`);
+  await click("Preferências");
+  await waitForText("E-mail: autorizado");
+  await click("E-mail: autorizado");
+  await waitForText("E-mail: bloqueado");
+  await click("WhatsApp: autorizado");
+  await waitForText("WhatsApp: bloqueado");
+  assert.ok(
+    (await operation.crm.reminders.query()).items
+      .filter(r => r.patientId === opPatient.id)
+      .every(r => r.status === "SUPPRESSED" || r.status === "CANCELLED")
+  );
+  const crmReader = await careAccount(
+    `browser-crm-reader-${randomUUID()}`,
+    `Consulta CRM fictícia ${suffix}`,
+    "ASSISTANT",
+    ["VIEW_CRM"]
+  );
+  await setCookie(crmReader.token);
+  await page("Page.navigate", { url: `${base}/crm` });
+  await waitForText("Somente consulta");
+  assert.equal(
+    await evaluate(
+      "!![...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Novo lead')"
+    ),
+    false
+  );
+  console.log(
+    "Chrome: lead, responsável, etapa, interação/histórico, tarefa vencida/edição/conclusão, conversão sem duplicação, importação conferida, preferências da equipe e paciente, lembretes sem envio, indicadores e leitura restrita aprovados."
+  );
+
   assert.deepEqual(exceptions, []);
   console.log(
     "Chrome: portal sem sessão, dados do paciente correto, documentos liberados e limpeza após logout aprovados."
@@ -1587,6 +1786,11 @@ try {
       [fixture.operationTenantId]
     );
     for (const table of [
+      "mindos_crm_reminders",
+      "mindos_contact_preferences",
+      "mindos_crm_interactions",
+      "mindos_crm_tasks",
+      "mindos_crm_leads",
       "financial_movements",
       "financial_operations",
       "financial_installments",

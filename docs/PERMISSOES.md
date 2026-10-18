@@ -6,9 +6,9 @@ OAuth Manus autentica a identidade. A associação ativa em `mindos_memberships`
 |---|---|
 | OWNER / CLINIC_ADMIN / SUPER_ADMIN | Acesso total à clínica, como já previsto pelo backend; não ultrapassa o filtro da clínica |
 | PSYCHOLOGIST | Dados administrativos, agenda e leitura/escrita clínica; notas restritas exigem concessão adicional |
-| ASSISTANT / RECEPTIONIST | Cadastro administrativo e agenda; sem prontuário e sem financeiro |
+| ASSISTANT / RECEPTIONIST | Cadastro administrativo, agenda e CRM; sem prontuário e sem financeiro |
 | FINANCIAL | Dados básicos e leitura/alteração financeira; sem prontuário |
-| SALES | Dados administrativos; sem prontuário e sem financeiro |
+| SALES | Dados administrativos e CRM; sem prontuário e sem financeiro |
 | VIEWER | Dados básicos; sem prontuário e sem financeiro |
 | PATIENT | Somente portal do paciente vinculado; o servidor deriva o paciente do usuário |
 
@@ -33,3 +33,7 @@ Psicólogos precisam também de vínculo ativo explícito com cada paciente. Adm
 ## Complemento da etapa 5
 
 Escritas financeiras verificam novamente associação ativa e MANAGE_FINANCIAL dentro da transação e lock da clínica. A revisão e a chave de operação não substituem autorização: reenvio também é recusado após revogação. Autoria vem da conta no banco. VIEW_FINANCIAL consulta cobranças, parcelas, relatórios e livro; a interface de consulta não mostra formulários de alteração. Registros legados sem conferência não são movimentados mesmo por administrador. Não existe endpoint público ativo de webhook bancário nesta entrega; a simulação anterior é recusada em todos os ambientes.
+
+## Complemento da etapa 6
+
+`VIEW_CRM` permite consulta administrativa; `MANAGE_CRM` permite alterações, tarefas, interações, preferências registradas e preparação de lembretes. Converter lead exige também `MANAGE_PATIENTS`. Novos modelos de assistente, recepção e comercial incluem CRM; associações existentes exigem concessão explícita em Equipe. Paciente não recebe acesso ao CRM: consulta e altera somente suas próprias preferências por endpoints do portal, com identidade derivada da sessão. Revisão, chave idempotente e confirmação de identidade não substituem a autorização revalidada na transação da clínica. Histórico administrativo não retorna prontuário.

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'wouter';
-import { useVertical } from '../contexts/VerticalContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { VerticalCode } from '../types/finance';
+import React, { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { useVertical } from "../contexts/VerticalContext";
+import { useTheme } from "../contexts/ThemeContext";
+import { VerticalCode } from "../types/finance";
 import {
   Activity,
   ArrowDownRight,
@@ -32,7 +32,7 @@ import {
   Settings2,
   UserRoundCheck,
   FileHeart,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface FinancialLayoutProps {
   children: React.ReactNode;
@@ -42,38 +42,55 @@ interface FinancialLayoutProps {
   showFiscalBanner?: boolean;
 }
 
-export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, contextLabel, showFiscalBanner = false }: FinancialLayoutProps) {
-  const { currentVertical, verticalCode, setVerticalCode, allPresets } = useVertical();
+export function FinancialLayout({
+  children,
+  onOpenQuickCheckout,
+  operatorName,
+  contextLabel,
+  showFiscalBanner = false,
+}: FinancialLayoutProps) {
+  const { currentVertical, verticalCode, setVerticalCode, allPresets } =
+    useVertical();
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
   const [verticalMenuOpen, setVerticalMenuOpen] = useState(false);
 
   const navItems = [
-    { href: '/', label: 'MindOS', icon: Sparkles },
-    { href: '/agenda', label: 'Agenda', icon: CalendarDays },
-    { href: '/reception', label: 'Recepção', icon: UserRoundCheck },
-    { href: '/patients', label: 'Pacientes', icon: UsersRound },
-    { href: '/patient-care', label: 'Documentos e portal', icon: FileText },
-    { href: '/app/consents', label: 'Consentimentos', icon: FileHeart },
-    { href: '/clinical-records', label: 'Prontuário', icon: FileHeart },
-    { href: '/checkout', label: 'Financeiro', icon: CreditCard, highlight: true },
-    { href: '/transactions', label: 'Transações', icon: Receipt },
-    { href: '/app/admin-studio', label: 'Admin Studio', icon: Settings2 },
-    { href: '/app/scheduling', label: 'Configuração da agenda', icon: CalendarDays },
-    { href: '/app/team', label: 'Equipe', icon: UsersRound },
+    { href: "/", label: "MindOS", icon: Sparkles },
+    { href: "/agenda", label: "Agenda", icon: CalendarDays },
+    { href: "/reception", label: "Recepção", icon: UserRoundCheck },
+    { href: "/patients", label: "Pacientes", icon: UsersRound },
+    { href: "/crm", label: "CRM", icon: UsersRound },
+    { href: "/patient-care", label: "Documentos e portal", icon: FileText },
+    { href: "/app/consents", label: "Consentimentos", icon: FileHeart },
+    { href: "/clinical-records", label: "Prontuário", icon: FileHeart },
+    {
+      href: "/checkout",
+      label: "Financeiro",
+      icon: CreditCard,
+      highlight: true,
+    },
+    { href: "/transactions", label: "Transações", icon: Receipt },
+    { href: "/app/admin-studio", label: "Admin Studio", icon: Settings2 },
+    {
+      href: "/app/scheduling",
+      label: "Configuração da agenda",
+      icon: CalendarDays,
+    },
+    { href: "/app/team", label: "Equipe", icon: UsersRound },
   ];
 
   const getVerticalIcon = (code: VerticalCode) => {
     switch (code) {
-      case 'DENTAL_CLINIC':
+      case "DENTAL_CLINIC":
         return Sparkles;
-      case 'MEDICAL_CLINIC':
+      case "MEDICAL_CLINIC":
         return Stethoscope;
-      case 'AESTHETIC_CLINIC':
+      case "AESTHETIC_CLINIC":
         return Sparkles;
-      case 'PHYSIOTHERAPY_CLINIC':
+      case "PHYSIOTHERAPY_CLINIC":
         return Activity;
-      case 'PSYCHOLOGY_CLINIC':
+      case "PSYCHOLOGY_CLINIC":
         return TrendingUp;
       default:
         return Layers;
@@ -133,7 +150,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
                         Selecionar Vertical White Label
                       </div>
                       <div className="space-y-1">
-                        {allPresets.map((preset) => {
+                        {allPresets.map(preset => {
                           const Icon = getVerticalIcon(preset.code);
                           const isSelected = preset.code === verticalCode;
                           return (
@@ -146,8 +163,8 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
                               }}
                               className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 transition-colors ${
                                 isSelected
-                                  ? 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-semibold'
-                                  : 'hover:bg-slate-50 dark:hover:bg-zinc-800/50 text-slate-600 dark:text-zinc-400'
+                                  ? "bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-semibold"
+                                  : "hover:bg-slate-50 dark:hover:bg-zinc-800/50 text-slate-600 dark:text-zinc-400"
                               }`}
                             >
                               <div
@@ -199,7 +216,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
                 className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                 title="Alternar tema claro/escuro"
               >
-                {theme === 'dark' ? (
+                {theme === "dark" ? (
                   <Sun className="w-4 h-4 text-amber-400" />
                 ) : (
                   <Moon className="w-4 h-4" />
@@ -228,7 +245,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
         <div className="border-t border-slate-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center space-x-1 sm:space-x-2 py-1.5 overflow-x-auto no-scrollbar">
-              {navItems.map((item) => {
+              {navItems.map(item => {
                 const Icon = item.icon;
                 const isActive = location === item.href;
                 return (
@@ -237,8 +254,8 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
                     href={item.href}
                     className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                       isActive
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-xs'
-                        : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800'
+                        ? "bg-slate-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-xs"
+                        : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800"
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-80" />
@@ -271,7 +288,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
             <span>— Core Financeiro & Fiscal Multi-Tenant</span>
           </div>
           <div className="flex items-center gap-4">
-              <span>Privacidade por camadas</span>
+            <span>Privacidade por camadas</span>
             <span>•</span>
             <span>Auditoria de acesso</span>
             <span>•</span>
