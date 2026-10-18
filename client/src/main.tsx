@@ -11,7 +11,7 @@ import "./index.css";
 // Analytics é opcional; não faça requisições com placeholders vazios.
 const analyticsEndpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT;
 const analyticsWebsiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID;
-if (analyticsEndpoint && analyticsWebsiteId) {
+if (analyticsEndpoint && analyticsWebsiteId && window.location.pathname !== "/invite") {
   const script = document.createElement("script");
   script.defer = true;
   script.src = `${analyticsEndpoint.replace(/\/$/, "")}/umami`;

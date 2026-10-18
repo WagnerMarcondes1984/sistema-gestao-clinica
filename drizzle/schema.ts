@@ -225,8 +225,24 @@ export const mindosMemberships = mysqlTable("mindos_memberships", {
   permissionsJson: text("permissionsJson").notNull(),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, table => [uniqueIndex("mindos_memberships_tenant_user_unique").on(table.tenantId, table.userId), index("mindos_memberships_user_active_idx").on(table.userId, table.active)]);
 export type MindosMembership = typeof mindosMemberships.$inferSelect;
+
+export const mindosTeamInvites = mysqlTable("mindos_team_invites", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  role: mysqlEnum("role", ["CLINIC_ADMIN", "PSYCHOLOGIST", "ASSISTANT", "RECEPTIONIST", "FINANCIAL", "SALES", "VIEWER", "PATIENT"]).notNull(),
+  permissionsJson: text("permissionsJson").notNull(),
+  tokenHash: varchar("tokenHash", { length: 64 }).notNull().unique(),
+  patientId: int("patientId"),
+  status: mysqlEnum("status", ["PENDING", "ACCEPTED", "REVOKED"]).default("PENDING").notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  acceptedByUserId: int("acceptedByUserId"),
+  expiresAt: timestamp("expiresAt").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("mindos_team_invites_tenant_idx").on(table.tenantId, table.status)]);
 
 export const mindosPatients = mysqlTable("mindos_patients", {
   portalUserId: int("portalUserId"),

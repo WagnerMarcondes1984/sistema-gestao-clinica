@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, financialProcedure, router } from "./_core/trpc";
 import { z } from "zod";
+import { teamRouter } from "./team-router";
 import {
   listClinicalVerticals,
   getClinicalVerticalByCode,
@@ -44,6 +45,7 @@ import {
 } from "./db";
 
 export const appRouter = router({
+  team: teamRouter,
   system: systemRouter,
   publicMindos: router({
     serviceAreas: publicProcedure.query(async () => listMindosServiceAreas()),

@@ -58,16 +58,14 @@ Alterações implementadas e aprovadas nos testes de integração:
 
 Ainda pendente nesta etapa:
 
-- Concluir entrada da clínica, convites, gestão de associações, papéis e ativação/desativação pela interface.
-- Concluir os fluxos administrativos que aplicam a matriz; modelos e testes de permissões já foram adicionados.
 - Preparar procedimento revisado de associação de registros financeiros legados, quando houver uma base real a migrar.
 - Validar login Manus real quando as credenciais do ambiente estiverem configuradas. O seed não cria acesso OAuth.
 
 ## Próxima ação concreta
 
-Concluir gestão de equipe, convites e associações da etapa 2, mantendo OAuth Manus. Não iniciar os módulos operacionais da etapa 3 antes de fechar esses controles. O login real depende de `VITE_APP_ID`, `OAUTH_SERVER_URL`, `VITE_OAUTH_PORTAL_URL` e `OWNER_OPEN_ID`, ainda não configurados no ambiente local.
+**Parar após esta entrega da etapa 2 para análise do usuário. Não iniciar a etapa 3.** A gestão de equipe, os convites e as associações foram implementados, mantendo o provedor atual. A recomendação de trocar o login antes de produção continua pendente de implementação e definição do provedor. O login real depende de `VITE_APP_ID`, `OAUTH_SERVER_URL`, `VITE_OAUTH_PORTAL_URL` e `OWNER_OPEN_ID`, ainda não configurados no ambiente local.
 
-## Verificações executadas
+## Verificações do checkpoint anterior
 
 | Verificação | Resultado |
 |---|---|
@@ -82,3 +80,23 @@ Concluir gestão de equipe, convites e associações da etapa 2, mantendo OAuth 
 | Chrome headless | Portal anônimo/autenticado, documentos e logout com recarregamento aprovados |
 
 A suíte unitária ignorou o teste antigo dependente de banco; os testes próprios de integração foram executados separadamente com conexão real. As sessões usadas no teste HTTP/Chrome são locais e fictícias e não comprovam o fluxo externo de login Manus.
+
+## Entrega de equipe e convites — etapa 2, parada para análise
+
+Implementado nesta rodada:
+
+- `/app/team`: lista de vínculos, papéis, permissões, desativação/reativação, criação e cancelamento de convites.
+- `/invite`: aceitação pessoal pelo e-mail da identidade autenticada, com retorno interno após OAuth.
+- Convite de paciente exige cadastro existente da própria clínica; não foi iniciado CRUD de pacientes da etapa 3.
+- Convite de 72 horas com segredo aleatório, hash no banco, POST para verificação/aceitação e proteção contra replay, aceitação simultânea e destinatário incorreto.
+- Concessões limitadas por papel; proprietário, superadministrador e próprio acesso protegidos; administrador comum não gerencia outros administradores.
+- Desativação ou mudança de permissões bloqueia requisições seguintes; criador revogado não concede acesso por convite antigo.
+- Entrada explícita de clínica somente por administrador de instalação sem associação anterior.
+- Operações persistentes e auditadas em transações, com índice único de vínculo por clínica/usuário.
+- O cabeçalho da nova tela identifica a conta autenticada e não exibe o banner fiscal demonstrativo.
+
+Verificações desta rodada: TypeScript aprovado; 61 testes unitários aprovados e 1 ignorado; 15 testes de integração aprovados; schema com 21 tabelas e 254 colunas conferido; build aprovado com aviso de tamanho do bundle. Chrome validou criação/aceitação do convite, desativação, reativação, financeiro somente leitura, cancelamento e o portal/logout anteriores. Revisão final no Chrome aprovada, incluindo identidade no cabeçalho. Capturas com dados fictícios: [desktop](previews/equipe-desktop.png) e [celular](previews/equipe-mobile.png).
+
+Operação e limites em `EQUIPE-E-CONVITES.md`. O envio do link é manual; não houve mensagem a terceiros. Não foi trocado o provedor de login. A autenticação Manus real e a associação de financeiro legado continuam pendentes. A etapa 3 não foi iniciada.
+
+Checkpoint desta entrega: branch `codex/equipe-e-convites`, baseada em `codex/preparacao-e-seguranca`, para revisão separada sem avançar a etapa 3.

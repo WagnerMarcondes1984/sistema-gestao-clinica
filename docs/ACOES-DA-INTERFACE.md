@@ -1,11 +1,15 @@
 # Inventário das ações da interface
 
-Levantamento estático das páginas e componentes de operação em 17/10/2026, após as correções iniciais. Rotas e módulos estão descritos em `INVENTARIO-FUNCIONAL.md`. Componentes genéricos de UI e exemplos não definem a conclusão dos fluxos do produto.
+Levantamento estático atualizado após a entrega de equipe e convites da etapa 2. Rotas e módulos estão em `INVENTARIO-FUNCIONAL.md`; os testes efetivos de cada entrega estão em `EXECUCAO-DO-PLANO.md`.
 
-Cada linha registra um manipulador de clique ou envio de formulário. “Parcial” exige homologação do fluxo; chamar o backend não comprova que uma integração externa está concluída. Handlers por nome precisam ser conferidos com a função correspondente. Este levantamento serve como fila de revisão, sem marcar ações como funcionais apenas pela existência do botão.
+Cada linha registra um clique ou envio de formulário. A classificação automática conservadora não declara o fluxo aprovado: chamar backend não comprova integração externa e handlers por nome exigem conferir a função correspondente. Os novos fluxos de equipe possuem testes específicos de integração e navegador; as ações antigas continuam em revisão nas etapas previstas.
 
-| Origem | Evento | Classificação | Ação encontrada |
+| Origem | Evento | Classificação estática | Ação encontrada |
 |---|---|---|---|
+| client/src/pages/AcceptInvite.tsx:99 | onClick | Parcial — revisar fluxo chamado | `startLogin` |
+| client/src/pages/AcceptInvite.tsx:114 | onClick | Parcial — revisar fluxo chamado | `() => verify({ token })` |
+| client/src/pages/AcceptInvite.tsx:119 | onClick | Parcial — revisar fluxo chamado | `() => void logout()` |
+| client/src/pages/AcceptInvite.tsx:170 | onClick | Parcial — chama backend | `() => accept.mutate({ token })` |
 | client/src/pages/AdminStudio.tsx:84 | onClick | Parcial — ação local | `() => setActive(item.id)` |
 | client/src/pages/AdminStudio.tsx:89 | onClick | Parcial — ação local | `() => { setDraftStatus('PREVIEW'); notify('Preview preparado para validação.'); }` |
 | client/src/pages/AdminStudio.tsx:89 | onClick | Parcial — chama backend | `() => { if (isAuthenticated && latestDraft) publishMutation.mutate({ versionId: latestDraft.id }); else { setDraftStatus('PUBLISHED'); notify('Modo de demonstra` |
@@ -91,6 +95,14 @@ Cada linha registra um manipulador de clique ou envio de formulário. “Parcial
 | client/src/pages/Reception.tsx:22 | onClick | Demonstrativo — apenas mensagem | `() => toast.info('Busca administrativa aberta.')` |
 | client/src/pages/Reception.tsx:22 | onClick | Demonstrativo — apenas mensagem | `() => toast.info('Contato telefônico aberto.')` |
 | client/src/pages/Reception.tsx:22 | onClick | Demonstrativo — apenas mensagem | `() => toast.info('Pendências de confirmação abertas.')` |
+| client/src/pages/Team.tsx:131 | onClick | Parcial — revisar fluxo chamado | `startLogin` |
+| client/src/pages/Team.tsx:145 | onClick | Parcial — revisar fluxo chamado | `() => void overview.refetch()` |
+| client/src/pages/Team.tsx:164 | onSubmit | Parcial — chama backend | `event => { event.preventDefault(); createClinic.mutate({ name: clinicName, slug }); }` |
+| client/src/pages/Team.tsx:291 | onClick | Parcial — ação local | `() => setEditing({ membershipId: member.id, name: member.name \|\| member.email \|\| "Pessoa", active: member.active, access: { role: member.role as TeamRole, permi` |
+| client/src/pages/Team.tsx:325 | onSubmit | Parcial — revisar fluxo chamado | `submitInvite` |
+| client/src/pages/Team.tsx:380 | onClick | Demonstrativo — apenas mensagem | `async () => { try { await navigator.clipboard.writeText(inviteLink); toast.success("Link copiado."); } catch { toast.error("Selecione o link e copie manualmente` |
+| client/src/pages/Team.tsx:428 | onClick | Parcial — chama backend | `() => revoke.mutate({ inviteId: invite.id })` |
+| client/src/pages/Team.tsx:466 | onSubmit | Parcial — revisar fluxo chamado | `submitEdit` |
 | client/src/pages/Transactions.tsx:303 | onClick | Parcial — ação local | `() => setSelectedInvoiceTx(tx)` |
 | client/src/pages/Transactions.tsx:319 | onClick | Parcial — ação local | `() => setSelectedReceiptTx(tx)` |
 | client/src/pages/Transactions.tsx:327 | onClick | Parcial — ação local | `() => setSelectedInvoiceTx(tx)` |
@@ -98,10 +110,10 @@ Cada linha registra um manipulador de clique ou envio de formulário. “Parcial
 | client/src/pages/Transactions.tsx:347 | onClick | Parcial — chama backend | `() => webhookMutation.mutate({ code: tx.code })` |
 | client/src/pages/Transactions.tsx:401 | onClick | Parcial — ação local | `() => setRefundTargetTx(null)` |
 | client/src/pages/Transactions.tsx:409 | onClick | Parcial — chama backend | `() => { if (!refundReason.trim()) { toast.error('Informe a justificativa do estorno.'); return; } refundMutation.mutate({ code: refundTargetTx.code, reason: ref` |
-| client/src/components/FinancialLayout.tsx:107 | onClick | Parcial — ação local | `() => setVerticalMenuOpen(!verticalMenuOpen)` |
-| client/src/components/FinancialLayout.tsx:122 | onClick | Parcial — ação local | `() => setVerticalMenuOpen(false)` |
-| client/src/components/FinancialLayout.tsx:136 | onClick | Parcial — ação local | `() => { setVerticalCode(preset.code); setVerticalMenuOpen(false); }` |
-| client/src/components/FinancialLayout.tsx:191 | onClick | Parcial — revisar fluxo chamado | `toggleTheme` |
+| client/src/components/FinancialLayout.tsx:111 | onClick | Parcial — ação local | `() => setVerticalMenuOpen(!verticalMenuOpen)` |
+| client/src/components/FinancialLayout.tsx:126 | onClick | Parcial — ação local | `() => setVerticalMenuOpen(false)` |
+| client/src/components/FinancialLayout.tsx:140 | onClick | Parcial — ação local | `() => { setVerticalCode(preset.code); setVerticalMenuOpen(false); }` |
+| client/src/components/FinancialLayout.tsx:195 | onClick | Parcial — revisar fluxo chamado | `toggleTheme` |
 | client/src/components/ReceiptModal.tsx:63 | onClick | Parcial — revisar fluxo chamado | `handlePrint` |
 | client/src/components/ReceiptModal.tsx:70 | onClick | Parcial — revisar fluxo chamado | `onClose` |
 | client/src/components/ReceiptModal.tsx:190 | onClick | Parcial — revisar fluxo chamado | `handleCopyCode` |
