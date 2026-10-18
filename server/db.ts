@@ -706,7 +706,7 @@ export async function listMindosAppointments(userId: number, userRole: string) {
   if (!db) throw new Error("Banco de dados não disponível");
   const appointments = await db.select().from(mindosAppointments).where(eq(mindosAppointments.tenantId, tenant.id)).orderBy(mindosAppointments.startsAt);
   const patientIds = Array.from(new Set(appointments.map((item) => item.patientId)));
-  const patients = patientIds.length > 0 ? await db.select().from(mindosPatients).where(inArray(mindosPatients.id, patientIds)) : [];
+  const patients = patientIds.length > 0 ? await db.select().from(mindosPatients).where(and(eq(mindosPatients.tenantId, tenant.id), inArray(mindosPatients.id, patientIds))) : [];
   const patientMap = new Map(patients.map((patient) => [patient.id, patient]));
   return appointments.map((appointment) => ({ ...appointment, patient: patientMap.get(appointment.patientId) || null }));
 }
@@ -727,6 +727,7 @@ export async function createMindosAppointment(userId: number, userRole: string, 
   if (!db) throw new Error("Banco de dados não disponível");
   const patient = await db.select().from(mindosPatients).where(and(eq(mindosPatients.id, input.patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
   if (!patient[0]) throw new Error("Paciente não pertence ao tenant atual");
+  if (["INACTIVE", "CLOSED"].includes(patient[0].administrativeStatus)) throw new TRPCError({ code: "BAD_REQUEST", message: "Reative o paciente antes de criar uma sessão" });
   const existing = await db.select().from(mindosAppointments).where(eq(mindosAppointments.tenantId, tenant.id));
   const overlaps = existing.some((item) => item.status !== "CANCELLED" && input.startsAt < item.endsAt && input.endsAt > item.startsAt && item.professionalName === input.professionalName);
   if (overlaps) throw new Error("Conflito de agenda para o profissional selecionado");
@@ -736,14 +737,15 @@ export async function createMindosAppointment(userId: number, userRole: string, 
 }
 
 export async function getMindosPatient360(userId: number, userRole: string, patientId: number) {
-  const { tenant } = await assertMindosPermission(userId, userRole, "VIEW_PATIENT_BASIC");
+  const { tenant, membership } = await assertMindosPermission(userId, userRole, "VIEW_PATIENT_BASIC");
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
   const patientRows = await db.select().from(mindosPatients).where(and(eq(mindosPatients.id, patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
-  if (!patientRows[0]) throw new Error("Paciente não encontrado no tenant atual");
+  if (!patientRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Paciente não encontrado nesta clínica" });
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "PATIENT", subjectId: patientId, dataLayer: "ADMINISTRATIVE", action: "VIEW_PATIENT_360", reason: "Consulta operacional" });
   const appointments = await db.select().from(mindosAppointments).where(and(eq(mindosAppointments.tenantId, tenant.id), eq(mindosAppointments.patientId, patientId))).orderBy(desc(mindosAppointments.startsAt));
-  return { patient: patientRows[0], appointments };
+  const { portalUserId, ...patient } = patientRows[0];
+  return { patient, appointments: hasMindosPermission(membership, "MANAGE_APPOINTMENTS") ? appointments : [] };
 }
 
 export async function listMindosCmsVersions(userId: number, userRole: string) {
@@ -835,6 +837,8 @@ export async function listMindosClinicalRecords(userId: number, userRole: string
   const { tenant, membership } = await assertMindosPermission(userId, userRole, "VIEW_CLINICAL_RECORD");
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
+  const [patient] = await db.select({ id: mindosPatients.id }).from(mindosPatients).where(and(eq(mindosPatients.id, patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
+  if (!patient) throw new TRPCError({ code: "NOT_FOUND", message: "Paciente não encontrado nesta clínica" });
   const records = await db.select().from(mindosClinicalRecords).where(and(eq(mindosClinicalRecords.tenantId, tenant.id), eq(mindosClinicalRecords.patientId, patientId), hasMindosPermission(membership, "VIEW_RESTRICTED_NOTE") ? undefined : ne(mindosClinicalRecords.recordType, "RESTRICTED_NOTE"))).orderBy(desc(mindosClinicalRecords.createdAt));
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "PATIENT", subjectId: patientId, dataLayer: "CLINICAL", action: "VIEW_CLINICAL_RECORD", reason: "Consulta clínica autorizada" });
   if (records.some(record => record.recordType === "RESTRICTED_NOTE")) {

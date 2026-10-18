@@ -14,6 +14,7 @@ import CashManagement from "./pages/CashManagement";
 import AuditFiscal from "./pages/AuditFiscal";
 import MindOSDashboard from "./pages/MindOSDashboard";
 import Agenda from "./pages/Agenda";
+import Patients from "./pages/Patients";
 import Patient360 from "./pages/Patient360";
 import AdminStudio from "./pages/AdminStudio";
 import ClinicalRecord from "./pages/ClinicalRecord";
@@ -29,7 +30,8 @@ function Router() {
       <Route path="/" component={MindOSDashboard} />
       <Route path="/finance" component={Dashboard} />
       <Route path="/agenda" component={Agenda} />
-      <Route path="/patients" component={Patient360} />
+      <Route path="/patients" component={Patients} />
+      <Route path="/patients/view" component={Patient360} />
       <Route path="/clinical-records" component={ClinicalRecord} />
       <Route path="/reception" component={Reception} />
       <Route path="/portal" component={PatientPortal} />

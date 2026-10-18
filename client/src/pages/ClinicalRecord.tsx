@@ -1,27 +1,208 @@
-import { useState } from 'react';
-import { FinancialLayout } from '../components/FinancialLayout';
-import { useAuth } from '../_core/hooks/useAuth';
-import { trpc } from '../lib/trpc';
-import { FileText, HeartPulse, LockKeyhole, Plus, ShieldCheck, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { toast } from "sonner";
+import { FinancialLayout } from "../components/FinancialLayout";
+import {
+  PatientSelector,
+  SessionNotice,
+  useSelectedPatient,
+  buttonClass,
+  fieldClass,
+} from "../components/patients/PatientSelector";
+import { useAuth } from "../_core/hooks/useAuth";
+import { trpc } from "../lib/trpc";
 
-export default function ClinicalRecord() {
-  const { isAuthenticated } = useAuth();
-  const recordsQuery = trpc.mindos.clinicalRecords.useQuery({ patientId: 1 }, { enabled: isAuthenticated, retry: false });
-  const createMutation = trpc.mindos.createClinicalRecord.useMutation({ onSuccess: () => { recordsQuery.refetch(); toast.success('Registro salvo como rascunho versionado.'); } });
-  const [recordType, setRecordType] = useState<'ANAMNESIS' | 'EVOLUTION' | 'RESTRICTED_NOTE' | 'GOAL' | 'CARE_PLAN'>('EVOLUTION');
-  const [content, setContent] = useState('');
-  const submit = () => {
-    if (!content.trim()) { toast.error('Escreva o conteúdo antes de salvar.'); return; }
-    if (!isAuthenticated) { toast.info('Faça login para persistir o registro clínico.'); return; }
-    createMutation.mutate({ patientId: 1, recordType, content });
-    setContent('');
-  };
+const recordTypes = {
+  ANAMNESIS: "Anamnese",
+  EVOLUTION: "Evolução",
+  RESTRICTED_NOTE: "Nota restrita",
+  GOAL: "Objetivo",
+  CARE_PLAN: "Plano de cuidado",
+};
+type RecordType = keyof typeof recordTypes;
+function RecordWorkspace({
+  patientId,
+  onDirtyChange,
+}: {
+  patientId: number;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
+  const [recordType, setRecordType] = useState<RecordType>("EVOLUTION");
+  const [content, setContent] = useState("");
+  const [validation, setValidation] = useState("");
+  const records = trpc.mindos.clinicalRecords.useQuery(
+    { patientId },
+    { retry: false }
+  );
+  const profile = trpc.patients.get.useQuery({ patientId }, { retry: false });
+  const create = trpc.mindos.createClinicalRecord.useMutation({
+    onSuccess: () => {
+      setContent("");
+      onDirtyChange(false);
+      records.refetch();
+      toast.success("Rascunho salvo para o paciente selecionado.");
+    },
+  });
   return (
-    <FinancialLayout>
+    <div className="space-y-4">
+      {profile.data && (
+        <h2 className="font-bold">
+          {profile.data.fullName} • #{patientId}
+        </h2>
+      )}
+      {(records.isLoading || profile.isLoading) && (
+        <p role="status">Carregando prontuário…</p>
+      )}
+      {(records.error || profile.error) && (
+        <p role="alert" className="text-red-700">
+          {records.error?.message || profile.error?.message}
+        </p>
+      )}
+      {records.data && profile.data && (
+        <>
+          <form
+            className="rounded-2xl border bg-white p-5 space-y-3"
+            onSubmit={e => {
+              e.preventDefault();
+              if (!content.trim()) {
+                setValidation("Escreva o conteúdo antes de salvar.");
+                return;
+              }
+              create.mutate({ patientId, recordType, content: content.trim() });
+            }}
+          >
+            <h3 className="font-bold">Novo rascunho</h3>
+            <label className="block text-sm">
+              Tipo de registro
+              <select
+                className={fieldClass}
+                value={recordType}
+                onChange={e => setRecordType(e.target.value as RecordType)}
+              >
+                {Object.entries(recordTypes).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              Conteúdo
+              <textarea
+                required
+                className={`${fieldClass} min-h-48`}
+                value={content}
+                onChange={e => {
+                  setContent(e.target.value);
+                  onDirtyChange(Boolean(e.target.value));
+                  setValidation("");
+                }}
+              />
+            </label>
+            {(validation || create.error) && (
+              <p role="alert" className="text-red-700">
+                {validation || create.error?.message}
+              </p>
+            )}
+            <button className={buttonClass} disabled={create.isPending}>
+              {create.isPending ? "Salvando…" : "Salvar rascunho"}
+            </button>
+            <p className="text-xs text-slate-500">
+              O servidor verifica a permissão de escrita. Notas restritas exigem
+              concessão adicional. A conclusão do fluxo de versões e adendos
+              pertence à etapa 4.
+            </p>
+          </form>
+          <section className="rounded-2xl border bg-white p-5">
+            <h3 className="font-bold">
+              Registros autorizados ({records.data.length})
+            </h3>
+            {records.data.length === 0 && (
+              <p className="mt-3 text-sm text-slate-500">
+                Nenhum registro para este paciente.
+              </p>
+            )}
+            <div className="mt-4 space-y-4">
+              {records.data.map(record => (
+                <article key={record.id} className="border-t pt-3">
+                  <div className="font-semibold text-sm">
+                    {recordTypes[record.recordType]} • {record.status} • v
+                    {record.version}
+                  </div>
+                  <p className="mt-2 text-sm whitespace-pre-wrap">
+                    {record.content}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {new Date(record.createdAt).toLocaleString("pt-BR")} •{" "}
+                    {record.integrityHash
+                      ? "Hash registrado"
+                      : "Sem hash registrado"}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+export default function ClinicalRecord() {
+  const { user, loading, isAuthenticated } = useAuth();
+  const { patientId, selectPatient } = useSelectedPatient();
+  const [pendingPatient, setPendingPatient] = useState<number | null>(null);
+  const [dirty, setDirty] = useState(false);
+  // The selected workspace remounts when changing patients to prevent mixing drafts.
+  return (
+    <FinancialLayout
+      operatorName={user?.name || "Conta autenticada"}
+      contextLabel="Prontuário"
+      showFiscalBanner={false}
+    >
       <div className="space-y-5">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4"><div><div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-wider text-indigo-600 font-bold mb-2"><HeartPulse className="w-3.5 h-3.5" /> Acesso clínico auditado</div><h1 className="text-2xl font-extrabold text-slate-900">Prontuário psicológico</h1><p className="text-sm text-slate-500 mt-1">Marina S. Andrade • registros versionados e sem sobrescrita silenciosa.</p></div><div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-700"><ShieldCheck className="w-4 h-4" /> Acesso clínico autorizado</div></div>
-        <div className="grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-5"><section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5"><div className="flex items-center gap-2 mb-4"><Sparkles className="w-4 h-4 text-indigo-600" /><h2 className="font-bold text-slate-900">Novo registro</h2></div><div className="grid grid-cols-2 gap-2 mb-4">{[['ANAMNESIS', 'Anamnese'], ['EVOLUTION', 'Evolução'], ['GOAL', 'Objetivo'], ['CARE_PLAN', 'Plano'], ['RESTRICTED_NOTE', 'Nota restrita']].map(([value, label]) => <button key={value} onClick={() => setRecordType(value as typeof recordType)} className={`px-3 py-2 rounded-xl text-[11px] font-bold border ${recordType === value ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'border-slate-200 text-slate-500'}`}>{label}{value === 'RESTRICTED_NOTE' && <LockKeyhole className="w-3 h-3 inline ml-1" />}</button>)}</div><textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Registre apenas informações necessárias ao cuidado..." className="w-full min-h-48 resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200" /><button onClick={submit} className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold"><Plus className="w-4 h-4" /> Salvar rascunho</button><p className="mt-3 text-[11px] text-slate-500">Notas restritas exigem a permissão <span className="font-mono">EDIT_RESTRICTED_NOTE</span> e geram auditoria específica.</p></section><section className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden"><div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"><div><h2 className="font-bold text-slate-900">Histórico versionado</h2><p className="text-xs text-slate-500 mt-1">{recordsQuery.data?.length ?? 0} registros retornados pela camada clínica.</p></div><FileText className="w-5 h-5 text-slate-400" /></div><div className="divide-y divide-slate-100">{recordsQuery.data && recordsQuery.data.length > 0 ? recordsQuery.data.map((record) => <div key={record.id} className="p-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-800">{record.recordType}</span><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${record.status === 'FINALIZED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{record.status === 'FINALIZED' ? 'FINALIZADO' : 'RASCUNHO'}</span></div><span className="text-[10px] text-slate-400">v{record.version}</span></div><p className="text-xs text-slate-600 mt-2 leading-relaxed">{record.content}</p><div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400"><LockKeyhole className="w-3 h-3" /> Hash de integridade registrado</div></div>) : <div className="p-10 text-center"><div className="text-sm font-bold text-slate-700">Nenhum registro carregado</div><p className="text-xs text-slate-500 mt-1">A camada clínica retorna apenas dados autorizados.</p></div>}</div></section></div>
+        <h1 className="text-2xl font-bold">Prontuário psicológico</h1>
+        <SessionNotice loading={loading} authenticated={isAuthenticated} />
+        {isAuthenticated && (
+          <>
+            <PatientSelector
+              value={patientId}
+              onChange={id => {
+                if (dirty) setPendingPatient(id);
+                else selectPatient(id);
+              }}
+            />
+            {pendingPatient !== null && (
+              <div role="alert" className="rounded-xl border bg-amber-50 p-4">
+                <p>
+                  Trocar de paciente descarta o texto não salvo deste
+                  prontuário.
+                </p>
+                <button
+                  className={buttonClass}
+                  onClick={() => {
+                    selectPatient(pendingPatient);
+                    setPendingPatient(null);
+                    setDirty(false);
+                  }}
+                >
+                  Descartar e trocar
+                </button>
+                <button
+                  className="ml-3 underline"
+                  onClick={() => setPendingPatient(null)}
+                >
+                  Continuar editando
+                </button>
+              </div>
+            )}
+            {patientId > 0 && (
+              <RecordWorkspace
+                key={patientId}
+                patientId={patientId}
+                onDirtyChange={setDirty}
+              />
+            )}
+          </>
+        )}
       </div>
     </FinancialLayout>
   );

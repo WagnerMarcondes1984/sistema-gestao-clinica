@@ -1,6 +1,7 @@
 export const PERMISSIONS = [
   "ALL",
   "VIEW_PATIENT_BASIC",
+  "MANAGE_PATIENTS",
   "VIEW_ADMINISTRATIVE",
   "MANAGE_APPOINTMENTS",
   "VIEW_CLINICAL_RECORD",
@@ -22,6 +23,7 @@ export const ROLE_PERMISSION_TEMPLATES = {
   SUPER_ADMIN: ["ALL"],
   PSYCHOLOGIST: [
     "VIEW_PATIENT_BASIC",
+    "MANAGE_PATIENTS",
     "VIEW_ADMINISTRATIVE",
     "MANAGE_APPOINTMENTS",
     "VIEW_CLINICAL_RECORD",
@@ -29,11 +31,13 @@ export const ROLE_PERMISSION_TEMPLATES = {
   ],
   ASSISTANT: [
     "VIEW_PATIENT_BASIC",
+    "MANAGE_PATIENTS",
     "VIEW_ADMINISTRATIVE",
     "MANAGE_APPOINTMENTS",
   ],
   RECEPTIONIST: [
     "VIEW_PATIENT_BASIC",
+    "MANAGE_PATIENTS",
     "VIEW_ADMINISTRATIVE",
     "MANAGE_APPOINTMENTS",
   ],
@@ -74,6 +78,7 @@ export const ROLE_LABELS: Record<ClinicRole, string> = {
 export const PERMISSION_LABELS: Record<Permission, string> = {
   ALL: "Acesso administrativo total",
   VIEW_PATIENT_BASIC: "Consultar dados básicos",
+  MANAGE_PATIENTS: "Cadastrar, editar e inativar pacientes",
   VIEW_ADMINISTRATIVE: "Consultar dados administrativos",
   MANAGE_APPOINTMENTS: "Consultar e gerenciar agenda",
   VIEW_CLINICAL_RECORD: "Consultar prontuário",

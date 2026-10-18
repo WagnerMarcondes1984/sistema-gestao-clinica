@@ -18,7 +18,7 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 const profile = await mkdtemp(join(tmpdir(), "mindos-browser-"));
 let server, browser, socket;
-const fixture = { userId: null, tenantId: null, emails: [] };
+const fixture = { userId: null, tenantId: null, emails: [], patientNames: [] };
 try {
   const [[owner]] = await db.query(
     "SELECT * FROM users WHERE openId = 'mindos-demo-owner'"
@@ -283,7 +283,7 @@ try {
   }
   async function fill(selector, value, tag = "input") {
     await evaluate(
-      `(() => { const element = document.querySelector(${JSON.stringify(selector)}); const proto = ${tag === "select" ? "HTMLSelectElement" : "HTMLInputElement"}.prototype; Object.getOwnPropertyDescriptor(proto, "value").set.call(element, ${JSON.stringify(value)}); element.dispatchEvent(new Event(${JSON.stringify(tag === "select" ? "change" : "input")}, { bubbles: true })); })()`
+      `(() => { const element = document.querySelector(${JSON.stringify(selector)}); const proto = ${tag === "select" ? "HTMLSelectElement" : tag === "textarea" ? "HTMLTextAreaElement" : "HTMLInputElement"}.prototype; Object.getOwnPropertyDescriptor(proto, "value").set.call(element, ${JSON.stringify(value)}); element.dispatchEvent(new Event(${JSON.stringify(tag === "select" ? "change" : "input")}, { bubbles: true })); })()`
     );
   }
   const click = text =>
@@ -409,6 +409,186 @@ try {
   console.log(
     "Chrome: convite criado e aceito, desativação/reativação, financeiro somente leitura e cancelamento de convite aprovados."
   );
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  const patientName = `Paciente navegador ${suffix}`;
+  const secondName = `Outro paciente navegador ${suffix}`;
+  fixture.patientNames = [patientName, secondName];
+  await page("Page.navigate", { url: `${base}/patients` });
+  await waitForText("Novo paciente");
+  await click("Novo paciente");
+  await waitForText("Salvar paciente");
+  await fill('[role="dialog"] input[required]', patientName);
+  await fill('[role="dialog"] input[type="date"]', "1992-02-20");
+  await fill(
+    '[role="dialog"] input[type="email"]',
+    `patient-${suffix}@example.com`
+  );
+  await fill('[role="dialog"] input[type="tel"]', "(11) 98888-1234");
+  await click("Salvar paciente");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Cadastro não fechou após salvar."
+  );
+  await fill('input[type="search"]', patientName);
+  await click("Buscar");
+  await waitForText(patientName);
+  const newPatient = (
+    await ownerClient.patients.list.query({ search: patientName })
+  ).items[0];
+  assert.ok(newPatient);
+  assert.equal(newPatient.birthDate, "1992-02-20");
+  await click("Novo paciente");
+  await waitForText("Salvar paciente");
+  await fill('[role="dialog"] input[required]', patientName.toUpperCase());
+  await fill('[role="dialog"] input[type="date"]', "1992-02-20");
+  await click("Salvar paciente");
+  await waitForText("Possível paciente duplicado");
+  await page("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+  });
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Modal de duplicidade não fechou."
+  );
+  const editPatient = () =>
+    evaluate(
+      `document.querySelector('[aria-label="Editar ${patientName}"]').click()`
+    );
+  await editPatient();
+  await waitForText("Editar paciente");
+  await fill(
+    '[role="dialog"] fieldset > label:last-child select',
+    "INACTIVE",
+    "select"
+  );
+  await click("Salvar paciente");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Inativação não salvou."
+  );
+  assert.equal(
+    (await ownerClient.patients.get.query({ patientId: newPatient.id }))
+      .administrativeStatus,
+    "INACTIVE"
+  );
+  await page("Page.reload");
+  await waitForText(patientName);
+  await waitForText("Inativo");
+  const patientScreenshot = await page("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: true,
+  });
+  await writeFile(
+    join(tmpdir(), "mindos-pacientes-verificado.png"),
+    Buffer.from(patientScreenshot.data, "base64")
+  );
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  const patientMobile = await page("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: true,
+  });
+  await writeFile(
+    join(tmpdir(), "mindos-pacientes-mobile.png"),
+    Buffer.from(patientMobile.data, "base64")
+  );
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await editPatient();
+  await waitForText("Editar paciente");
+  await fill(
+    '[role="dialog"] fieldset > label:last-child select',
+    "ACTIVE",
+    "select"
+  );
+  await click("Salvar paciente");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Reativação não salvou."
+  );
+  assert.equal(
+    (await ownerClient.patients.get.query({ patientId: newPatient.id }))
+      .administrativeStatus,
+    "ACTIVE"
+  );
+  await evaluate(
+    `document.querySelector('a[href="/patients/view?patientId=${newPatient.id}"]').click()`
+  );
+  await waitForText("Atividade administrativa recente");
+  assert.ok((await evaluate("document.body.innerText")).includes(patientName));
+  assert.ok(
+    !(
+      await evaluate("document.querySelector('section h2').innerText")
+    ).includes("Marina S. Andrade")
+  );
+  const second = await ownerClient.patients.create.mutate({
+    fullName: secondName,
+    birthDate: "1993-02-20",
+  });
+  const recordContent = `Rascunho fictício de verificação ${suffix}`;
+  await page("Page.navigate", {
+    url: `${base}/clinical-records?patientId=${newPatient.id}`,
+  });
+  await waitForText("Novo rascunho");
+  await fill("textarea", recordContent, "textarea");
+  await click("Salvar rascunho");
+  await waitForText("Rascunho salvo para o paciente selecionado.");
+  await page("Page.reload");
+  await waitForText(recordContent);
+  await fill("textarea", "Texto fictício não salvo", "textarea");
+  await fill("select", String(second.id), "select");
+  await waitForText("Trocar de paciente descarta");
+  await click("Continuar editando");
+  assert.equal(
+    await evaluate("document.querySelector('textarea').value"),
+    "Texto fictício não salvo"
+  );
+  await fill("select", String(second.id), "select");
+  await click("Descartar e trocar");
+  await waitForText("Nenhum registro para este paciente.");
+  assert.ok(
+    !(await evaluate("document.body.innerText")).includes(recordContent)
+  );
+  assert.equal(await evaluate("document.querySelector('textarea').value"), "");
+  const startsAt = new Date("2027-02-20T15:00:00Z");
+  await ownerClient.mindos.createAppointment.mutate({
+    patientId: newPatient.id,
+    professionalName: `Profissional teste ${suffix}`,
+    unitName: "Unidade fictícia",
+    serviceType: "Sessão fictícia",
+    mode: "ONLINE",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 3600000),
+  });
+  await page("Page.navigate", {
+    url: `${base}/agenda?patientId=${newPatient.id}`,
+  });
+  await waitForText("Sessão fictícia");
+  assert.ok((await evaluate("document.body.innerText")).includes(patientName));
+  await fill("select", String(second.id), "select");
+  await waitForText("Nenhuma sessão cadastrada para os filtros selecionados.");
+  assert.ok(
+    !(await evaluate("document.body.innerText")).includes("Sessão fictícia")
+  );
+  console.log(
+    "Chrome: criação, busca, duplicidade, edição/inativação/reativação, persistência e seleção real em 360°, prontuário e agenda aprovadas."
+  );
   assert.deepEqual(exceptions, []);
   console.log(
     "Chrome: portal sem sessão, dados do paciente correto, documentos liberados e limpeza após logout aprovados."
@@ -428,6 +608,37 @@ try {
           }, 3000)
         ),
       ]);
+    }
+  }
+  if (fixture.tenantId && fixture.patientNames.length) {
+    const marks = fixture.patientNames.map(() => "?").join(",");
+    const [patients] = await db.query(
+      `SELECT id FROM mindos_patients WHERE tenantId = ? AND fullName IN (${marks})`,
+      [fixture.tenantId, ...fixture.patientNames]
+    );
+    for (const patient of patients) {
+      const [records] = await db.query(
+        "SELECT id FROM mindos_clinical_records WHERE tenantId = ? AND patientId = ?",
+        [fixture.tenantId, patient.id]
+      );
+      for (const record of records)
+        await db.execute(
+          "DELETE FROM mindos_access_audits WHERE tenantId = ? AND subjectType = 'CLINICAL_RECORD' AND subjectId = ?",
+          [fixture.tenantId, record.id]
+        );
+      for (const table of ["mindos_clinical_records", "mindos_appointments"])
+        await db.execute(
+          `DELETE FROM ${table} WHERE tenantId = ? AND patientId = ?`,
+          [fixture.tenantId, patient.id]
+        );
+      await db.execute(
+        "DELETE FROM mindos_access_audits WHERE tenantId = ? AND subjectType = 'PATIENT' AND subjectId = ?",
+        [fixture.tenantId, patient.id]
+      );
+      await db.execute(
+        "DELETE FROM mindos_patients WHERE tenantId = ? AND id = ?",
+        [fixture.tenantId, patient.id]
+      );
     }
   }
   if (fixture.userId) {

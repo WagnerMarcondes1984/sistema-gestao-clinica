@@ -245,6 +245,7 @@ export const mindosTeamInvites = mysqlTable("mindos_team_invites", {
 }, table => [index("mindos_team_invites_tenant_idx").on(table.tenantId, table.status)]);
 
 export const mindosPatients = mysqlTable("mindos_patients", {
+  revision: int("revision").default(1).notNull(),
   portalUserId: int("portalUserId"),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
