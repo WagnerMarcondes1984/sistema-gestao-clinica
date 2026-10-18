@@ -24,6 +24,7 @@ import PatientCare from "./pages/PatientCare";
 import ConsentTemplates from "./pages/ConsentTemplates";
 import PatientPortal from "./pages/PatientPortal";
 import OnlineBooking from "./pages/OnlineBooking";
+import CRM from "./pages/CRM";
 import Team from "./pages/Team";
 import AcceptInvite from "./pages/AcceptInvite";
 
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/finance" component={Dashboard} />
       <Route path="/agenda" component={Agenda} />
       <Route path="/app/scheduling" component={SchedulingSettings} />
+      <Route path="/crm" component={CRM} />
       <Route path="/patients" component={Patients} />
       <Route path="/patients/view" component={Patient360} />
       <Route path="/clinical-records" component={ClinicalRecord} />

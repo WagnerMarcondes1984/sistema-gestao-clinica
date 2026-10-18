@@ -15,7 +15,7 @@ Este plano complementa o `todo.md`. As marcações antigas não comprovam funcio
 - [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
 - [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
 - [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
-- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 137 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 156 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
 - [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
@@ -76,7 +76,7 @@ Aceite: profissional autorizado registra e finaliza atendimento; alteração pos
 
 ## 5. Concluir financeiro e integrações reais — prioridade alta
 
-**Em andamento (18/10/2026): controle financeiro interno implementado para revisão. Provedores a definir; pacotes/repasses sem automação por escolha do usuário. Guia em `docs/ETAPA-5-FINANCEIRO-INTERNO.md`. Não iniciar etapa 6.**
+**Em andamento (18/10/2026): controle financeiro interno implementado para revisão. Provedores a definir; pacotes/repasses sem automação por escolha do usuário. Guia em `docs/ETAPA-5-FINANCEIRO-INTERNO.md`. Usuário autorizou avançar à etapa 6, mantendo as integrações externas pendentes.**
 
 Depende das etapas 2 e 3. A escolha dos provedores antecede sua implementação.
 
@@ -95,17 +95,17 @@ Aceite: pagamento em ambiente de testes do provedor atualiza uma única cobranç
 
 ## 6. Concluir CRM administrativo e comunicação — prioridade alta
 
-**Não iniciada. Aguardar encerramento/revisão da etapa 5 e novo comando.**
+**Em andamento: CRM interno implementado; e-mail/WhatsApp a definir por decisão do usuário. Integrações e comprovação de entrega permanecem pendentes. Guia em `docs/ETAPA-6-CRM-E-COMUNICACAO.md`. Parar para revisão antes da etapa 7.**
 
 Depende da etapa 3 e das permissões da etapa 2.
 
-- [ ] Criar fila de leads com etapas definidas, responsável, origem e próximo contato.
-- [ ] Unificar entrada manual e solicitações online, evitando duplicação de pacientes.
-- [ ] Implementar tarefas de retorno, vencimentos e histórico administrativo de interações.
+- [x] Criar fila de leads com etapas definidas, responsável, origem e próximo contato.
+- [x] Unificar entrada manual e solicitações online, evitando duplicação de pacientes.
+- [x] Implementar tarefas de retorno, vencimentos e histórico administrativo de interações.
 - [ ] Integrar envio real de e-mail e/ou WhatsApp com o provedor escolhido.
 - [ ] Registrar envio, entrega e falha; respeitar preferências de contato e evitar conteúdo clínico nos lembretes.
-- [ ] Criar lembretes de sessão, confirmação e retorno com prevenção de duplicidades.
-- [ ] Calcular indicadores reais de conversão de lead em paciente, comparecimento e retorno.
+- [ ] Criar lembretes de sessão, confirmação e retorno com prevenção de duplicidades. Preparação interna idempotente e preferências implementadas; disparo automático depende do provedor.
+- [x] Calcular indicadores reais de conversão de lead em paciente, comparecimento e retorno.
 
 Aceite: um lead entra, recebe responsável e tarefa, tem contato registrado e vira paciente sem perda de histórico; mensagens mostram a situação real de entrega.
 

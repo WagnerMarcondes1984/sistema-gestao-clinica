@@ -1,10 +1,11 @@
 # Inventário funcional — base de 17/10/2026
 
-Inventário inicial com atualização das etapas 2 a 5; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
+Inventário inicial com atualização das etapas 2 a 6; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
 
 | Rota | Situação | Evidência e trabalho restante |
 |---|---|---|
 | `/` | Operação implementada e testada | Painel com contadores reais e atalhos autorizados; removidos fallback, pendências e ações demonstrativas da rotina clínica. |
+| `/crm` | CRM interno implementado; comunicação externa pendente | Leads, importação com identidade conferida, conversão, tarefas, histórico, preferências, preparação de lembretes e indicadores. Nenhum envio externo. |
 | `/agenda` | Implementado e testado | Criação única/recorrente, edição de ocorrência/série, transições, filtros, fuso e conflitos transacionais. |
 | `/app/scheduling` | Implementado e testado | Profissionais, unidades, serviços, publicação de serviços, disponibilidade e fuso da clínica. |
 | `/patients` | Implementado e testado | Cadastro administrativo, busca, paginação, edição e inativação, com autorização, duplicidades e controle de edição concorrente. |
@@ -31,7 +32,7 @@ Inventário inicial com atualização das etapas 2 a 5; a homologação visual c
 
 - Não existe login independente por e-mail/senha: autenticação usa OAuth Manus.
 - Gestão de equipe, convites e permissões entregue na etapa 2; transferência de propriedade e múltiplas clínicas ativas ficam fora deste bloco.
-- Não existe funil comercial completo, tarefas de follow-up ou integração efetiva de mensagens.
+- CRM administrativo e tarefas de retorno implementados na etapa 6. Funil comercial avançado e integração efetiva de mensagens permanecem pendentes.
 - Ter um registro `MESSAGE_SENT` não comprova envio de mensagem por um provedor.
 - Geração de status/dados bancários e fiscais fictícios removida na etapa 5; legado preservado sem se apresentar como autorização real. Integrações permanecem pendentes.
 - As migrações originais não incluíam o SQL inicial de usuários; restaurado na etapa 1.

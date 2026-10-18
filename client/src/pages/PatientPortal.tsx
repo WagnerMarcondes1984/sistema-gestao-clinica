@@ -1,3 +1,4 @@
+import { CommunicationPreferences } from "../components/CommunicationPreferences";
 import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "../_core/hooks/useAuth";
@@ -127,6 +128,7 @@ export default function PatientPortal() {
                 ["documents", "Documentos"],
                 ["consents", "Consentimentos"],
                 ["financial", "Financeiro"],
+                ["preferences", "Preferências"],
               ].map(([id, label]) => (
                 <button
                   key={id}
@@ -139,6 +141,7 @@ export default function PatientPortal() {
               ))}
             </nav>
             <section className="border rounded-2xl bg-white p-6 space-y-4">
+              {tab === "preferences" && <CommunicationPreferences />}
               {tab === "schedule" && (
                 <>
                   <h2 className="font-bold">Minhas sessões</h2>

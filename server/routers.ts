@@ -20,6 +20,7 @@ import {
   cashMoveInput,
 } from "../shared/finance";
 import { teamRouter } from "./team-router";
+import { crmRouter } from "./crm-router";
 import { careRouter } from "./care-router";
 import { patientsRouter } from "./patients-router";
 import { schedulingRouter } from "./scheduling-router";
@@ -71,6 +72,7 @@ export const appRouter = router({
   team: teamRouter,
   patients: patientsRouter,
   care: careRouter,
+  crm: crmRouter,
   scheduling: schedulingRouter,
   system: systemRouter,
   publicMindos: router({

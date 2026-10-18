@@ -52,3 +52,7 @@ Configure os dois segredos independentes `CLINICAL_INTEGRITY_SECRET` e `DOCUMENT
 ## Revisão do financeiro interno — etapa 5
 
 Aplicar migração 0013, executar build e usar `node scripts/open-review.mjs --finance`. Abre resumo da equipe e portal fictício em janelas separadas, normalmente na porta 3420. Provedores financeiros e fiscais seguem a definir; não adicionar credenciais fictícias nem apresentar simulação como pagamento real. Pacotes e repasses ficam manuais por escolha do usuário. Guia: [ETAPA-5-FINANCEIRO-INTERNO.md](ETAPA-5-FINANCEIRO-INTERNO.md). Legado anterior à migração permanece preservado e bloqueado para movimentação até conferência própria.
+
+## Revisão do CRM — etapa 6
+
+Aplicar a migração 0014, executar build e iniciar `node scripts/open-review.mjs --crm`. Abre `/crm` e portal com contas fictícias separadas, na porta 3420. Não envia e-mail/WhatsApp e não exige novas credenciais: provedores a definir. Os vínculos existentes precisam de concessão explícita de CRM. Guia em [ETAPA-6-CRM-E-COMUNICACAO.md](ETAPA-6-CRM-E-COMUNICACAO.md). O patch `patches/seed-finance-guard.patch` preserva apenas a ampliação do guard financeiro/CRM do seed remoto; para checkout publicado, aplicar com `patch -p1 < patches/seed-finance-guard.patch` antes de usar seed, sempre em banco vazio. Não reaplicar sobre o seed local já atualizado.

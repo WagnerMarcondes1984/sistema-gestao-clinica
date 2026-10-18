@@ -3,5 +3,5 @@
 @@ -20,3 +20,3 @@
      'users', 'clinical_verticals', 'transaction_items', 'transactions',
 -    'accounts_payable', 'cash_sessions', 'financial_audit_logs',
-+    'accounts_payable', 'cash_sessions', 'financial_audit_logs', 'financial_operations', 'financial_movements', 'financial_installments',
++    'accounts_payable', 'cash_sessions', 'financial_audit_logs', 'financial_operations', 'financial_movements', 'financial_installments', 'mindos_crm_leads', 'mindos_crm_tasks', 'mindos_crm_interactions', 'mindos_contact_preferences', 'mindos_crm_reminders',
      'mindos_patient_clinicians', 'mindos_clinical_versions', 'mindos_consent_templates', 'mindos_consent_decisions', 'mindos_reschedule_requests', 'mindos_professionals', 'mindos_units', 'mindos_services', 'mindos_availability', 'mindos_booking_limits', 'mindos_access_audits', 'mindos_team_invites', 'mindos_clinical_records', 'mindos_appointments',
