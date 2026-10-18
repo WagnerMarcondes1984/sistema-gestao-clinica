@@ -61,9 +61,9 @@ Ainda pendente nesta etapa:
 - Preparar procedimento revisado de associação de registros financeiros legados, quando houver uma base real a migrar.
 - Validar login Manus real quando as credenciais do ambiente estiverem configuradas. O seed não cria acesso OAuth.
 
-## Próxima ação concreta
+## Ponto de parada da entrega anterior
 
-**Parar após esta entrega da etapa 2 para análise do usuário. Não iniciar a etapa 3.** A gestão de equipe, os convites e as associações foram implementados, mantendo o provedor atual. A recomendação de trocar o login antes de produção continua pendente de implementação e definição do provedor. O login real depende de `VITE_APP_ID`, `OAUTH_SERVER_URL`, `VITE_OAUTH_PORTAL_URL` e `OWNER_OPEN_ID`, ainda não configurados no ambiente local.
+**Parada atendida na entrega da etapa 2. Usuário autorizou iniciar a etapa 3 em 18/10/2026.** A gestão de equipe, os convites e as associações foram implementados, mantendo o provedor atual. A recomendação de trocar o login antes de produção continua pendente de implementação e definição do provedor. O login real depende de `VITE_APP_ID`, `OAUTH_SERVER_URL`, `VITE_OAUTH_PORTAL_URL` e `OWNER_OPEN_ID`, ainda não configurados no ambiente local.
 
 ## Verificações do checkpoint anterior
 
@@ -100,3 +100,17 @@ Verificações desta rodada: TypeScript aprovado; 61 testes unitários aprovados
 Operação e limites em `EQUIPE-E-CONVITES.md`. O envio do link é manual; não houve mensagem a terceiros. Não foi trocado o provedor de login. A autenticação Manus real e a associação de financeiro legado continuam pendentes. A etapa 3 não foi iniciada.
 
 Checkpoint desta entrega: branch `codex/equipe-e-convites`, baseada em `codex/preparacao-e-seguranca`, para revisão separada sem avançar a etapa 3.
+
+## Etapa 3 — pacientes e seleção real (18/10/2026)
+
+Usuário autorizou o início após revisar a entrega anterior. Implementado cadastro completo de pacientes, incluindo busca paginada, edição, situação, inativação/reativação, validação, prevenção de duplicidades simultâneas e revisão de edição concorrente. A seleção agora alimenta Paciente 360°, prontuário e agenda pelo ID real da clínica.
+
+A migração 0008 adicionou controle de revisão sem apagar dados. Escrita exige `MANAGE_PATIENTS`; vínculos existentes não receberam novas permissões automaticamente. Foram corrigidos filtro de clínica nos pacientes associados à agenda e validação de paciente na leitura de prontuário.
+
+A primeira execução dos testes encontrou busca sensível a acentos. Uma consulta local confirmou que LOCATE não respeitava a equivalência desejada; corrigido usando LIKE com collation explícita e escape de metacaracteres. O teste de navegador também foi ajustado para conferir o cabeçalho do paciente, pois os demais pacientes aparecem legitimamente nas opções do seletor.
+
+Operação, regras de duplicidade e limites em `ETAPA-3-PACIENTES.md`. Etapa 3 permanece em andamento: cadastro de profissionais/serviços/unidades/disponibilidade e restante de agenda/recepção não foram declarados concluídos. Nenhuma implementação da etapa 4 foi iniciada; o prontuário apenas recebeu seleção real e correções no rascunho existente.
+
+Validação deste bloco: TypeScript aprovado; 77 testes unitários aprovados e 1 ignorado; 23 testes de integração aprovados; schema com 21 tabelas e 255 colunas; build aprovado, mantendo aviso de bundle grande. Chrome aprovou cadastro, busca, duplicidade, edição/inativação/reativação, recarregamento, seleção de paciente nas três telas e descarte confirmado de texto não salvo; regressões de equipe, portal e logout também passaram. Capturas em `previews/pacientes-desktop.png` e `previews/pacientes-mobile.png`. Dados temporários de teste removidos ao final.
+
+Checkpoint deste bloco: `codex/etapa-3-pacientes`, baseado em `codex/equipe-e-convites`, para revisão separada. Próximo item do plano: cadastro de profissionais, serviços, unidades e disponibilidade.

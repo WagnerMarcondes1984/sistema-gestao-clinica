@@ -52,7 +52,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
     { href: '/', label: 'MindOS', icon: Sparkles },
     { href: '/agenda', label: 'Agenda', icon: CalendarDays },
     { href: '/reception', label: 'Recepção', icon: UserRoundCheck },
-    { href: '/patients', label: 'Paciente 360°', icon: UsersRound },
+    { href: '/patients', label: 'Pacientes', icon: UsersRound },
     { href: '/clinical-records', label: 'Prontuário', icon: FileHeart },
     { href: '/checkout', label: 'Financeiro', icon: CreditCard, highlight: true },
     { href: '/transactions', label: 'Transações', icon: Receipt },

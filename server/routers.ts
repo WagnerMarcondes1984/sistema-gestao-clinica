@@ -5,6 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, financialProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { teamRouter } from "./team-router";
+import { patientsRouter } from "./patients-router";
 import {
   listClinicalVerticals,
   getClinicalVerticalByCode,
@@ -46,6 +47,7 @@ import {
 
 export const appRouter = router({
   team: teamRouter,
+  patients: patientsRouter,
   system: systemRouter,
   publicMindos: router({
     serviceAreas: publicProcedure.query(async () => listMindosServiceAreas()),
@@ -269,7 +271,7 @@ export const appRouter = router({
     }),
     createAppointment: protectedProcedure
       .input(z.object({
-        patientId: z.number(),
+        patientId: z.number().int().positive(),
         professionalName: z.string().min(2),
         unitName: z.string().min(2),
         serviceType: z.string().min(2),
@@ -284,7 +286,7 @@ export const appRouter = router({
       }),
     createRecurring: protectedProcedure
       .input(z.object({
-        patientId: z.number(),
+        patientId: z.number().int().positive(),
         professionalName: z.string().min(2),
         unitName: z.string().min(2),
         serviceType: z.string().min(2),
@@ -298,7 +300,7 @@ export const appRouter = router({
         return await createMindosRecurringAppointments(ctx.user.id, ctx.user.role, input);
       }),
     patient360: protectedProcedure
-      .input(z.object({ patientId: z.number() }))
+      .input(z.object({ patientId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
         return await getMindosPatient360(ctx.user.id, ctx.user.role, input.patientId);
       }),
@@ -331,13 +333,13 @@ export const appRouter = router({
       return await listMindosFinancialRules(ctx.user.id, ctx.user.role);
     }),
     clinicalRecords: protectedProcedure
-      .input(z.object({ patientId: z.number() }))
+      .input(z.object({ patientId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
         return await listMindosClinicalRecords(ctx.user.id, ctx.user.role, input.patientId);
       }),
     createClinicalRecord: protectedProcedure
       .input(z.object({
-        patientId: z.number(),
+        patientId: z.number().int().positive(),
         appointmentId: z.number().optional(),
         recordType: z.enum(["ANAMNESIS", "EVOLUTION", "RESTRICTED_NOTE", "GOAL", "CARE_PLAN"]),
         content: z.string().min(1),
@@ -353,7 +355,7 @@ export const appRouter = router({
     bookingRequests: protectedProcedure.query(async ({ ctx }) => listMindosBookingRequests(ctx.user.id, ctx.user.role)),
     receptionQueue: protectedProcedure.query(async ({ ctx }) => listMindosReceptionQueue(ctx.user.id, ctx.user.role)),
     portalData: protectedProcedure.query(async ({ ctx }) => listMindosPortalData(ctx.user.id, ctx.user.role)),
-    receptionEvent: protectedProcedure.input(z.object({ patientId: z.number(), eventType: z.enum(["CHECK_IN", "MESSAGE_SENT", "CALL_LOGGED", "PROFILE_REVIEWED"]), messageTemplate: z.string().max(160).optional() })).mutation(async ({ ctx, input }) => createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)),
+    receptionEvent: protectedProcedure.input(z.object({ patientId: z.number().int().positive(), eventType: z.enum(["CHECK_IN", "MESSAGE_SENT", "CALL_LOGGED", "PROFILE_REVIEWED"]), messageTemplate: z.string().max(160).optional() })).mutation(async ({ ctx, input }) => createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)),
     institutionalProfile: protectedProcedure.query(async ({ ctx }) => getMindosInstitutionalProfile(ctx.user.id, ctx.user.role)),
     saveInstitutionalProfile: protectedProcedure.input(z.object({ title: z.string().min(2), metaDescription: z.string().min(2), city: z.string().optional(), faqJson: z.string(), llmsTxt: z.string() })).mutation(async ({ ctx, input }) => saveMindosInstitutionalProfile(ctx.user.id, ctx.user.role, input)),
   }),

@@ -21,3 +21,5 @@ Associações inativas são recusadas. Enquanto não existir seleção explícit
 Gestão visual em `/app/team`, com convites, concessões, desativação e reativação. O servidor aplica um limite de permissões por papel: recepção e financeiro não podem receber permissões clínicas por este fluxo. Proprietário e superadministrador são protegidos; ninguém altera o próprio acesso. Administradores comuns não gerenciam outros administradores.
 
 Convites de paciente exigem seleção de cadastro da própria clínica e conta do e-mail destinatário. Consulte `EQUIPE-E-CONVITES.md` para operação, proteção dos links e limitações da entrega.
+
+Na etapa 3, `MANAGE_PATIENTS` separa escrita do cadastro administrativo da consulta básica. Novos modelos de psicólogo, assistente e recepção incluem esta permissão. Associações existentes exigem concessão revisada em Equipe; nenhum acesso foi ampliado automaticamente. Detalhes em `ETAPA-3-PACIENTES.md`.

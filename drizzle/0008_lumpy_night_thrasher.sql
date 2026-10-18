@@ -1,0 +1,1 @@
+ALTER TABLE `mindos_patients` ADD `revision` int DEFAULT 1 NOT NULL;

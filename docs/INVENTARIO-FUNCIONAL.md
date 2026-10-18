@@ -1,13 +1,14 @@
 # Inventário funcional — base de 17/10/2026
 
-Inventário inicial com atualização das correções da etapa 2; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
+Inventário inicial com atualização das etapas 2 e 3; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
 
 | Rota | Situação | Evidência e trabalho restante |
 |---|---|---|
 | `/` | Parcial | Dashboard MindOS consulta backend autenticado; apresentação sem sessão usa demonstração. Homologar indicadores e permissões. |
-| `/agenda` | Parcial | Lista sessões; botões de novo agendamento, ações e recorrência mostram notificações. CRUD visual e concorrência pendentes. |
-| `/patients` | Parcial | Paciente 360° consulta paciente fixo; cabeçalho e timeline têm dados estáticos; várias abas são placeholders. |
-| `/clinical-records` | Parcial | Consulta e criação de registros persistentes para paciente fixo; falta seleção, edição, adendos e finalização visual. Permissões de notas restritas corrigidas e testadas no backend. |
+| `/agenda` | Parcial | Lista sessões reais com filtro de paciente e data; removidos fallback e ações simuladas. CRUD visual, fuso e concorrência continuam pendentes. |
+| `/patients` | Implementado e testado | Cadastro administrativo, busca, paginação, edição e inativação, com autorização, duplicidades e controle de edição concorrente. |
+| `/patients/view` | Implementado e testado neste bloco | Paciente selecionado por URL, dados administrativos e histórico real, links para agenda e prontuário. Módulos completos dependem das etapas seguintes. |
+| `/clinical-records` | Parcial | Consulta e criação de rascunhos para paciente selecionado; confirma descarte ao trocar de paciente. Edição, adendos e finalização visual pendentes. Permissões de notas restritas corrigidas e testadas no backend. |
 | `/reception` | Parcial | Fila e eventos conectados ao backend; indicadores fixos, cadastro e atalhos demonstrativos. Check-in precisa refletir sessão. |
 | `/portal` | Parcial | Consulta sessões e documentos do paciente derivado da conta; telas demonstrativas removidas. Download, consentimentos, financeiro e reagendamento continuam pendentes. |
 | `/book` | Parcial | Envia solicitação pública; não é reserva confirmada. Resolução da clínica pública e triagem pendentes. |
@@ -33,7 +34,7 @@ Inventário inicial com atualização das correções da etapa 2; a homologaçã
 - As migrações originais não incluíam o SQL inicial de usuários; restaurado na etapa 1.
 - O seed original apagava dados e referenciava usuário de ID 1 sem criá-lo; corrigido na etapa 1.
 
-O levantamento de 105 handlers de clique/envio está em `ACOES-DA-INTERFACE.md`.
+O levantamento estático de handlers de clique/envio está em `ACOES-DA-INTERFACE.md`.
 
 ## Critério para fechar uma ação
 

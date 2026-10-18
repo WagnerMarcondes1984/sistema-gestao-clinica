@@ -34,3 +34,7 @@ Se uma reinicialização interromper a criação inicial do MySQL, preserve o vo
 ## Verificação no navegador
 
 Depois do build, `pnpm test:browser` inicia temporariamente o servidor e o Google Chrome em modo headless. Exige `google-chrome` instalado. Usa apenas o banco local e contas fictícias do seed, com sessões assinadas exclusivamente para esse teste; não substitui a homologação do OAuth Manus real. Confere as requisições HTTP, o paciente exibido, os documentos liberados e o logout, inclusive após recarregar a página. Também confere criação e aceitação de convite, desativação, reativação, financeiro somente leitura e cancelamento pela interface. Os registros temporários da equipe são removidos ao final. Servidor e navegador são encerrados ao terminar. Uma captura fictícia fica em `/tmp/mindos-portal-verificado.png`.
+
+## Cadastro de pacientes (etapa 3)
+
+A migração 0008 adiciona `revision` sem apagar dados. Em `/patients`, contas com `MANAGE_PATIENTS` criam e editam cadastros. O administrador deve conceder essa nova permissão explicitamente aos vínculos existentes em Equipe. Regras de duplicidade e seleção em `ETAPA-3-PACIENTES.md`. A verificação de navegador também cobre cadastro, duplicidade, persistência e seleção real no 360°, prontuário e agenda, com limpeza dos pacientes fictícios criados pelo teste.
