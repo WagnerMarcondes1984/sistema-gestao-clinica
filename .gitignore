@@ -115,3 +115,6 @@ temp/
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
 .project-config.json
+
+# Arquivos privados criptografados, fora do controle de versão
+.mindos-private/

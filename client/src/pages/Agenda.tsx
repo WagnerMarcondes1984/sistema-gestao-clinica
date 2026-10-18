@@ -66,23 +66,23 @@ export default function Agenda() {
     Promise.all([utils.scheduling.invalidate(), utils.mindos.invalidate()]);
   const create = trpc.scheduling.create.useMutation({
     onSuccess: async () => {
+      await refresh();
       setEditor(null);
       toast.success("Agendamento salvo.");
-      await refresh();
     },
   });
   const move = trpc.scheduling.reschedule.useMutation({
     onSuccess: async () => {
+      await refresh();
       setEditor(null);
       toast.success("Reagendamento salvo. Histórico preservado.");
-      await refresh();
     },
   });
   const transition = trpc.scheduling.transition.useMutation({
     onSuccess: async () => {
+      await refresh();
       setAction(null);
       toast.success("Situação da sessão atualizada.");
-      await refresh();
     },
     onError: () => query.refetch(),
   });

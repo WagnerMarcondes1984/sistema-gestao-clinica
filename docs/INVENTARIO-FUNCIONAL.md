@@ -1,6 +1,6 @@
 # Inventário funcional — base de 17/10/2026
 
-Inventário inicial com atualização das etapas 2 e 3; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
+Inventário inicial com atualização das etapas 2, 3 e 4; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
 
 | Rota | Situação | Evidência e trabalho restante |
 |---|---|---|
@@ -9,9 +9,11 @@ Inventário inicial com atualização das etapas 2 e 3; a homologação visual c
 | `/app/scheduling` | Implementado e testado | Profissionais, unidades, serviços, publicação de serviços, disponibilidade e fuso da clínica. |
 | `/patients` | Implementado e testado | Cadastro administrativo, busca, paginação, edição e inativação, com autorização, duplicidades e controle de edição concorrente. |
 | `/patients/view` | Implementado e testado neste bloco | Paciente selecionado por URL, dados administrativos e histórico real, links para agenda e prontuário. Módulos completos dependem das etapas seguintes. |
-| `/clinical-records` | Parcial | Consulta e criação de rascunhos para paciente selecionado; confirma descarte ao trocar de paciente. Edição, adendos e finalização visual pendentes. Permissões de notas restritas corrigidas e testadas no backend. |
-| `/reception` | Implementado e testado | Fila do dia, check-in por sessão, contadores reais, registro manual de ligação e triagem de solicitações. Não envia mensagens externas. |
-| `/portal` | Parcial | Consulta sessões e documentos do paciente derivado da conta; telas demonstrativas removidas. Download, consentimentos, financeiro e reagendamento continuam pendentes. |
+| `/clinical-records` | Implementado e testado | Edição, finalização, adendos, autoria, histórico HMAC e vínculo clínico explícito. Legado identificado sem fabricar histórico. |
+| `/reception` | Implementado e testado | Fila do dia, check-in por sessão, contadores reais, registro manual de ligação e triagem de solicitações. Inclui triagem de reagendamento do portal com substituição atômica de sessão. Não envia mensagens externas. |
+| `/portal` | Implementado e testado | Sessões, documentos privados liberados, consentimentos versionados, receitas vinculadas e pedidos de reagendamento do próprio paciente. |
+| `/patient-care` | Implementado e testado | Documentos privados, vínculo por psicólogo, evidências de consentimento e liberação explícita de receita. |
+| `/app/consents` | Implementado e testado | Rascunho, publicação e aposentadoria de versões; preservação das decisões. |
 | `/book` | Implementado e testado | Serviços publicados, dados mínimos, validação, limites persistentes e solicitação que segue para triagem. Não reserva automaticamente. |
 | `/app/team` | Implementado e testado | Gestão de vínculos, permissões, ativação e convites com isolamento por clínica. Login externo real pendente de configuração. |
 | `/invite` | Implementado e testado | Verificação e aceitação pessoal, expiração e proteção contra reutilização. Fluxo OAuth de retorno coberto por testes com mocks. |

@@ -4,208 +4,554 @@ import { useAuth } from "../_core/hooks/useAuth";
 import { startLogin } from "../const";
 import { trpc } from "../lib/trpc";
 import {
-  CalendarDays,
-  FileCheck2,
-  FileText,
-  LockKeyhole,
-  ShieldCheck,
-} from "lucide-react";
-
-const tabs = [
-  { id: "schedule", label: "Agenda", Icon: CalendarDays },
-  { id: "documents", label: "Documentos", Icon: FileText },
-  { id: "consents", label: "Consentimentos", Icon: FileCheck2 },
-  { id: "financial", label: "Financeiro", Icon: ShieldCheck },
-] as const;
-type Tab = (typeof tabs)[number]["id"];
-
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../components/ui/dialog";
+import {
+  buttonClass,
+  fieldClass,
+} from "../components/patients/PatientSelector";
+import { STATUS_LABELS } from "../../../shared/scheduling";
+const labels = {
+  ACCEPTED: "Aceito",
+  DECLINED: "Não aceito",
+  WITHDRAWN: "Aceite retirado",
+};
 export default function PatientPortal() {
   const { isAuthenticated, loading, logout } = useAuth();
-  const portalQuery = trpc.mindos.portalData.useQuery(undefined, {
+  const query = trpc.mindos.portalData.useQuery(undefined, {
     enabled: isAuthenticated,
     retry: false,
+    refetchInterval: 15000,
   });
-  const [tab, setTab] = useState<Tab>("schedule");
-  const data = portalQuery.data;
-  const appointment = data?.appointments
-    .filter(
-      item =>
-        new Date(item.startsAt).getTime() >= Date.now() &&
-        ["SCHEDULED", "CONFIRMED"].includes(item.status)
-    )
-    .sort(
-      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
-    )[0];
-
+  const data = query.data;
+  const [tab, setTab] = useState("schedule"),
+    [reschedule, setReschedule] = useState<{
+      id: number;
+      date: string;
+      time: string;
+    } | null>(null),
+    [consent, setConsent] = useState<{
+      id: number;
+      title: string;
+      body: string;
+      hash: string;
+      decision: "ACCEPTED" | "DECLINED" | "WITHDRAWN";
+    } | null>(null),
+    [acknowledged, setAcknowledged] = useState(false);
+  const refresh = () => query.refetch();
+  const request = trpc.care.requestReschedule.useMutation({
+    onSuccess: () => {
+      setReschedule(null);
+      refresh();
+    },
+  });
+  const cancel = trpc.care.cancelReschedule.useMutation({ onSuccess: refresh });
+  const decide = trpc.care.decideConsent.useMutation({
+    onSuccess: () => {
+      setConsent(null);
+      setAcknowledged(false);
+      refresh();
+    },
+  });
+  const zone = data?.clinic.timezone || "America/Sao_Paulo";
+  const format = (date: Date) =>
+    new Date(date).toLocaleString("pt-BR", {
+      timeZone: zone,
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="px-5 sm:px-8 py-4 bg-white border-b border-slate-200 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-3">
-          <ShieldCheck className="w-6 h-6 text-indigo-600" aria-hidden="true" />
-          <span className="font-extrabold text-slate-900">
-            MindOS · Portal do paciente
-          </span>
+      <header className="px-5 sm:px-8 py-4 bg-white border-b flex justify-between gap-4">
+        <Link href="/" className="font-bold">
+          MindOS · Portal do paciente
         </Link>
         {isAuthenticated && (
           <button
             onClick={() => void logout()}
-            className="text-sm font-semibold text-indigo-700"
+            className="text-indigo-700 font-semibold"
           >
             Sair
           </button>
         )}
       </header>
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-5">
-        <h1 className="text-2xl font-extrabold text-slate-900">
-          {data
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-5">
+        <h1 className="text-2xl font-bold">
+          {data && isAuthenticated
             ? `Olá, ${data.patient.preferredName || data.patient.fullName}`
             : "Portal do paciente"}
         </h1>
         <p className="text-sm text-slate-500">
-          Acompanhe as informações liberadas pela clínica para o seu cadastro.
+          Informações liberadas pela clínica para seu cadastro.
         </p>
         {loading ? (
           <p role="status">Verificando acesso…</p>
         ) : !isAuthenticated ? (
-          <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-            <p className="text-sm text-slate-600">
-              Entre com sua conta para consultar seus dados.
-            </p>
-            <button
-              onClick={startLogin}
-              className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold"
-            >
+          <section className="border rounded-2xl bg-white p-6 space-y-4">
+            <p>Entre com sua conta para consultar seus dados.</p>
+            <button className={buttonClass} onClick={startLogin}>
               Entrar
             </button>
           </section>
-        ) : portalQuery.isLoading ? (
+        ) : query.isLoading ? (
           <p role="status">Carregando informações liberadas…</p>
-        ) : portalQuery.isError ? (
+        ) : query.error ? (
           <section
             role="alert"
-            className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4"
+            className="border rounded-2xl bg-white p-6 space-y-3"
           >
-            <p className="text-sm text-slate-700">
+            <p>
               Não foi possível abrir o portal. Confirme com a clínica se sua
               conta está vinculada ao cadastro de paciente.
             </p>
-            <button
-              onClick={() => void portalQuery.refetch()}
-              className="text-sm font-semibold text-indigo-700"
-            >
+            <p className="text-sm text-slate-500">{query.error.message}</p>
+            <button className={buttonClass} onClick={() => query.refetch()}>
               Tentar novamente
             </button>
           </section>
         ) : data ? (
           <>
+            <p className="text-sm text-slate-500">
+              {data.clinic.name} • fuso: {zone}
+            </p>
             <nav
               aria-label="Seções do portal"
-              className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-1 overflow-x-auto"
+              className="rounded-2xl bg-white border p-2 flex gap-2 overflow-x-auto"
             >
-              {tabs.map(({ id, label, Icon }) => (
+              {[
+                ["schedule", "Agenda"],
+                ["documents", "Documentos"],
+                ["consents", "Consentimentos"],
+                ["financial", "Financeiro"],
+              ].map(([id, label]) => (
                 <button
                   key={id}
                   aria-current={tab === id ? "page" : undefined}
+                  className={`px-4 py-2 rounded-xl font-semibold ${tab === id ? "bg-indigo-50 text-indigo-700" : "text-slate-600"}`}
                   onClick={() => setTab(id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === id ? "bg-indigo-50 text-indigo-700" : "text-slate-600"}`}
                 >
-                  <Icon className="w-4 h-4" aria-hidden="true" />
                   {label}
                 </button>
               ))}
             </nav>
-            <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <section className="border rounded-2xl bg-white p-6 space-y-4">
               {tab === "schedule" && (
                 <>
-                  <h2 className="font-bold text-slate-900">Próxima sessão</h2>
-                  {appointment ? (
-                    <div className="rounded-xl bg-indigo-50 p-4 space-y-2">
+                  <h2 className="font-bold">Minhas sessões</h2>
+                  {data.appointments.length === 0 && (
+                    <p>Nenhuma sessão cadastrada.</p>
+                  )}
+                  {data.appointments.map(a => (
+                    <article
+                      key={a.id}
+                      className="border-t pt-3 space-y-2"
+                      data-portal-appointment-id={a.id}
+                    >
                       <p className="font-semibold">
-                        {new Date(appointment.startsAt).toLocaleString(
-                          "pt-BR",
-                          { dateStyle: "medium", timeStyle: "short" }
+                        {format(a.startsAt)} • {STATUS_LABELS[a.status]}
+                      </p>
+                      <p className="text-sm">
+                        {a.mode === "ONLINE" ? "Online" : "Presencial"}
+                      </p>
+                      {new Date(a.startsAt) > new Date() &&
+                        ["SCHEDULED", "CONFIRMED"].includes(a.status) && (
+                          <button
+                            className="border rounded-xl px-3 py-2"
+                            disabled={data.rescheduleRequests.some(
+                              r =>
+                                r.appointmentId === a.id &&
+                                r.status === "PENDING"
+                            )}
+                            onClick={() => {
+                              request.reset();
+                              const parts = new Intl.DateTimeFormat("en-CA", {
+                                timeZone: zone,
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                              }).format(new Date(a.startsAt));
+                              setReschedule({
+                                id: a.id,
+                                date: parts,
+                                time: "09:00",
+                              });
+                            }}
+                          >
+                            Solicitar reagendamento
+                          </button>
                         )}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        {appointment.mode === "ONLINE"
-                          ? "Online"
-                          : "Presencial"}{" "}
-                        ·{" "}
-                        {appointment.status === "CONFIRMED"
-                          ? "Confirmada"
-                          : "Agendada"}
-                      </p>
-                    </div>
-                  ) : (
+                    </article>
+                  ))}
+                  <h3 className="font-bold pt-4">
+                    Meus pedidos de reagendamento
+                  </h3>
+                  {data.rescheduleRequests.length === 0 && (
                     <p className="text-sm text-slate-500">
-                      Nenhuma sessão futura confirmada ou agendada.
+                      Nenhum pedido registrado.
+                    </p>
+                  )}
+                  {data.rescheduleRequests.map(r => (
+                    <div key={r.id} className="border-t pt-3 space-y-2">
+                      <p className="text-sm">
+                        Pedido #{r.id} • sessão #{r.appointmentId} •{" "}
+                        {r.date.split("-").reverse().join("/")} às {r.time} •{" "}
+                        {r.status === "PENDING"
+                          ? "Aguardando equipe"
+                          : r.status === "APPROVED"
+                            ? "Aprovado"
+                            : r.status === "DECLINED"
+                              ? "Recusado"
+                              : "Cancelado"}
+                      </p>
+                      {r.status === "PENDING" && (
+                        <button
+                          className="text-indigo-700 underline"
+                          disabled={cancel.isPending}
+                          onClick={() => cancel.mutate({ id: r.id })}
+                        >
+                          Cancelar solicitação
+                        </button>
+                      )}
+                      {r.replacementAppointmentId && (
+                        <p className="text-sm">
+                          Nova sessão #{r.replacementAppointmentId}.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  {cancel.error && (
+                    <p role="alert" className="text-red-700">
+                      {cancel.error.message}
                     </p>
                   )}
                   <p className="text-xs text-slate-500">
-                    Para reagendamento e acesso ao teleatendimento, entre em
-                    contato com a clínica.
+                    A preferência solicitada não altera a sessão até a aprovação
+                    da equipe. Teleatendimento integrado não está disponível
+                    nesta entrega; combine o atendimento online diretamente com
+                    a clínica.
                   </p>
                 </>
               )}
               {tab === "documents" && (
                 <>
-                  <h2 className="font-bold text-slate-900">
-                    Documentos liberados
-                  </h2>
-                  {data.documents.length ? (
-                    <ul className="space-y-2">
-                      {data.documents.map(document => (
-                        <li
-                          key={document.id}
-                          className="rounded-xl bg-slate-50 p-4 text-sm"
-                        >
-                          <span className="font-semibold">
-                            {document.title}
-                          </span>
-                          <span className="text-slate-500">
-                            {" "}
-                            · versão {document.version}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Nenhum documento liberado pela clínica.
-                    </p>
+                  <h2 className="font-bold">Documentos liberados</h2>
+                  {data.documents.length === 0 && (
+                    <p>Nenhum documento liberado pela clínica.</p>
                   )}
-                  <p className="text-xs text-slate-500">
-                    O download de arquivos ainda está em implementação.
-                  </p>
+                  {data.documents.map(d => (
+                    <article key={d.id} className="border-t pt-3 space-y-2">
+                      <p className="font-semibold">
+                        {d.title} • versão {d.version}
+                      </p>
+                      {d.hasFile ? (
+                        <a
+                          className="inline-block border rounded-xl px-3 py-2 text-indigo-700"
+                          href={`/api/private-documents/${d.id}/download`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Baixar documento
+                        </a>
+                      ) : (
+                        <p className="text-xs text-slate-500">
+                          Registro legado sem arquivo disponível.
+                        </p>
+                      )}
+                    </article>
+                  ))}
                 </>
               )}
               {tab === "consents" && (
                 <>
-                  <h2 className="font-bold text-slate-900">Consentimentos</h2>
+                  <h2 className="font-bold">Consentimentos</h2>
                   <p className="text-sm text-slate-500">
-                    A consulta e assinatura de consentimentos pelo portal ainda
-                    estão em implementação.
+                    Leia o texto integral antes de registrar sua decisão. O
+                    aceite identifica sua conta e a versão do termo.
                   </p>
+                  {data.consents.length === 0 && (
+                    <p>Nenhum termo publicado no momento.</p>
+                  )}
+                  {data.consents.map(t => (
+                    <article
+                      key={t.id}
+                      className="border-t pt-3 space-y-3"
+                      data-portal-consent-id={t.id}
+                    >
+                      <h3 className="font-semibold">
+                        {t.title} • v{t.version}
+                      </h3>
+                      <p className="whitespace-pre-wrap text-sm">{t.body}</p>
+                      <p className="text-sm">
+                        {t.decision
+                          ? labels[t.decision]
+                          : "Aguardando sua decisão"}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {t.decision !== "ACCEPTED" ? (
+                          <>
+                            <button
+                              className={buttonClass}
+                              onClick={() => {
+                                decide.reset();
+                                setAcknowledged(false);
+                                setConsent({
+                                  id: t.id,
+                                  title: t.title,
+                                  body: t.body,
+                                  hash: t.bodyHash,
+                                  decision: "ACCEPTED",
+                                });
+                              }}
+                            >
+                              Aceitar termo
+                            </button>
+                            <button
+                              className="border rounded-xl px-3 py-2"
+                              onClick={() => {
+                                decide.reset();
+                                setAcknowledged(false);
+                                setConsent({
+                                  id: t.id,
+                                  title: t.title,
+                                  body: t.body,
+                                  hash: t.bodyHash,
+                                  decision: "DECLINED",
+                                });
+                              }}
+                            >
+                              Não aceitar
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="border rounded-xl px-3 py-2"
+                            onClick={() => {
+                              decide.reset();
+                              setAcknowledged(false);
+                              setConsent({
+                                id: t.id,
+                                title: t.title,
+                                body: t.body,
+                                hash: t.bodyHash,
+                                decision: "WITHDRAWN",
+                              });
+                            }}
+                          >
+                            Retirar aceite
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                  <h3 className="font-bold pt-4">Histórico de decisões</h3>
+                  {data.consentHistory.length === 0 && (
+                    <p>Nenhuma decisão registrada.</p>
+                  )}
+                  {data.consentHistory.map(d => {
+                    const snapshot = JSON.parse(d.snapshotJson) as {
+                      title: string;
+                      version: number;
+                      body: string;
+                    };
+                    const active =
+                      data.consentHistory
+                        .filter(e => e.templateId === d.templateId)
+                        .at(-1)?.id === d.id && d.decision === "ACCEPTED";
+                    return (
+                      <details key={d.id} className="border-t pt-3">
+                        <summary>
+                          {snapshot.title} • v{snapshot.version} •{" "}
+                          {labels[d.decision]} • {format(d.decidedAt)}
+                        </summary>
+                        <p className="whitespace-pre-wrap text-sm mt-2">
+                          {snapshot.body}
+                        </p>
+                        <p className="text-xs text-slate-500 break-all mt-2">
+                          Evidência: {d.evidenceHash}
+                        </p>
+                        {active &&
+                          !data.consents.some(t => t.id === d.templateId) && (
+                            <button
+                              className="border rounded-xl px-3 py-2 mt-3"
+                              onClick={() => {
+                                decide.reset();
+                                setAcknowledged(false);
+                                setConsent({
+                                  id: d.templateId,
+                                  title: snapshot.title,
+                                  body: snapshot.body,
+                                  hash: d.bodyHash,
+                                  decision: "WITHDRAWN",
+                                });
+                              }}
+                            >
+                              Retirar aceite desta versão
+                            </button>
+                          )}
+                      </details>
+                    );
+                  })}
                 </>
               )}
               {tab === "financial" && (
                 <>
-                  <h2 className="font-bold text-slate-900">Financeiro</h2>
+                  <h2 className="font-bold">Financeiro</h2>
                   <p className="text-sm text-slate-500">
-                    A consulta de cobranças e comprovantes pelo portal ainda
-                    está em implementação.
+                    Lançamentos internos vinculados ao seu cadastro e liberados
+                    pela equipe. Pagamentos e comprovantes bancários dependem da
+                    integração financeira.
                   </p>
+                  {data.financial.length === 0 && (
+                    <p>Nenhuma cobrança liberada para consulta.</p>
+                  )}
+                  {data.financial.map(f => (
+                    <article key={f.id} className="border-t pt-3 space-y-1">
+                      <p className="font-semibold">
+                        {f.code} • {f.title}
+                      </p>
+                      <p>
+                        {(f.totalAmount / 100).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}{" "}
+                        • Situação interna: {f.status}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        Valor registrado como pago:{" "}
+                        {(f.paidAmount / 100).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}{" "}
+                        • Vencimento: {format(f.dueDate)}
+                      </p>
+                    </article>
+                  ))}
                 </>
               )}
             </section>
-            <p className="flex items-center gap-2 text-xs text-slate-500">
-              <LockKeyhole className="w-4 h-4" aria-hidden="true" /> Acesso
-              restrito ao paciente vinculado à conta.
-            </p>
           </>
-        ) : (
-          <p role="status">Nenhuma informação disponível.</p>
-        )}
+        ) : null}
+        <Dialog
+          open={Boolean(reschedule && isAuthenticated)}
+          onOpenChange={open => {
+            if (!open && !request.isPending) setReschedule(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Solicitar reagendamento</DialogTitle>
+              <DialogDescription>
+                Informe uma preferência no fuso da clínica. A equipe irá
+                conferir a disponibilidade antes de alterar sua sessão.
+              </DialogDescription>
+            </DialogHeader>
+            {reschedule && (
+              <form
+                className="space-y-3"
+                onSubmit={e => {
+                  e.preventDefault();
+                  request.mutate({
+                    appointmentId: reschedule.id,
+                    date: reschedule.date,
+                    time: reschedule.time,
+                  });
+                }}
+              >
+                <label className="block text-sm">
+                  Nova data
+                  <input
+                    id="portal-request-date"
+                    type="date"
+                    required
+                    className={fieldClass}
+                    value={reschedule.date}
+                    onChange={e =>
+                      setReschedule({ ...reschedule, date: e.target.value })
+                    }
+                  />
+                </label>
+                <label className="block text-sm">
+                  Horário de preferência
+                  <input
+                    id="portal-request-time"
+                    type="time"
+                    required
+                    className={fieldClass}
+                    value={reschedule.time}
+                    onChange={e =>
+                      setReschedule({ ...reschedule, time: e.target.value })
+                    }
+                  />
+                </label>
+                {request.error && (
+                  <p role="alert" className="text-red-700">
+                    {request.error.message}
+                  </p>
+                )}
+                <button className={buttonClass} disabled={request.isPending}>
+                  Enviar solicitação
+                </button>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+        <Dialog
+          open={Boolean(consent && isAuthenticated)}
+          onOpenChange={open => {
+            if (!open && !decide.isPending) setConsent(null);
+          }}
+        >
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {consent?.decision === "ACCEPTED"
+                  ? "Confirmar aceite"
+                  : consent?.decision === "DECLINED"
+                    ? "Registrar não aceite"
+                    : "Retirar aceite"}
+              </DialogTitle>
+              <DialogDescription>
+                A decisão será registrada com sua identidade autenticada, a
+                versão do texto e a data do servidor.
+              </DialogDescription>
+            </DialogHeader>
+            <p className="font-semibold">{consent?.title}</p>
+            <p className="text-sm whitespace-pre-wrap">{consent?.body}</p>
+            <label className="flex gap-2 text-sm">
+              <input
+                id="portal-consent-ack"
+                type="checkbox"
+                checked={acknowledged}
+                onChange={e => setAcknowledged(e.target.checked)}
+              />{" "}
+              Li o texto e confirmo esta decisão.
+            </label>
+            {decide.error && (
+              <p role="alert" className="text-red-700">
+                {decide.error.message}
+              </p>
+            )}
+            <button
+              className={buttonClass}
+              disabled={!acknowledged || decide.isPending}
+              onClick={() => {
+                if (consent)
+                  decide.mutate({
+                    templateId: consent.id,
+                    bodyHash: consent.hash,
+                    decision: consent.decision,
+                    acknowledged,
+                  });
+              }}
+            >
+              Confirmar decisão
+            </button>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

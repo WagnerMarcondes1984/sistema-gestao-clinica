@@ -20,6 +20,8 @@ import Patient360 from "./pages/Patient360";
 import AdminStudio from "./pages/AdminStudio";
 import ClinicalRecord from "./pages/ClinicalRecord";
 import Reception from "./pages/Reception";
+import PatientCare from "./pages/PatientCare";
+import ConsentTemplates from "./pages/ConsentTemplates";
 import PatientPortal from "./pages/PatientPortal";
 import OnlineBooking from "./pages/OnlineBooking";
 import Team from "./pages/Team";
@@ -37,6 +39,8 @@ function Router() {
       <Route path="/clinical-records" component={ClinicalRecord} />
       <Route path="/reception" component={Reception} />
       <Route path="/portal" component={PatientPortal} />
+      <Route path="/patient-care" component={PatientCare} />
+      <Route path="/app/consents" component={ConsentTemplates} />
       <Route path="/book" component={OnlineBooking} />
       <Route path="/app/admin-studio" component={AdminStudio} />
       <Route path="/app/team" component={Team} />

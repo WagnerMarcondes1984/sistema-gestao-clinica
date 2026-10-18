@@ -19,7 +19,7 @@ async function seed() {
   const tables = [
     'users', 'clinical_verticals', 'transaction_items', 'transactions',
     'accounts_payable', 'cash_sessions', 'financial_audit_logs',
-    'mindos_professionals', 'mindos_units', 'mindos_services', 'mindos_availability', 'mindos_booking_limits', 'mindos_access_audits', 'mindos_team_invites', 'mindos_clinical_records', 'mindos_appointments',
+    'mindos_patient_clinicians', 'mindos_clinical_versions', 'mindos_consent_templates', 'mindos_consent_decisions', 'mindos_reschedule_requests', 'mindos_professionals', 'mindos_units', 'mindos_services', 'mindos_availability', 'mindos_booking_limits', 'mindos_access_audits', 'mindos_team_invites', 'mindos_clinical_records', 'mindos_appointments',
     'mindos_patients', 'mindos_memberships', 'mindos_cms_versions',
     'mindos_financial_rules', 'mindos_booking_requests', 'mindos_institutional_profiles',
     'mindos_service_areas', 'mindos_portal_documents', 'mindos_reception_events', 'mindos_tenants',

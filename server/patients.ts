@@ -89,6 +89,11 @@ export async function listPatients(
     tenantName: tenant.name,
     timezone: tenant.timezone,
     canManage: hasMindosPermission(membership, "MANAGE_PATIENTS"),
+    canViewDocuments: hasMindosPermission(membership, "VIEW_DOCUMENTS"),
+    canManageDocuments: hasMindosPermission(membership, "MANAGE_DOCUMENTS"),
+    canManageTeam: hasMindosPermission(membership, "MANAGE_TEAM"),
+    canViewFinancial: hasMindosPermission(membership, "VIEW_FINANCIAL"),
+    canManageFinancial: hasMindosPermission(membership, "MANAGE_FINANCIAL"),
     canSchedule: hasMindosPermission(membership, "MANAGE_APPOINTMENTS"),
     canViewClinical: hasMindosPermission(membership, "VIEW_CLINICAL_RECORD"),
   };

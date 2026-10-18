@@ -91,6 +91,10 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
       "VIEW_CLINICAL_RECORD",
       "EDIT_CLINICAL_RECORD",
     ]);
+    await insert(
+      "INSERT INTO mindos_patient_clinicians(tenantId,patientId,userId,assignedByUserId) VALUES(?,?,?,?)",
+      [tenants[0], patients[0], users[3], users[0]]
+    );
     patient = await user(tenants[0], "PATIENT", []);
     await db.execute(
       "UPDATE mindos_patients SET portalUserId = ? WHERE id = ?",
@@ -143,7 +147,7 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
           [
             tenants[0],
             patients[0],
-            users[0],
+            users[3],
             type,
             "Conteúdo fictício para teste de autorização.",
           ]
@@ -166,6 +170,8 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
           "accounts_payable",
           "cash_sessions",
           "mindos_access_audits",
+          "mindos_clinical_versions",
+          "mindos_patient_clinicians",
           "mindos_clinical_records",
           "mindos_reception_events",
           "mindos_portal_documents",
@@ -248,7 +254,10 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
       )
     ).toEqual(["EVOLUTION"]);
     await expect(
-      clinician.mindos.finalizeClinicalRecord({ recordId: records[1] })
+      clinician.mindos.finalizeClinicalRecord({
+        recordId: records[1],
+        revision: 1,
+      })
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(
       await ownerA.mindos.clinicalRecords({ patientId: patients[0] })

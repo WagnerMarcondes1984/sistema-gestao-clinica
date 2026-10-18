@@ -15,7 +15,7 @@ Este plano complementa o `todo.md`. As marcações antigas não comprovam funcio
 - [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
 - [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
 - [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
-- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 138 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 170 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
 - [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
@@ -40,7 +40,7 @@ Aceite: testes com duas clínicas comprovam isolamento; usuário anônimo não c
 
 ## 3. Concluir pacientes, equipe, agenda e recepção — prioridade alta
 
-**Implementada e validada localmente em 18/10/2026; parada para revisão visual do usuário. Operação e evidências em `docs/ETAPA-3-OPERACAO.md`. Não iniciar a etapa 4 sem novo comando.**
+**Revisada pelo usuário; etapa 4 autorizada em 18/10/2026. Evidências em `docs/ETAPA-3-OPERACAO.md`.**
 
 Depende da etapa 2.
 
@@ -59,22 +59,24 @@ Aceite: cadastrar paciente, agendar, receber solicitação online, confirmar, fa
 
 ## 4. Concluir prontuário, documentos e portal — prioridade alta
 
-**Não iniciada: aguardar análise do usuário da etapa 3 e novo comando.**
+**Implementada e validada localmente; aguardando revisão visual. Guia em `docs/ETAPA-4-PRONTUARIO-E-PORTAL.md`. Parar antes da etapa 5.**
 
 Depende das etapas 2 e 3.
 
-- [ ] Completar edição de rascunhos, finalização e adendos, preservando histórico e autoria.
-- [ ] Proteger versões finalizadas contra sobrescrita e validar integridade dos registros.
-- [ ] Definir quais profissionais podem acessar cada paciente e aplicar essa regra no servidor.
-- [ ] Implementar upload, armazenamento privado, download autorizado e revogação de documentos.
-- [ ] Implementar consentimentos versionados, aceite ou assinatura conforme o requisito definido, com evidência de autoria e data.
-- [ ] Conectar o portal ao nome, sessões, documentos e financeiro reais do paciente.
-- [ ] Persistir solicitações de reagendamento e encaminhá-las à equipe.
-- [ ] Implementar teleatendimento com controle de acesso por sessão se estiver no escopo do lançamento; caso contrário, remover a ação demonstrativa.
+- [x] Completar edição de rascunhos, finalização e adendos, preservando histórico e autoria.
+- [x] Proteger versões finalizadas contra sobrescrita e validar integridade dos registros.
+- [x] Definir quais profissionais podem acessar cada paciente e aplicar essa regra no servidor.
+- [x] Implementar upload, armazenamento privado, download autorizado e revogação de documentos.
+- [x] Implementar consentimentos versionados, aceite ou assinatura conforme o requisito definido, com evidência de autoria e data.
+- [x] Conectar o portal ao nome, sessões, documentos e financeiro reais do paciente.
+- [x] Persistir solicitações de reagendamento e encaminhá-las à equipe.
+- [x] Implementar teleatendimento com controle de acesso por sessão se estiver no escopo do lançamento; caso contrário, remover a ação demonstrativa.
 
 Aceite: profissional autorizado registra e finaliza atendimento; alteração posterior gera histórico; paciente vê apenas documentos liberados; revogação impede novo acesso; ações do portal produzem resultado persistente.
 
 ## 5. Concluir financeiro e integrações reais — prioridade alta
+
+**Não iniciada: aguardar análise da etapa 4 e novo comando do usuário.**
 
 Depende das etapas 2 e 3. A escolha dos provedores antecede sua implementação.
 

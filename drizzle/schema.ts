@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, index, uniqueIndex } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, mediumtext, timestamp, varchar, boolean, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -48,6 +48,8 @@ export type ClinicalVertical = typeof clinicalVerticals.$inferSelect;
  * Transações Financeiras e Cobranças Clínicas
  */
 export const transactions = mysqlTable("transactions", {
+  patientId: int("patientId"),
+  portalVisible: boolean("portalVisible").default(false).notNull(),
   // Legado sem associação explícita permanece invisível até migração revisada.
   tenantId: int("tenantId"),
   id: int("id").autoincrement().primaryKey(),
@@ -289,6 +291,9 @@ export type MindosAppointment = typeof mindosAppointments.$inferSelect;
 export type InsertMindosAppointment = typeof mindosAppointments.$inferInsert;
 
 export const mindosClinicalRecords = mysqlTable("mindos_clinical_records", {
+  revision: int("revision").default(1).notNull(),
+  parentRecordId: int("parentRecordId"),
+  integrityVersion: int("integrityVersion").default(0).notNull(),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   patientId: int("patientId").notNull(),
@@ -296,7 +301,7 @@ export const mindosClinicalRecords = mysqlTable("mindos_clinical_records", {
   authorUserId: int("authorUserId").notNull(),
   recordType: mysqlEnum("recordType", ["ANAMNESIS", "EVOLUTION", "RESTRICTED_NOTE", "GOAL", "CARE_PLAN"]).notNull(),
   status: mysqlEnum("status", ["DRAFT", "FINALIZED", "ADDENDUM"]).default("DRAFT").notNull(),
-  content: text("content").notNull(),
+  content: mediumtext("content").notNull(),
   version: int("version").default(1).notNull(),
   integrityHash: varchar("integrityHash", { length: 128 }),
   finalizedAt: timestamp("finalizedAt"),
@@ -391,6 +396,16 @@ export const mindosServiceAreas = mysqlTable("mindos_service_areas", {
 export type MindosServiceArea = typeof mindosServiceAreas.$inferSelect;
 
 export const mindosPortalDocuments = mysqlTable("mindos_portal_documents", {
+  fileKey: varchar("fileKey", { length: 64 }),
+  fileName: varchar("fileName", { length: 180 }),
+  mimeType: varchar("mimeType", { length: 64 }),
+  fileSize: int("fileSize"),
+  fileHash: varchar("fileHash", { length: 64 }),
+  portalVisible: boolean("portalVisible").default(false).notNull(),
+  scope: mysqlEnum("scope", ["ADMINISTRATIVE", "CLINICAL"]).default("ADMINISTRATIVE").notNull(),
+  uploadedByUserId: int("uploadedByUserId"),
+  revokedAt: timestamp("revokedAt"),
+  revision: int("revision").default(1).notNull(),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   patientId: int("patientId").notNull(),
@@ -443,3 +458,29 @@ export const mindosBookingLimits = mysqlTable("mindos_booking_limits", {
   keyHash: varchar("keyHash", { length: 64 }).notNull(), windowStart: timestamp("windowStart").notNull(),
   attempts: int("attempts").default(0).notNull(),
 }, table => [uniqueIndex("mindos_booking_limits_key_unique").on(table.tenantId, table.keyHash)]);
+
+export const mindosPatientClinicians = mysqlTable("mindos_patient_clinicians", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(), patientId: int("patientId").notNull(), userId: int("userId").notNull(),
+  active: boolean("active").default(true).notNull(), assignedByUserId: int("assignedByUserId").notNull(), updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, t => [uniqueIndex("mindos_patient_clinicians_unique").on(t.tenantId,t.patientId,t.userId)]);
+export const mindosClinicalVersions = mysqlTable("mindos_clinical_versions", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(), recordId: int("recordId").notNull(), revision: int("revision").notNull(),
+  snapshotJson: mediumtext("snapshotJson").notNull(), integrityHash: varchar("integrityHash",{length:64}).notNull(), previousHash: varchar("previousHash",{length:64}),
+  actorUserId: int("actorUserId").notNull(), action: varchar("action",{length:32}).notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, t => [uniqueIndex("mindos_clinical_versions_unique").on(t.tenantId,t.recordId,t.revision)]);
+export const mindosConsentTemplates = mysqlTable("mindos_consent_templates", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(), code: varchar("code",{length:64}).notNull(), version: int("version").notNull(), revision: int("revision").default(1).notNull(),
+  title: varchar("title",{length:180}).notNull(), body: mediumtext("body").notNull(), bodyHash: varchar("bodyHash",{length:64}).notNull(), status: mysqlEnum("status",["DRAFT","PUBLISHED","RETIRED"]).default("DRAFT").notNull(),
+  createdByUserId: int("createdByUserId").notNull(), publishedByUserId: int("publishedByUserId"), publishedAt: timestamp("publishedAt"), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, t => [uniqueIndex("mindos_consent_template_version_unique").on(t.tenantId,t.code,t.version)]);
+export const mindosConsentDecisions = mysqlTable("mindos_consent_decisions", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(), patientId: int("patientId").notNull(), templateId: int("templateId").notNull(), actorUserId: int("actorUserId").notNull(),
+  decision: mysqlEnum("decision",["ACCEPTED","DECLINED","WITHDRAWN"]).notNull(), snapshotJson: mediumtext("snapshotJson").notNull(), bodyHash: varchar("bodyHash",{length:64}).notNull(),
+  previousHash: varchar("previousHash",{length:64}), evidenceHash: varchar("evidenceHash",{length:64}).notNull(), decidedAt: timestamp("decidedAt",{fsp:3}).notNull(),
+},t => [index("mindos_consent_decisions_patient_idx").on(t.tenantId,t.patientId,t.templateId)]);
+export const mindosRescheduleRequests = mysqlTable("mindos_reschedule_requests",{
+  id: int("id").autoincrement().primaryKey(),tenantId: int("tenantId").notNull(), patientId: int("patientId").notNull(), appointmentId: int("appointmentId").notNull(),
+  activeKey: varchar("activeKey",{length:64}), date: varchar("date",{length:10}).notNull(), time: varchar("time",{length:8}).notNull(),
+  status: mysqlEnum("status",["PENDING","APPROVED","DECLINED","CANCELLED"]).default("PENDING").notNull(), revision: int("revision").default(1).notNull(),
+  requestedByUserId: int("requestedByUserId").notNull(), resolvedByUserId: int("resolvedByUserId"), replacementAppointmentId: int("replacementAppointmentId"), createdAt: timestamp("createdAt").defaultNow().notNull(),resolvedAt:timestamp("resolvedAt"),
+},t=>[uniqueIndex("mindos_reschedule_requests_active_unique").on(t.tenantId,t.activeKey)]);

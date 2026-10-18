@@ -23,3 +23,9 @@ Gestão visual em `/app/team`, com convites, concessões, desativação e reativ
 Convites de paciente exigem seleção de cadastro da própria clínica e conta do e-mail destinatário. Consulte `EQUIPE-E-CONVITES.md` para operação, proteção dos links e limitações da entrega.
 
 Na etapa 3, `MANAGE_PATIENTS` separa escrita do cadastro administrativo da consulta básica. Novos modelos de psicólogo, assistente e recepção incluem esta permissão. Associações existentes exigem concessão revisada em Equipe; nenhum acesso foi ampliado automaticamente. Detalhes em `ETAPA-3-PACIENTES.md`.
+
+## Complemento da etapa 4
+
+Psicólogos precisam também de vínculo ativo explícito com cada paciente. Administradores supervisionam a própria clínica, mas não editam rascunhos de outro autor. Registros finalizados são imutáveis para todos; mudanças são adendos.
+
+`VIEW_DOCUMENTS` e `MANAGE_DOCUMENTS` distinguem consulta e gestão. Modelos novos de psicólogo, assistente e recepção incluem documentos administrativos; documentos clínicos continuam sujeitos ao acesso clínico. Associações existentes não recebem permissões automaticamente. Gestão de vínculos clínicos exige `MANAGE_TEAM`; liberação financeira exige `MANAGE_FINANCIAL`. Paciente consulta somente documentos liberados, decisões e receitas explicitamente vinculadas à própria conta.
