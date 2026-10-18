@@ -48,3 +48,7 @@ Depois das migrações e do build, execute `node scripts/open-review.mjs`. O scr
 Use `node scripts/open-review.mjs --care` após compilar. Abre equipe e paciente em janelas com sessões isoladas de duas horas; fechar todas encerra o servidor. O banco fictício é preservado.
 
 Configure os dois segredos independentes `CLINICAL_INTEGRITY_SECRET` e `DOCUMENT_ENCRYPTION_SECRET` (aleatórios, pelo menos 32 caracteres). Não publique `.env` nem `.mindos-private`. `PRIVATE_DOCUMENT_ROOT` deve ser persistente e privado, fora de `client` e `dist/public`. Backup precisa preservar banco, arquivos e chaves. Migrações 0011/0012 são necessárias. Guia completo em [ETAPA-4-PRONTUARIO-E-PORTAL.md](ETAPA-4-PRONTUARIO-E-PORTAL.md).
+
+## Revisão do financeiro interno — etapa 5
+
+Aplicar migração 0013, executar build e usar `node scripts/open-review.mjs --finance`. Abre resumo da equipe e portal fictício em janelas separadas, normalmente na porta 3420. Provedores financeiros e fiscais seguem a definir; não adicionar credenciais fictícias nem apresentar simulação como pagamento real. Pacotes e repasses ficam manuais por escolha do usuário. Guia: [ETAPA-5-FINANCEIRO-INTERNO.md](ETAPA-5-FINANCEIRO-INTERNO.md). Legado anterior à migração permanece preservado e bloqueado para movimentação até conferência própria.

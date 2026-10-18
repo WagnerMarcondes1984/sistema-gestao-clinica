@@ -419,10 +419,14 @@ export default function PatientPortal() {
                           currency: "BRL",
                         })}{" "}
                         • Situação interna: {f.status}
+                        {f.ledgerVersion !== 1 && " • Legado não conferido"}
                       </p>
                       <p className="text-sm text-slate-500">
-                        Valor registrado como pago:{" "}
-                        {(f.paidAmount / 100).toLocaleString("pt-BR", {
+                        Recebido líquido registrado:{" "}
+                        {(
+                          (f.paidAmount - f.refundedAmount) /
+                          100
+                        ).toLocaleString("pt-BR", {
                           style: "currency",
                           currency: "BRL",
                         })}{" "}

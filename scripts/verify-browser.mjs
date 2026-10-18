@@ -1313,6 +1313,234 @@ try {
   console.log(
     "Chrome: edição, finalização, adendo, histórico, vínculo clínico, upload privado, liberação, download autenticado, revogação, termos versionados, aceite/não aceite/retirada, financeiro liberado e reagendamento pelo portal aprovados."
   );
+  // Etapa 5: exercita a interface e confere o resultado persistido.
+  const labelFill = async (label, value, tag = "input") => {
+    const get = `[...document.querySelectorAll('label')].find(l=>l.firstChild?.textContent.trim()===${JSON.stringify(label)})?.querySelector(${JSON.stringify(tag)})`;
+    await waitForCondition(
+      `(()=>{const e=${get};return !!e && !e.disabled ${tag === "select" ? `&& [...e.options].some(o=>o.value===${JSON.stringify(String(value))})` : ""};})()`,
+      `Campo indisponível: ${label}`
+    );
+    await evaluate(
+      `(()=>{const e=${get};Object.getOwnPropertyDescriptor(${tag === "select" ? "HTMLSelectElement" : "HTMLInputElement"}.prototype,'value').set.call(e,${JSON.stringify(String(value))});e.dispatchEvent(new Event(${JSON.stringify(tag === "select" ? "change" : "input")},{bubbles:true}));})()`
+    );
+  };
+  const closedDialog = () =>
+    waitForCondition(
+      "!document.querySelector('[role=dialog]')",
+      "Operação financeira não concluiu."
+    );
+  const financeArticleClick = async (title, button) => {
+    const expression = `(()=>{const a=[...document.querySelectorAll('article')].find(a=>a.textContent.includes(${JSON.stringify(title)}));return a && [...a.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(button)} && !b.disabled);})()`;
+    await waitForCondition(`!!${expression}`, "Ação financeira não disponível");
+    await evaluate(`${expression}.click()`);
+  };
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/checkout` });
+  await waitForText("Nova cobrança interna");
+  await labelFill("Paciente", opPatient.id, "select");
+  const financeTitle = `Cobrança financeira fictícia ${suffix}`;
+  await labelFill("Descrição", financeTitle);
+  await labelFill("Serviço", "Sessão fictícia");
+  await labelFill("Preço unitário (R$)", "10.01");
+  await labelFill("Desconto (R$)", "0.01");
+  await labelFill("Acréscimo (R$)", "0.02");
+  await labelFill("Parcelas", "3");
+  await labelFill("Primeiro vencimento", preferredDate);
+  await click("Revisar cobrança");
+  await waitForText("Revisar nova cobrança");
+  await click("Confirmar registro");
+  await closedDialog();
+  let financeRow = (await operation.transactions.list.query({})).find(
+    r => r.title === financeTitle
+  );
+  assert.equal(financeRow.totalAmount, 1002);
+  assert.deepEqual(
+    financeRow.parts.map(p => p.amount),
+    [334, 334, 334]
+  );
+  assert.equal(financeRow.paidAmount, 0);
+  assert.equal(financeRow.invoiceStatus, "NOT_ISSUED");
+  await page("Page.navigate", { url: `${base}/transactions` });
+  await waitForText(financeTitle);
+  await financeArticleClick(financeTitle, "Registrar recebimento manual");
+  await labelFill(
+    "Referência do comprovante / controle",
+    "Referência fictícia do navegador"
+  );
+  await click("Confirmar registro");
+  await waitForText("Confira:");
+  await click("Confirmar registro");
+  await closedDialog();
+  financeRow = await operation.transactions.getByCode.query({
+    code: financeRow.code,
+  });
+  assert.equal(financeRow.paidAmount, 1002);
+  assert.equal(financeRow.invoiceStatus, "NOT_ISSUED");
+  await financeArticleClick(financeTitle, "Registrar reversão interna");
+  await labelFill("Valor (R$)", "2.00");
+  await labelFill(
+    "Referência do comprovante / controle",
+    "Devolução fictícia conferida"
+  );
+  await labelFill("Motivo da reversão", "Reversão fictícia para teste visual");
+  await click("Confirmar registro");
+  await waitForText("Confira:");
+  await click("Confirmar registro");
+  await closedDialog();
+  financeRow = await operation.transactions.getByCode.query({
+    code: financeRow.code,
+  });
+  assert.equal(financeRow.refundedAmount, 200);
+  assert.equal(financeRow.status, "PARTIALLY_REFUNDED");
+  await financeArticleClick(financeTitle, "Parcelas e histórico");
+  await waitForText("Parcela 3:");
+  await click("Fechar histórico");
+  await takeScreenshot("mindos-financeiro-etapa5.png");
+  await page("Page.navigate", { url: `${base}/cash` });
+  await waitForText("Abrir caixa");
+  await click("Abrir caixa");
+  await labelFill("Valor (R$)", "20.00");
+  await click("Confirmar registro");
+  await waitForText("Valor conferido:");
+  await click("Confirmar registro");
+  await closedDialog();
+  await click("Suprimento");
+  await labelFill("Valor (R$)", "5.00");
+  await labelFill("Motivo / observação", "Fundo fictício de teste");
+  await click("Confirmar registro");
+  await waitForText("Valor conferido:");
+  await click("Confirmar registro");
+  await closedDialog();
+  await click("Sangria");
+  await labelFill("Valor (R$)", "2.00");
+  await labelFill("Motivo / observação", "Retirada fictícia conferida");
+  await click("Confirmar registro");
+  await waitForText("Valor conferido:");
+  await click("Confirmar registro");
+  await closedDialog();
+  assert.equal(
+    (await operation.cash.current.query({ verticalCode: "PSYCHOLOGY_CLINIC" }))
+      .expectedBalance,
+    2300
+  );
+  await page("Page.navigate", { url: `${base}/checkout` });
+  await waitForText("Nova cobrança interna");
+  await labelFill("Paciente", opPatient.id, "select");
+  const cashTitle = `Recebimento em espécie fictício ${suffix}`;
+  await labelFill("Descrição", cashTitle);
+  await labelFill("Serviço", "Sessão em dinheiro");
+  await labelFill("Preço unitário (R$)", "10.00");
+  await labelFill("Primeiro vencimento", preferredDate);
+  await labelFill("Meio informado", "CASH", "select");
+  await click("Revisar cobrança");
+  await waitForText("Revisar nova cobrança");
+  await click("Confirmar registro");
+  await closedDialog();
+  await page("Page.navigate", { url: `${base}/transactions` });
+  await waitForText(cashTitle);
+  await financeArticleClick(cashTitle, "Registrar recebimento manual");
+  await labelFill(
+    "Referência do comprovante / controle",
+    "Recebimento fictício da recepção"
+  );
+  await labelFill("Dinheiro entregue (R$)", "12.00");
+  await click("Confirmar registro");
+  await waitForText("troco");
+  await click("Confirmar registro");
+  await closedDialog();
+  const cashRow = (await operation.transactions.list.query({})).find(
+    r => r.title === cashTitle
+  );
+  const cashDetail = await operation.transactions.getByCode.query({
+    code: cashRow.code,
+  });
+  assert.equal(cashDetail.cashChange, 200);
+  assert.equal(
+    (await operation.cash.current.query({ verticalCode: "PSYCHOLOGY_CLINIC" }))
+      .expectedBalance,
+    3300
+  );
+  await page("Page.navigate", { url: `${base}/payables` });
+  await waitForText("Nova despesa");
+  const supplier = `Fornecedor fictício ${suffix}`;
+  await labelFill("Fornecedor", supplier);
+  await labelFill("Descrição da despesa", "Material fictício de teste");
+  await labelFill("Valor da despesa (R$)", "3.50");
+  await labelFill("Vencimento da despesa", preferredDate);
+  await labelFill("Meio informado", "CASH", "select");
+  await click("Revisar despesa");
+  await waitForText("Revisar despesa");
+  await click("Confirmar registro");
+  await closedDialog();
+  await financeArticleClick(supplier, "Registrar pagamento manual");
+  await labelFill(
+    "Referência do comprovante / controle",
+    "Recibo fictício do fornecedor"
+  );
+  await click("Confirmar registro");
+  await waitForText("Confira:");
+  await click("Confirmar registro");
+  await closedDialog();
+  assert.equal(
+    (await operation.cash.current.query({ verticalCode: "PSYCHOLOGY_CLINIC" }))
+      .expectedBalance,
+    2950
+  );
+  await page("Page.navigate", { url: `${base}/cash` });
+  await waitForText("Conferir e fechar caixa");
+  await click("Conferir e fechar caixa");
+  await labelFill("Valor físico contado (R$)", "29.00");
+  await labelFill(
+    "Motivo / observação",
+    "Diferença fictícia de cinquenta centavos"
+  );
+  await click("Confirmar registro");
+  await waitForText("Valor conferido:");
+  await click("Confirmar registro");
+  await closedDialog();
+  assert.equal(
+    await operation.cash.current.query({ verticalCode: "PSYCHOLOGY_CLINIC" }),
+    undefined
+  );
+  const cashHistory = await operation.cash.list.query({});
+  assert.equal(cashHistory[0].difference, -50);
+  await page("Page.navigate", { url: `${base}/finance` });
+  await waitForText("Livro de movimentos");
+  await waitForText("Devolução fictícia conferida");
+  const financialReport = await operation.dashboard.metrics.query({});
+  assert.equal(financialReport.totalReceived, 1802);
+  assert.equal(financialReport.paidPayable, 350);
+  assert.equal(financialReport.netBalance, 1452);
+  assert.equal(financialReport.cashBalance, 0);
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await takeScreenshot("mindos-financeiro-etapa5-mobile.png");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await setCookie(memberToken);
+  await page("Page.navigate", { url: `${base}/checkout` });
+  await waitForText("Seu acesso permite somente consulta.");
+  assert.equal(
+    await evaluate(
+      "!![...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Revisar cobrança')"
+    ),
+    false
+  );
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/finance` });
+  await waitForText("Permissão insuficiente");
+  console.log(
+    "Chrome: criação de cobrança, parcelas, baixa e reversão manual, histórico, abertura, suprimento, sangria, dinheiro/troco, despesa, fechamento com diferença, relatório e acesso somente leitura aprovados."
+  );
+
   assert.deepEqual(exceptions, []);
   console.log(
     "Chrome: portal sem sessão, dados do paciente correto, documentos liberados e limpeza após logout aprovados."
@@ -1354,7 +1582,17 @@ try {
     }
   }
   if (fixture.operationTenantId) {
+    await db.execute(
+      "DELETE FROM transaction_items WHERE transactionId IN (SELECT id FROM transactions WHERE tenantId=?)",
+      [fixture.operationTenantId]
+    );
     for (const table of [
+      "financial_movements",
+      "financial_operations",
+      "financial_installments",
+      "financial_audit_logs",
+      "accounts_payable",
+      "cash_sessions",
       "mindos_consent_decisions",
       "mindos_consent_templates",
       "mindos_reschedule_requests",

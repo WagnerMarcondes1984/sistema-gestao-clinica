@@ -1,6 +1,6 @@
 # Inventário funcional — base de 17/10/2026
 
-Inventário inicial com atualização das etapas 2, 3 e 4; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
+Inventário inicial com atualização das etapas 2 a 5; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
 
 | Rota | Situação | Evidência e trabalho restante |
 |---|---|---|
@@ -18,13 +18,13 @@ Inventário inicial com atualização das etapas 2, 3 e 4; a homologação visua
 | `/app/team` | Implementado e testado | Gestão de vínculos, permissões, ativação e convites com isolamento por clínica. Login externo real pendente de configuração. |
 | `/invite` | Implementado e testado | Verificação e aceitação pessoal, expiração e proteção contra reutilização. Fluxo OAuth de retorno coberto por testes com mocks. |
 | `/app/admin-studio` | Parcial | Salva versões CMS e perfil; edição de blocos e várias configurações só mostram mensagens. Domínio/SSL exibidos sem verificação real. |
-| `/finance` | Parcial | Métricas persistentes com autorização e isolamento por clínica testados. Homologação financeira completa pendente. |
-| `/checkout` | Demonstrativo com persistência | Cria cobranças; PIX, cartão, boleto e emissão fiscal simulados. Falta validação de valores no servidor e integrações reais. |
-| `/transactions` | Parcial | Lista e altera transações; confirmar/estornar altera estado interno sem operação bancária real. |
-| `/receivables` | Parcial | Consulta cobranças e baixa interna; falta conciliação com provedor real. |
-| `/payables` | Parcial | Lista e baixa despesas; completar cadastro, autorização e isolamento. |
-| `/cash` | Parcial | Consulta e fechamento persistentes; completar abertura, movimentos, isolamento e conferência de saldos. |
-| `/audit` | Parcial | Consulta auditoria financeira protegida por permissão e clínica, com autoria autenticada nas cobranças. |
+| `/finance` | Resumo interno implementado e testado | Leitura transacional de receitas líquidas, parcelas, despesas e caixa; divergências bloqueiam os números. Legado separado; sem gráficos fictícios. |
+| `/checkout` | Controle interno implementado e testado | Paciente e sessão reais, cálculo do servidor, parcelas exatas, revisão e criação pendente idempotente. Integrações bancárias/fiscais pendentes. |
+| `/transactions` | Controle interno implementado e testado | Busca/paginação, histórico, baixas e reversões manuais auditadas. Não executa estorno bancário. |
+| `/receivables` | Controle interno implementado e testado | Saldo original em aberto, parcelas e atraso no fuso da clínica; conciliação externa pendente. |
+| `/payables` | Controle interno implementado e testado | Cadastro de despesa, pagamento manual parcial/integral, referência e saída em espécie vinculada ao caixa. |
+| `/cash` | Controle interno implementado e testado | Abertura única, movimentos, dinheiro/troco, suprimento/sangria, revisão e contagem de fechamento; legado bloqueado. |
+| `/audit` | Controle interno implementado e testado | Autoria do banco, eventos transacionais e referência. Eventos antigos preservados e identificados como potencial simulação. |
 | `/404` | Implementado no código | Tela de rota inexistente; revisar comportamento no navegador durante homologação. |
 
 ## Ausências transversais
@@ -33,7 +33,7 @@ Inventário inicial com atualização das etapas 2, 3 e 4; a homologação visua
 - Gestão de equipe, convites e permissões entregue na etapa 2; transferência de propriedade e múltiplas clínicas ativas ficam fora deste bloco.
 - Não existe funil comercial completo, tarefas de follow-up ou integração efetiva de mensagens.
 - Ter um registro `MESSAGE_SENT` não comprova envio de mensagem por um provedor.
-- Ter status fiscal `ISSUED` na simulação não comprova autorização fiscal.
+- Geração de status/dados bancários e fiscais fictícios removida na etapa 5; legado preservado sem se apresentar como autorização real. Integrações permanecem pendentes.
 - As migrações originais não incluíam o SQL inicial de usuários; restaurado na etapa 1.
 - O seed original apagava dados e referenciava usuário de ID 1 sem criá-lo; corrigido na etapa 1.
 
