@@ -1,7 +1,8 @@
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, financialProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import {
   listClinicalVerticals,
@@ -80,15 +81,15 @@ export const appRouter = router({
   }),
 
   dashboard: router({
-    metrics: publicProcedure
+    metrics: financialProcedure("VIEW_FINANCIAL")
       .input(z.object({ verticalCode: z.string().optional() }))
-      .query(async ({ input }) => {
-        return await getDashboardMetrics(input.verticalCode);
+      .query(async ({ ctx, input }) => {
+        return await getDashboardMetrics(ctx.financialActor, input.verticalCode);
       }),
   }),
 
   transactions: router({
-    list: publicProcedure
+    list: financialProcedure("VIEW_FINANCIAL")
       .input(
         z.object({
           verticalCode: z.string().optional(),
@@ -99,15 +100,15 @@ export const appRouter = router({
           offset: z.number().optional(),
         })
       )
-      .query(async ({ input }) => {
-        return await listTransactions(input);
+      .query(async ({ ctx, input }) => {
+        return await listTransactions(ctx.financialActor, input);
       }),
-    getByCode: publicProcedure
+    getByCode: financialProcedure("VIEW_FINANCIAL")
       .input(z.object({ code: z.string() }))
-      .query(async ({ input }) => {
-        return await getTransactionByCode(input.code);
+      .query(async ({ ctx, input }) => {
+        return await getTransactionByCode(ctx.financialActor, input.code);
       }),
-    create: publicProcedure
+    create: financialProcedure("MANAGE_FINANCIAL")
       .input(
         z.object({
           verticalCode: z.string(),
@@ -161,20 +162,20 @@ export const appRouter = router({
           ),
         })
       )
-      .mutation(async ({ input }) => {
-        return await createTransactionWithItems(input);
+      .mutation(async ({ ctx, input }) => {
+        return await createTransactionWithItems(ctx.financialActor, input);
       }),
-    confirm: publicProcedure
+    confirm: financialProcedure("MANAGE_FINANCIAL")
       .input(
         z.object({
           code: z.string(),
           operatorName: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await confirmTransactionPayment(input.code, input.operatorName);
+      .mutation(async ({ ctx, input }) => {
+        return await confirmTransactionPayment(ctx.financialActor, input.code);
       }),
-    refund: publicProcedure
+    refund: financialProcedure("MANAGE_FINANCIAL")
       .input(
         z.object({
           code: z.string(),
@@ -182,24 +183,25 @@ export const appRouter = router({
           operatorName: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await refundTransactionPayment(
+      .mutation(async ({ ctx, input }) => {
+        return await refundTransactionPayment(ctx.financialActor, 
           input.code,
-          input.reason,
-          input.operatorName
+          input.reason
         );
       }),
-    simulateWebhook: publicProcedure
+    simulateWebhook: financialProcedure("MANAGE_FINANCIAL")
       .input(
         z.object({
           code: z.string(),
           event: z.string().default("PIX_RECEIVED"),
         })
       )
-      .mutation(async ({ input }) => {
-        const updated = await confirmTransactionPayment(
-          input.code,
-          "Webhook Bancário Simulado"
+      .mutation(async ({ ctx, input }) => {
+        if (process.env.NODE_ENV === "production") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Simulação indisponível em produção" });
+        }
+        const updated = await confirmTransactionPayment(ctx.financialActor, 
+          input.code
         );
         return {
           event: input.event,
@@ -211,35 +213,35 @@ export const appRouter = router({
   }),
 
   accountsPayable: router({
-    list: publicProcedure
+    list: financialProcedure("VIEW_FINANCIAL")
       .input(
         z.object({
           verticalCode: z.string().optional(),
           status: z.string().optional(),
         })
       )
-      .query(async ({ input }) => {
-        return await listAccountsPayable(input.verticalCode, input.status);
+      .query(async ({ ctx, input }) => {
+        return await listAccountsPayable(ctx.financialActor, input.verticalCode, input.status);
       }),
-    pay: publicProcedure
+    pay: financialProcedure("MANAGE_FINANCIAL")
       .input(z.object({ code: z.string() }))
-      .mutation(async ({ input }) => {
-        return await payAccountPayable(input.code);
+      .mutation(async ({ ctx, input }) => {
+        return await payAccountPayable(ctx.financialActor, input.code);
       }),
   }),
 
   cash: router({
-    current: publicProcedure
+    current: financialProcedure("VIEW_FINANCIAL")
       .input(z.object({ verticalCode: z.string() }))
-      .query(async ({ input }) => {
-        return await getCurrentCashSession(input.verticalCode);
+      .query(async ({ ctx, input }) => {
+        return await getCurrentCashSession(ctx.financialActor, input.verticalCode);
       }),
-    list: publicProcedure
+    list: financialProcedure("VIEW_FINANCIAL")
       .input(z.object({ verticalCode: z.string().optional() }))
-      .query(async ({ input }) => {
-        return await listCashSessions(input.verticalCode);
+      .query(async ({ ctx, input }) => {
+        return await listCashSessions(ctx.financialActor, input.verticalCode);
       }),
-    close: publicProcedure
+    close: financialProcedure("MANAGE_FINANCIAL")
       .input(
         z.object({
           sessionId: z.number(),
@@ -247,8 +249,8 @@ export const appRouter = router({
           notes: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await closeCashSession(
+      .mutation(async ({ ctx, input }) => {
+        return await closeCashSession(ctx.financialActor, 
           input.sessionId,
           input.closingBalance,
           input.notes
@@ -348,22 +350,22 @@ export const appRouter = router({
       }),
     bookingRequests: protectedProcedure.query(async ({ ctx }) => listMindosBookingRequests(ctx.user.id, ctx.user.role)),
     receptionQueue: protectedProcedure.query(async ({ ctx }) => listMindosReceptionQueue(ctx.user.id, ctx.user.role)),
-    portalData: protectedProcedure.input(z.object({ patientId: z.number() })).query(async ({ ctx, input }) => listMindosPortalData(ctx.user.id, ctx.user.role, input.patientId)),
+    portalData: protectedProcedure.query(async ({ ctx }) => listMindosPortalData(ctx.user.id, ctx.user.role)),
     receptionEvent: protectedProcedure.input(z.object({ patientId: z.number(), eventType: z.enum(["CHECK_IN", "MESSAGE_SENT", "CALL_LOGGED", "PROFILE_REVIEWED"]), messageTemplate: z.string().max(160).optional() })).mutation(async ({ ctx, input }) => createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)),
     institutionalProfile: protectedProcedure.query(async ({ ctx }) => getMindosInstitutionalProfile(ctx.user.id, ctx.user.role)),
     saveInstitutionalProfile: protectedProcedure.input(z.object({ title: z.string().min(2), metaDescription: z.string().min(2), city: z.string().optional(), faqJson: z.string(), llmsTxt: z.string() })).mutation(async ({ ctx, input }) => saveMindosInstitutionalProfile(ctx.user.id, ctx.user.role, input)),
   }),
 
   audit: router({
-    list: publicProcedure
+    list: financialProcedure("VIEW_FINANCIAL")
       .input(
         z.object({
           verticalCode: z.string().optional(),
           limit: z.number().optional(),
         })
       )
-      .query(async ({ input }) => {
-        return await listAuditLogs(input.verticalCode, input.limit);
+      .query(async ({ ctx, input }) => {
+        return await listAuditLogs(ctx.financialActor, input.verticalCode, input.limit);
       }),
   }),
 });

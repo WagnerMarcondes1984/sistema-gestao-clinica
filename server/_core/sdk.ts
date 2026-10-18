@@ -155,6 +155,9 @@ class SDKServer {
 
   private getSessionSecret() {
     const secret = ENV.cookieSecret;
+    if (new TextEncoder().encode(secret).length < 32) {
+      throw new Error("JWT_SECRET deve ter pelo menos 32 bytes");
+    }
     return new TextEncoder().encode(secret);
   }
 
@@ -214,6 +217,7 @@ class SDKServer {
       if (
         !isNonEmptyString(openId) ||
         !isNonEmptyString(appId) ||
+        appId !== ENV.appId ||
         !isNonEmptyString(name)
       ) {
         console.warn("[Auth] Session payload missing required fields");

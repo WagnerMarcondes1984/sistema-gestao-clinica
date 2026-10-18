@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -48,6 +48,8 @@ export type ClinicalVertical = typeof clinicalVerticals.$inferSelect;
  * Transações Financeiras e Cobranças Clínicas
  */
 export const transactions = mysqlTable("transactions", {
+  // Legado sem associação explícita permanece invisível até migração revisada.
+  tenantId: int("tenantId"),
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 32 }).notNull().unique(), // ex: COB-2026-8812
   verticalCode: varchar("verticalCode", { length: 32 }).notNull(), // DENTAL_CLINIC, etc.
@@ -107,7 +109,7 @@ export const transactions = mysqlTable("transactions", {
   operatorName: varchar("operatorName", { length: 64 }).default("Recepção Central"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [index("transactions_tenant_idx").on(table.tenantId)]);
 
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
@@ -132,6 +134,8 @@ export type TransactionItem = typeof transactionItems.$inferSelect;
  * Contas a Pagar (Despesas clínicas, fornecedores, repasses)
  */
 export const accountsPayable = mysqlTable("accounts_payable", {
+  // Legado sem associação explícita permanece invisível até migração revisada.
+  tenantId: int("tenantId"),
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 32 }).notNull().unique(),
   verticalCode: varchar("verticalCode", { length: 32 }).notNull(),
@@ -146,7 +150,7 @@ export const accountsPayable = mysqlTable("accounts_payable", {
   beneficiaryDocument: varchar("beneficiaryDocument", { length: 32 }),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [index("accounts_payable_tenant_idx").on(table.tenantId)]);
 
 export type AccountPayable = typeof accountsPayable.$inferSelect;
 
@@ -154,6 +158,8 @@ export type AccountPayable = typeof accountsPayable.$inferSelect;
  * Sessões de Caixa (Abertura, Movimentações e Fechamento)
  */
 export const cashSessions = mysqlTable("cash_sessions", {
+  // Legado sem associação explícita permanece invisível até migração revisada.
+  tenantId: int("tenantId"),
   id: int("id").autoincrement().primaryKey(),
   verticalCode: varchar("verticalCode", { length: 32 }).notNull(),
   sessionNumber: varchar("sessionNumber", { length: 32 }).notNull(),
@@ -168,7 +174,7 @@ export const cashSessions = mysqlTable("cash_sessions", {
   openedAt: timestamp("openedAt").defaultNow().notNull(),
   closedAt: timestamp("closedAt"),
   closingNotes: text("closingNotes"),
-});
+}, (table) => [index("cash_sessions_tenant_idx").on(table.tenantId)]);
 
 export type CashSession = typeof cashSessions.$inferSelect;
 
@@ -176,6 +182,9 @@ export type CashSession = typeof cashSessions.$inferSelect;
  * Log de Auditoria de Operações Financeiras
  */
 export const financialAuditLogs = mysqlTable("financial_audit_logs", {
+  actorUserId: int("actorUserId"),
+  // Legado sem associação explícita permanece invisível até migração revisada.
+  tenantId: int("tenantId"),
   id: int("id").autoincrement().primaryKey(),
   verticalCode: varchar("verticalCode", { length: 32 }).notNull(),
   transactionCode: varchar("transactionCode", { length: 32 }),
@@ -184,7 +193,7 @@ export const financialAuditLogs = mysqlTable("financial_audit_logs", {
   details: text("details").notNull(),
   ipAddress: varchar("ipAddress", { length: 45 }).default("127.0.0.1"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [index("financial_audit_logs_tenant_idx").on(table.tenantId)]);
 
 export type FinancialAuditLog = typeof financialAuditLogs.$inferSelect;
 
@@ -194,7 +203,7 @@ export type FinancialAuditLog = typeof financialAuditLogs.$inferSelect;
  */
 export const mindosTenants = mysqlTable("mindos_tenants", {
   id: int("id").autoincrement().primaryKey(),
-  slug: varchar("slug", { length: 96 }).notNull(),
+  slug: varchar("slug", { length: 96 }).notNull().unique(),
   name: varchar("name", { length: 160 }).notNull(),
   legalName: varchar("legalName", { length: 200 }),
   businessType: varchar("businessType", { length: 64 }).default("PSYCHOLOGY_CLINIC").notNull(),
@@ -220,6 +229,7 @@ export const mindosMemberships = mysqlTable("mindos_memberships", {
 export type MindosMembership = typeof mindosMemberships.$inferSelect;
 
 export const mindosPatients = mysqlTable("mindos_patients", {
+  portalUserId: int("portalUserId"),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   fullName: varchar("fullName", { length: 160 }).notNull(),
@@ -231,7 +241,7 @@ export const mindosPatients = mysqlTable("mindos_patients", {
   preferredChannel: mysqlEnum("preferredChannel", ["WHATSAPP_DISCREET", "EMAIL", "PHONE"]).default("WHATSAPP_DISCREET").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [uniqueIndex("mindos_patients_portal_user_unique").on(table.tenantId, table.portalUserId)]);
 export type MindosPatient = typeof mindosPatients.$inferSelect;
 export type InsertMindosPatient = typeof mindosPatients.$inferInsert;
 

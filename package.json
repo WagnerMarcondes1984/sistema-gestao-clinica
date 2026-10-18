@@ -10,7 +10,16 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:browser": "node scripts/verify-browser.mjs",
+    "db:push": "pnpm db:migrate",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "node server/seed-db.mjs",
+    "db:verify": "tsx scripts/verify-db.ts",
+    "db:smoke": "tsx scripts/verify-demo.ts",
+    "db:up": "docker compose -f compose.dev.yaml up -d --wait",
+    "db:stop": "docker compose -f compose.dev.yaml stop"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
