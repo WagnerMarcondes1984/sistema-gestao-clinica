@@ -275,6 +275,8 @@ export const mindosTenants = mysqlTable("mindos_tenants", {
     .default("#6366F1")
     .notNull(),
   siteConfigJson: text("siteConfigJson").notNull(),
+  cmsRevision: int("cmsRevision").default(0).notNull(),
+  cmsPublishedVersionId: int("cmsPublishedVersionId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -469,6 +471,9 @@ export const mindosClinicalRecords = mysqlTable("mindos_clinical_records", {
 export type MindosClinicalRecord = typeof mindosClinicalRecords.$inferSelect;
 
 export const mindosCmsVersions = mysqlTable("mindos_cms_versions", {
+  creationKey: varchar("creationKey", { length: 36 }),
+  creationHash: varchar("creationHash", { length: 64 }),
+  approvedAt: timestamp("approvedAt"),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   versionNumber: int("versionNumber").default(1).notNull(),
@@ -481,7 +486,7 @@ export const mindosCmsVersions = mysqlTable("mindos_cms_versions", {
   ])
     .default("DRAFT")
     .notNull(),
-  contentJson: text("contentJson").notNull(),
+  contentJson: mediumtext("contentJson").notNull(),
   changeSummary: varchar("changeSummary", { length: 255 }),
   createdByUserId: int("createdByUserId").notNull(),
   approvedByUserId: int("approvedByUserId"),

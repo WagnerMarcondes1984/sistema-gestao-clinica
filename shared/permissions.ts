@@ -15,6 +15,8 @@ export const PERMISSIONS = [
   "VIEW_FINANCIAL",
   "MANAGE_FINANCIAL",
   "MANAGE_PUBLIC_SITE",
+  "VIEW_PUBLIC_SITE",
+  "PUBLISH_PUBLIC_SITE",
   "MANAGE_TEAM",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -110,7 +112,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   EDIT_RESTRICTED_NOTE: "Registrar e finalizar notas restritas",
   VIEW_FINANCIAL: "Consultar financeiro",
   MANAGE_FINANCIAL: "Alterar financeiro",
-  MANAGE_PUBLIC_SITE: "Gerenciar conteúdo público",
+  VIEW_PUBLIC_SITE: "Consultar versões e prévia do site",
+  PUBLISH_PUBLIC_SITE: "Aprovar, publicar e restaurar o site",
+  MANAGE_PUBLIC_SITE: "Criar rascunhos do conteúdo público",
   MANAGE_TEAM: "Gerenciar equipe",
 };
 export function allowedTeamPermissions(role: TeamRole): Permission[] {
@@ -120,5 +124,7 @@ export function allowedTeamPermissions(role: TeamRole): Permission[] {
         "VIEW_RESTRICTED_NOTE",
         "EDIT_RESTRICTED_NOTE",
       ]
-    : permissionsForRole(role);
+    : role === "SALES"
+      ? [...permissionsForRole(role), "VIEW_PUBLIC_SITE", "MANAGE_PUBLIC_SITE"]
+      : permissionsForRole(role);
 }

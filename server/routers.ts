@@ -1,3 +1,6 @@
+import { publicSiteRouter } from "./public-site-router";
+import { brandForStaff } from "./public-site";
+import { siteSlug } from "../shared/public-site";
 import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -50,11 +53,6 @@ import {
   createMindosAppointment,
   createMindosRecurringAppointments,
   getMindosPatient360,
-  listMindosCmsVersions,
-  saveMindosCmsDraft,
-  publishMindosCmsVersion,
-  approveMindosCmsVersion,
-  rollbackMindosCmsVersion,
   listMindosFinancialRules,
   listMindosClinicalRecords,
   createMindosClinicalRecord,
@@ -77,7 +75,9 @@ export const appRouter = router({
   system: systemRouter,
   publicMindos: router({
     serviceAreas: publicProcedure.query(async () => listMindosServiceAreas()),
-    scheduling: publicProcedure.query(() => publicSchedule()),
+    scheduling: publicProcedure
+      .input(z.object({ clinicSlug: siteSlug.optional() }).strict().optional())
+      .query(({ input }) => publicSchedule(input?.clinicSlug)),
     requestBooking: publicProcedure
       .input(publicBookingInput)
       .mutation(({ ctx, input }) =>
@@ -299,53 +299,8 @@ export const appRouter = router({
           input.patientId
         );
       }),
-    cms: router({
-      versions: protectedProcedure.query(async ({ ctx }) => {
-        return await listMindosCmsVersions(ctx.user.id, ctx.user.role);
-      }),
-      saveDraft: protectedProcedure
-        .input(
-          z.object({
-            contentJson: z.string(),
-            changeSummary: z.string().optional(),
-          })
-        )
-        .mutation(async ({ ctx, input }) => {
-          return await saveMindosCmsDraft(
-            ctx.user.id,
-            ctx.user.role,
-            input.contentJson,
-            input.changeSummary
-          );
-        }),
-      publish: protectedProcedure
-        .input(z.object({ versionId: z.number() }))
-        .mutation(async ({ ctx, input }) => {
-          return await publishMindosCmsVersion(
-            ctx.user.id,
-            ctx.user.role,
-            input.versionId
-          );
-        }),
-      approve: protectedProcedure
-        .input(z.object({ versionId: z.number() }))
-        .mutation(async ({ ctx, input }) => {
-          return await approveMindosCmsVersion(
-            ctx.user.id,
-            ctx.user.role,
-            input.versionId
-          );
-        }),
-      rollback: protectedProcedure
-        .input(z.object({ versionId: z.number() }))
-        .mutation(async ({ ctx, input }) => {
-          return await rollbackMindosCmsVersion(
-            ctx.user.id,
-            ctx.user.role,
-            input.versionId
-          );
-        }),
-    }),
+    cms: publicSiteRouter,
+    brand: protectedProcedure.query(({ ctx }) => brandForStaff(ctx.user)),
     financialRules: protectedProcedure.query(async ({ ctx }) => {
       return await listMindosFinancialRules(ctx.user.id, ctx.user.role);
     }),

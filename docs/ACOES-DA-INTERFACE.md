@@ -1,8 +1,8 @@
 # Inventário das ações da interface
 
-Levantamento estático atualizado após o primeiro bloco da etapa 3. Gere novamente com `node scripts/inventory-actions.mjs`. Rotas em `INVENTARIO-FUNCIONAL.md`; evidências efetivas em `EXECUCAO-DO-PLANO.md`.
+Levantamento estático das ações atuais da interface. Gere novamente com `node scripts/inventory-actions.mjs`. Rotas em `INVENTARIO-FUNCIONAL.md`; evidências efetivas em `EXECUCAO-DO-PLANO.md`.
 
-Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **156 handlers**.
+Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **157 handlers**.
 
 | Local | Evento | Situação estática | Handler (até 240 caracteres) |
 |---|---|---|---|
@@ -10,15 +10,19 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/AcceptInvite.tsx:114 | onClick | Revisar fluxo chamado | `() => verify({ token })` |
 | client/src/pages/AcceptInvite.tsx:119 | onClick | Revisar fluxo chamado | `() => void logout()` |
 | client/src/pages/AcceptInvite.tsx:170 | onClick | Chama persistência — conferir evidência do módulo | `() => accept.mutate({ token })` |
-| client/src/pages/AdminStudio.tsx:84 | onClick | Ação local — conferir fluxo completo | `() => setActive(item.id)` |
-| client/src/pages/AdminStudio.tsx:89 | onClick | Mensagem — conferir se há operação efetiva | `() => { setDraftStatus('PREVIEW'); notify('Preview preparado para validação.'); }` |
-| client/src/pages/AdminStudio.tsx:89 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (isAuthenticated && latestDraft) publishMutation.mutate({ versionId: latestDraft.id }); else { setDraftStatus('PUBLISHED'); notify('Modo de demonstração: publicação preparada.'); } }` |
-| client/src/pages/AdminStudio.tsx:93 | onClick | Ação local — conferir fluxo completo | `() => setActive('site')` |
-| client/src/pages/AdminStudio.tsx:95 | onClick | Revisar fluxo chamado | `saveCurrentDraft` |
-| client/src/pages/AdminStudio.tsx:97 | onClick | Mensagem — conferir se há operação efetiva | `() => { setSiteBlocks([...siteBlocks, 'Bloco ${siteBlocks.length + 1}']); notify('Novo bloco adicionado ao draft.'); }` |
-| client/src/pages/AdminStudio.tsx:97 | onClick | Mensagem — conferir se há operação efetiva | `() => notify('Editando bloco ${block}.')` |
-| client/src/pages/AdminStudio.tsx:104 | onClick | Mensagem — conferir se há operação efetiva | `() => notify('${label} aberto para edição.')` |
-| client/src/pages/AdminStudio.tsx:106 | onClick | Mensagem — conferir se há operação efetiva | `() => notify('Configuração salva como draft.')` |
+| client/src/pages/AdminStudio.tsx:265 | onClick | Ação local — conferir fluxo completo | `() => setTab(id)` |
+| client/src/pages/AdminStudio.tsx:285 | onSubmit | Revisar fluxo chamado | `saveDraft` |
+| client/src/pages/AdminStudio.tsx:467 | onClick | Revisar fluxo chamado | `() => block(i, { items: b.items.filter((_, n) => n !== j), })` |
+| client/src/pages/AdminStudio.tsx:481 | onClick | Revisar fluxo chamado | `() => block(i, { items: [...b.items, { title: "", body: "" }], })` |
+| client/src/pages/AdminStudio.tsx:492 | onClick | Revisar fluxo chamado | `() => { const a = [...content.blocks]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; change({ ...content, blocks: a }); }` |
+| client/src/pages/AdminStudio.tsx:503 | onClick | Revisar fluxo chamado | `() => { const a = [...content.blocks]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; change({ ...content, blocks: a }); }` |
+| client/src/pages/AdminStudio.tsx:514 | onClick | Revisar fluxo chamado | `() => change({ ...content, blocks: content.blocks.filter((_, n) => n !== i), })` |
+| client/src/pages/AdminStudio.tsx:530 | onClick | Revisar fluxo chamado | `() => change({ ...content, blocks: [ ...content.blocks, { id: crypto.randomUUID(), kind: "ABOUT", enabled: true, title: "", body: "", items: [], }, ], })` |
+| client/src/pages/AdminStudio.tsx:648 | onClick | Ação local — conferir fluxo completo | `() => void load(null).catch(e => setError(e.message))` |
+| client/src/pages/AdminStudio.tsx:655 | onClick | Ação local — conferir fluxo completo | `() => void refresh().catch(e => setError(e.message))` |
+| client/src/pages/AdminStudio.tsx:696 | onClick | Ação local — conferir fluxo completo | `() => void load(v) .then(() => setTab("brand")) .catch(e => setError(e.message))` |
+| client/src/pages/AdminStudio.tsx:718 | onClick | Ação local — conferir fluxo completo | `() => { setError(""); setAck(false); setAction({ kind: v.status === "DRAFT" ? "approve" : v.status === "APPROVED" ? "publish" : "rollback", version: v, revision: data.revision, }); }` |
+| client/src/pages/AdminStudio.tsx:820 | onClick | Revisar fluxo chamado | `() => void confirmAction()` |
 | client/src/pages/Agenda.tsx:112 | onClick | Revisar fluxo chamado | `() => openEditor()` |
 | client/src/pages/Agenda.tsx:151 | onClick | Ação local — conferir fluxo completo | `() => { setDay(""); setAllDates(true); setProfessional(0); selectPatient(0); }` |
 | client/src/pages/Agenda.tsx:162 | onClick | Ação local — conferir fluxo completo | `() => { setAllDates(false); setDay(""); }` |
@@ -93,7 +97,7 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/FinancialWorkspace.tsx:1116 | onClick | Ação local — conferir fluxo completo | `() => setAction({ kind: "payable", target: { ...r, remaining: r.remainingAmount }, })` |
 | client/src/pages/FinancialWorkspace.tsx:1217 | onClick | Ação local — conferir fluxo completo | `() => setDetail("")` |
 | client/src/pages/NotFound.tsx:41 | onClick | Revisar fluxo chamado | `handleGoHome` |
-| client/src/pages/OnlineBooking.tsx:57 | onSubmit | Revisar fluxo chamado | `submit` |
+| client/src/pages/OnlineBooking.tsx:68 | onSubmit | Revisar fluxo chamado | `submit` |
 | client/src/pages/PatientCare.tsx:82 | onSubmit | Revisar fluxo chamado | `upload` |
 | client/src/pages/PatientCare.tsx:158 | onClick | Revisar fluxo chamado | `() => download(d.id)` |
 | client/src/pages/PatientCare.tsx:170 | onClick | Chama persistência — conferir evidência do módulo | `() => access.mutate({ documentId: d.id, revision: d.revision, action: d.portalVisible ? "HIDE" : "RELEASE", })` |
@@ -101,18 +105,18 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/PatientCare.tsx:276 | onSubmit | Chama persistência — conferir evidência do módulo | `e => { e.preventDefault(); mutation.mutate({ patientId, code, visible: true }); }` |
 | client/src/pages/PatientCare.tsx:316 | onClick | Chama persistência — conferir evidência do módulo | `() => mutation.mutate({ patientId, code: row.code, visible: !row.portalVisible, })` |
 | client/src/pages/PatientCare.tsx:410 | onClick | Ação local — conferir fluxo completo | `() => setTab(String(id))` |
-| client/src/pages/PatientPortal.tsx:76 | onClick | Revisar fluxo chamado | `() => void logout()` |
-| client/src/pages/PatientPortal.tsx:97 | onClick | Revisar fluxo chamado | `startLogin` |
-| client/src/pages/PatientPortal.tsx:113 | onClick | Revisar fluxo chamado | `() => query.refetch()` |
-| client/src/pages/PatientPortal.tsx:137 | onClick | Ação local — conferir fluxo completo | `() => setTab(id)` |
-| client/src/pages/PatientPortal.tsx:172 | onClick | Ação local — conferir fluxo completo | `() => { request.reset(); const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit", }).format(new Date(a.startsAt)); setReschedule({ id: a.id, date: parts, time: "09:00", }); }` |
-| client/src/pages/PatientPortal.tsx:217 | onClick | Chama persistência — conferir evidência do módulo | `() => cancel.mutate({ id: r.id })` |
-| client/src/pages/PatientPortal.tsx:301 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "ACCEPTED", }); }` |
-| client/src/pages/PatientPortal.tsx:317 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "DECLINED", }); }` |
-| client/src/pages/PatientPortal.tsx:335 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "WITHDRAWN", }); }` |
-| client/src/pages/PatientPortal.tsx:383 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: d.templateId, title: snapshot.title, body: snapshot.body, hash: d.bodyHash, decision: "WITHDRAWN", }); }` |
-| client/src/pages/PatientPortal.tsx:462 | onSubmit | Chama persistência — conferir evidência do módulo | `e => { e.preventDefault(); request.mutate({ appointmentId: reschedule.id, date: reschedule.date, time: reschedule.time, }); }` |
-| client/src/pages/PatientPortal.tsx:548 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (consent) decide.mutate({ templateId: consent.id, bodyHash: consent.hash, decision: consent.decision, acknowledged, }); }` |
+| client/src/pages/PatientPortal.tsx:79 | onClick | Revisar fluxo chamado | `() => void logout()` |
+| client/src/pages/PatientPortal.tsx:100 | onClick | Revisar fluxo chamado | `startLogin` |
+| client/src/pages/PatientPortal.tsx:116 | onClick | Revisar fluxo chamado | `() => query.refetch()` |
+| client/src/pages/PatientPortal.tsx:140 | onClick | Ação local — conferir fluxo completo | `() => setTab(id)` |
+| client/src/pages/PatientPortal.tsx:175 | onClick | Ação local — conferir fluxo completo | `() => { request.reset(); const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit", }).format(new Date(a.startsAt)); setReschedule({ id: a.id, date: parts, time: "09:00", }); }` |
+| client/src/pages/PatientPortal.tsx:220 | onClick | Chama persistência — conferir evidência do módulo | `() => cancel.mutate({ id: r.id })` |
+| client/src/pages/PatientPortal.tsx:304 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "ACCEPTED", }); }` |
+| client/src/pages/PatientPortal.tsx:320 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "DECLINED", }); }` |
+| client/src/pages/PatientPortal.tsx:338 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "WITHDRAWN", }); }` |
+| client/src/pages/PatientPortal.tsx:386 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: d.templateId, title: snapshot.title, body: snapshot.body, hash: d.bodyHash, decision: "WITHDRAWN", }); }` |
+| client/src/pages/PatientPortal.tsx:465 | onSubmit | Chama persistência — conferir evidência do módulo | `e => { e.preventDefault(); request.mutate({ appointmentId: reschedule.id, date: reschedule.date, time: reschedule.time, }); }` |
+| client/src/pages/PatientPortal.tsx:551 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (consent) decide.mutate({ templateId: consent.id, bodyHash: consent.hash, decision: consent.decision, acknowledged, }); }` |
 | client/src/pages/Patients.tsx:88 | onSubmit | Revisar fluxo chamado | `submit` |
 | client/src/pages/Patients.tsx:245 | onClick | Ação local — conferir fluxo completo | `() => setEditor({ patient: null })` |
 | client/src/pages/Patients.tsx:256 | onSubmit | Ação local — conferir fluxo completo | `e => { e.preventDefault(); setSearch(text.trim()); setPage(1); }` |
@@ -151,10 +155,7 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/components/DashboardLayout.tsx:187 | onClick | Ação local — conferir fluxo completo | `() => setLocation(item.path)` |
 | client/src/components/DashboardLayout.tsx:223 | onClick | Revisar fluxo chamado | `logout` |
 | client/src/components/ErrorBoundary.tsx:43 | onClick | Revisar fluxo chamado | `() => window.location.reload()` |
-| client/src/components/FinancialLayout.tsx:131 | onClick | Ação local — conferir fluxo completo | `() => setVerticalMenuOpen(!verticalMenuOpen)` |
-| client/src/components/FinancialLayout.tsx:146 | onClick | Ação local — conferir fluxo completo | `() => setVerticalMenuOpen(false)` |
-| client/src/components/FinancialLayout.tsx:160 | onClick | Ação local — conferir fluxo completo | `() => { setVerticalCode(preset.code); setVerticalMenuOpen(false); }` |
-| client/src/components/FinancialLayout.tsx:215 | onClick | Revisar fluxo chamado | `toggleTheme` |
+| client/src/components/FinancialLayout.tsx:135 | onClick | Revisar fluxo chamado | `toggleTheme` |
 | client/src/components/ManusDialog.tsx:80 | onClick | Revisar fluxo chamado | `onLogin` |
 | client/src/components/patients/PatientSelector.tsx:40 | onClick | Revisar fluxo chamado | `() => startLogin()` |
 | client/src/components/patients/PatientSelector.tsx:92 | onClick | Ação local — conferir fluxo completo | `() => setSearch(text.trim())` |

@@ -1,3 +1,4 @@
+import { publishedSnapshot } from "./public-site";
 import { TRPCError } from "@trpc/server";
 import { and, eq, desc, ne } from "drizzle-orm";
 import {
@@ -444,6 +445,7 @@ export async function portalData(user: User) {
         preferredName: patient.preferredName,
       },
       clinic: { name: clinic.name, timezone: clinic.timezone },
+      brand: (await publishedSnapshot(tx, clinic))?.content.brand || null,
       appointments,
       documents: docs.map(d => ({
         id: d.id,

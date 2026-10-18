@@ -67,9 +67,12 @@ export default function PatientPortal() {
     });
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="px-5 sm:px-8 py-4 bg-white border-b flex justify-between gap-4">
+      <header
+        style={{ borderTop: `5px solid ${data?.brand?.primary || "#4338CA"}` }}
+        className="px-5 sm:px-8 py-4 bg-white border-b flex justify-between gap-4"
+      >
         <Link href="/" className="font-bold">
-          MindOS · Portal do paciente
+          {data?.brand?.name || "MindOS"} · Portal do paciente
         </Link>
         {isAuthenticated && (
           <button
