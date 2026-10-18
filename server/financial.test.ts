@@ -1,60 +1,116 @@
-import { describe, expect, it } from "vitest";
-
-describe("Regras Financeiras do Core Clínico", () => {
-  it("calcula corretamente subtotal, desconto autorizado, acréscimos e valor total", () => {
-    const subtotal = 420000; // R$ 4.200,00
-    const discount = 20000;  // R$ 200,00
-    const addition = 5000;   // R$ 50,00
-    const totalAmount = subtotal - discount + addition;
-
-    expect(totalAmount).toBe(405000); // R$ 4.050,00
+import { describe, it, expect } from "vitest";
+import {
+  chargeInput,
+  calculateCharge,
+  installmentDate,
+  reaisToCents,
+  MAX_MONEY,
+} from "../shared/finance";
+const base = () =>
+  chargeInput.parse({
+    requestId: "123e4567-e89b-42d3-a456-426614174000",
+    patientId: 1,
+    verticalCode: "PSYCHOLOGY_CLINIC",
+    title: "Sessão fictícia",
+    category: "Teste",
+    paymentMethod: "PIX",
+    dueDate: new Date("2026-01-31T12:00:00Z"),
+    installments: 3,
+    items: [{ name: "Sessão", quantity: 1, unitPrice: 10000 }],
   });
-
-  it("calcula troco exato para pagamentos em dinheiro", () => {
-    const totalAmount = 60000; // R$ 600,00
-    const cashReceived = 70000; // R$ 700,00
-    const cashChange = cashReceived - totalAmount;
-
-    expect(cashChange).toBe(10000); // R$ 100,00
+describe("aritmética financeira executada pelo servidor", () => {
+  it("distribui o resto sem perder centavos", () => {
+    const r = calculateCharge(base());
+    expect(r.amounts).toEqual([3334, 3333, 3333]);
+    expect(r.amounts.reduce((a, b) => a + b, 0)).toBe(r.total);
   });
-
-  it("divide parcelas de cartão de crédito com precisão", () => {
-    const totalAmount = 680000; // R$ 6.800,00
-    const installments = 10;
-    const installmentValue = Math.round(totalAmount / installments);
-
-    expect(installmentValue).toBe(68000); // R$ 680,00
+  it("calcula itens, desconto e acréscimo", () => {
+    const b = base();
+    b.items = [
+      { name: "Sessão", quantity: 3, unitPrice: 10000 },
+      { name: "Outro", quantity: 2, unitPrice: 1234 },
+    ];
+    b.discount = 1000;
+    b.addition = 100;
+    expect(calculateCharge(b).total).toBe(31568);
   });
-
-  it("garante transição de estados de pagamento com emissão de nota fiscal", () => {
-    const initialStatus = "PENDING";
-    const action = "PAYMENT_CONFIRMED";
-    
-    let finalStatus = initialStatus;
-    let invoiceStatus = "NOT_ISSUED";
-
-    if (action === "PAYMENT_CONFIRMED") {
-      finalStatus = "PAID";
-      invoiceStatus = "ISSUED";
-    }
-
-    expect(finalStatus).toBe("PAID");
-    expect(invoiceStatus).toBe("ISSUED");
+  it.each([
+    { subtotal: 999 },
+    { totalAmount: 1 },
+    { discount: 10001 },
+    { cashChange: 10 },
+    { cashReceived: 10000 },
+    { installmentValue: 3333 },
+    { addition: MAX_MONEY },
+  ])("recusa cálculo adulterado %j", change =>
+    expect(() => calculateCharge({ ...base(), ...change })).toThrow()
+  );
+  it.each([-1, 0.5, Infinity, NaN, MAX_MONEY + 1])(
+    "recusa valor inválido %s",
+    unitPrice =>
+      expect(() =>
+        chargeInput.parse({
+          ...base(),
+          items: [{ name: "Teste", quantity: 1, unitPrice }],
+        })
+      ).toThrow()
+  );
+  it("recusa quantidades fracionárias e overflow na multiplicação", () => {
+    expect(() =>
+      chargeInput.parse({
+        ...base(),
+        items: [{ name: "Teste", quantity: 1.5, unitPrice: 1 }],
+      })
+    ).toThrow();
+    expect(() =>
+      calculateCharge({
+        ...base(),
+        items: [{ name: "Teste", quantity: 10000, unitPrice: MAX_MONEY }],
+      })
+    ).toThrow();
   });
-
-  it("trata estorno e cancelamento fiscal devidamente", () => {
-    const currentStatus = "PAID";
-    const action = "REFUND";
-
-    let newStatus = currentStatus;
-    let invoiceStatus = "ISSUED";
-
-    if (action === "REFUND") {
-      newStatus = "REFUNDED";
-      invoiceStatus = "CANCELLED";
-    }
-
-    expect(newStatus).toBe("REFUNDED");
-    expect(invoiceStatus).toBe("CANCELLED");
+  it("não aceita status pago nem identidade arbitrária da clínica", () => {
+    expect(() => chargeInput.parse({ ...base(), status: "PAID" })).toThrow();
+    expect(() => chargeInput.parse({ ...base(), tenantId: 2 })).toThrow();
   });
+  it("não cria parcelas zeradas", () =>
+    expect(() =>
+      calculateCharge({
+        ...base(),
+        items: [{ name: "Teste", quantity: 1, unitPrice: 1 }],
+      })
+    ).toThrow());
+  it("preserva o dia original depois de fevereiro", () => {
+    expect(
+      [0, 1, 2].map(i =>
+        installmentDate(base().dueDate, i).toISOString().slice(0, 10)
+      )
+    ).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
+  });
+  it("suporta ano bissexto", () =>
+    expect(
+      installmentDate(new Date("2028-01-31T12:00:00Z"), 1)
+        .toISOString()
+        .slice(0, 10)
+    ).toBe("2028-02-29"));
+  it.each([
+    ["0,01", 1],
+    ["1234.56", 123456],
+    ["001", 100],
+    ["0", 0],
+  ])("converte texto decimal sem erro de ponto flutuante", (raw, n) =>
+    expect(reaisToCents(raw)).toBe(n)
+  );
+  it.each(["-1", "1.234", "1e3", "", "1,2,3", "NaN", "100000000000"])(
+    "recusa entrada ambígua %s",
+    v => expect(() => reaisToCents(v)).toThrow()
+  );
+  it("recusa parcelas que ultrapassam o limite de datas do banco", () =>
+    expect(() =>
+      calculateCharge({
+        ...base(),
+        dueDate: new Date("2036-12-31T12:00:00Z"),
+        installments: 24,
+      })
+    ).toThrow("Último vencimento"));
 });

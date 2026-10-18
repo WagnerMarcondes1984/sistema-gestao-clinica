@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { assertDemoSeedAllowed } from './seed-safety.mjs';
 dotenv.config();
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -9,7 +10,29 @@ if (!DATABASE_URL) {
 }
 
 async function seed() {
+  assertDemoSeedAllowed(process.env);
   const connection = await mysql.createConnection(DATABASE_URL);
+  try {
+  const [[lock]] = await connection.query("SELECT GET_LOCK('mindos_demo_seed', 0) AS acquired");
+  if (lock.acquired !== 1) throw new Error('Outro seed está em execução.');
+  await connection.beginTransaction();
+  const tables = [
+    'users', 'clinical_verticals', 'transaction_items', 'transactions',
+    'accounts_payable', 'cash_sessions', 'financial_audit_logs',
+    'mindos_patient_clinicians', 'mindos_clinical_versions', 'mindos_consent_templates', 'mindos_consent_decisions', 'mindos_reschedule_requests', 'mindos_professionals', 'mindos_units', 'mindos_services', 'mindos_availability', 'mindos_booking_limits', 'mindos_access_audits', 'mindos_team_invites', 'mindos_clinical_records', 'mindos_appointments',
+    'mindos_patients', 'mindos_memberships', 'mindos_cms_versions',
+    'mindos_financial_rules', 'mindos_booking_requests', 'mindos_institutional_profiles',
+    'mindos_service_areas', 'mindos_portal_documents', 'mindos_reception_events', 'mindos_tenants',
+  ];
+  for (const table of tables) {
+    const [rows] = await connection.query('SELECT 1 FROM `' + table + '` LIMIT 1');
+    if (rows.length) throw new Error('Seed recusado: banco contém dados. Nenhum registro foi apagado.');
+  }
+  const [ownerResult] = await connection.execute(
+    'INSERT INTO users (openId, name, email, loginMethod, role) VALUES (?, ?, ?, ?, ?)',
+    ['mindos-demo-owner', 'Administrador de demonstração', 'demo@example.com', 'demo', 'admin']
+  );
+  const ownerUserId = ownerResult.insertId;
   console.log("Connected to database for seeding...");
 
   // 1. Inserir as 5 verticais clínicas
@@ -82,12 +105,6 @@ async function seed() {
 
   console.log("Verticals seeded successfully.");
 
-  // Limpar transações anteriores para idempotência
-  await connection.execute(`DELETE FROM transaction_items WHERE id > 0`);
-  await connection.execute(`DELETE FROM transactions WHERE id > 0`);
-  await connection.execute(`DELETE FROM accounts_payable WHERE id > 0`);
-  await connection.execute(`DELETE FROM cash_sessions WHERE id > 0`);
-  await connection.execute(`DELETE FROM financial_audit_logs WHERE id > 0`);
 
   // 2. Inserir Transações com diversidade de status, métodos e verticais
   const sampleTransactions = [
@@ -708,19 +725,6 @@ async function seed() {
   console.log("Cash sessions seeded.");
 
   // 8. Seed operacional persistente do MindOS
-  await connection.execute('DELETE FROM mindos_access_audits WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_clinical_records WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_appointments WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_patients WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_memberships WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_cms_versions WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_financial_rules WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_booking_requests WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_institutional_profiles WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_service_areas WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_portal_documents WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_reception_events WHERE id > 0');
-  await connection.execute('DELETE FROM mindos_tenants WHERE id > 0');
 
   const [tenantResult] = await connection.execute(
     `INSERT INTO mindos_tenants (slug, name, legalName, businessType, status, primaryColor, accentColor, siteConfigJson)
@@ -728,10 +732,15 @@ async function seed() {
     ['mindos-psychology', 'MindOS Psicologia & Saúde Mental', 'MindOS Clínica de Psicologia Ltda.', 'PSYCHOLOGY_CLINIC', 'ACTIVE', '#4338CA', '#6366F1', JSON.stringify({ title: 'MindOS — Psicologia e Saúde Mental', hero: 'Cuidado psicológico com presença, segurança e continuidade', status: 'PUBLISHED' })]
   );
   const tenantId = tenantResult.insertId;
+  // Somente dados inseridos por este seed em banco previamente vazio.
+  for (const table of ['transactions', 'accounts_payable', 'cash_sessions', 'financial_audit_logs']) {
+    await connection.execute('UPDATE `' + table + '` SET tenantId = ?', [tenantId]);
+  }
+  await connection.execute('UPDATE financial_audit_logs SET actorUserId = ?', [ownerUserId]);
 
   await connection.execute(
     `INSERT INTO mindos_memberships (tenantId, userId, role, permissionsJson, active) VALUES (?, ?, ?, ?, ?)`,
-    [tenantId, 1, 'OWNER', JSON.stringify(['ALL']), true]
+    [tenantId, ownerUserId, 'OWNER', JSON.stringify(['ALL']), true]
   );
 
   const patients = [
@@ -749,6 +758,13 @@ async function seed() {
     patientIds.push(result.insertId);
   }
 
+  const [portalUser] = await connection.execute(
+    'INSERT INTO users (openId, name, email, loginMethod, role) VALUES (?, ?, ?, ?, ?)',
+    ['mindos-demo-patient', 'Paciente de demonstração', 'patient@example.com', 'demo', 'user']
+  );
+  await connection.execute('UPDATE mindos_patients SET portalUserId = ? WHERE id = ?', [portalUser.insertId, patientIds[0]]);
+  await connection.execute('INSERT INTO mindos_memberships (tenantId, userId, role, permissionsJson, active) VALUES (?, ?, ?, ?, ?)', [tenantId, portalUser.insertId, 'PATIENT', '[]', true]);
+
   const appointments = [
     [patientIds[0], 'Dra. Clarice Vianna', 'Unidade Pinheiros', 'Psicoterapia individual', 'IN_PERSON', 'CONFIRMED', '2026-09-06 14:00:00', '2026-09-06 14:50:00', null, 'Confirmação enviada por canal discreto'],
     [patientIds[1], 'Dr. Felipe Nunes', 'Unidade Pinheiros', 'Acompanhamento psicológico', 'ONLINE', 'WAITING', '2026-09-06 10:30:00', '2026-09-06 11:20:00', null, 'Aguardando confirmação administrativa'],
@@ -763,13 +779,13 @@ async function seed() {
   }
 
   const cmsContent = { title: 'MindOS — Psicologia e Saúde Mental', hero: 'Cuidado psicológico com presença, segurança e continuidade', sections: ['Hero', 'Sobre', 'Áreas de atendimento', 'Profissionais públicos', 'FAQ', 'Agendamento'], seo: { title: 'MindOS Psicologia | Cuidado psicológico', description: 'Psicologia com segurança, presença e continuidade.' } };
-  await connection.execute(
+  const [cmsResult] = await connection.execute(
     `INSERT INTO mindos_cms_versions (tenantId, versionNumber, status, contentJson, changeSummary, createdByUserId, approvedByUserId, publishedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [tenantId, 1, 'PUBLISHED', JSON.stringify(cmsContent), 'Publicação inicial MindOS', 1, 1, new Date('2026-09-01T12:00:00Z')]
+    [tenantId, 1, 'PUBLISHED', JSON.stringify(cmsContent), 'Publicação inicial MindOS', ownerUserId, ownerUserId, new Date('2026-09-01T12:00:00Z')]
   );
   await connection.execute(
     `INSERT INTO mindos_cms_versions (tenantId, versionNumber, status, contentJson, changeSummary, createdByUserId) VALUES (?, ?, ?, ?, ?, ?)`,
-    [tenantId, 2, 'DRAFT', JSON.stringify({ ...cmsContent, hero: 'Cuidado psicológico com presença e continuidade.' }), 'Ajuste de copy em revisão', 1]
+    [tenantId, 2, 'DRAFT', JSON.stringify({ ...cmsContent, hero: 'Cuidado psicológico com presença e continuidade.' }), 'Ajuste de copy em revisão', ownerUserId]
   );
 
   const financialRules = [
@@ -786,11 +802,11 @@ async function seed() {
   }
   await connection.execute(
     `INSERT INTO mindos_access_audits (tenantId, actorUserId, subjectType, subjectId, dataLayer, action, reason) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [tenantId, 1, 'CMS_VERSION', 1, 'PUBLIC', 'PUBLISH_CMS', 'Publicação inicial do conteúdo institucional']
+    [tenantId, ownerUserId, 'CMS_VERSION', cmsResult.insertId, 'PUBLIC', 'PUBLISH_CMS', 'Publicação inicial do conteúdo institucional']
   );
   await connection.execute(
     `INSERT INTO mindos_institutional_profiles (tenantId, title, metaDescription, city, faqJson, llmsTxt, updatedByUserId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [tenantId, 'MindOS Psicologia | Cuidado psicológico', 'Psicologia com segurança, presença e continuidade em São Paulo.', 'São Paulo - SP', JSON.stringify([{ question: 'Como agendar?', answer: 'Escolha uma preferência e a equipe confirma o horário.' }]), 'MindOS é uma clínica de psicologia com atendimento responsável e linguagem institucional clara.', 1]
+    [tenantId, 'MindOS Psicologia | Cuidado psicológico', 'Psicologia com segurança, presença e continuidade em São Paulo.', 'São Paulo - SP', JSON.stringify([{ question: 'Como agendar?', answer: 'Escolha uma preferência e a equipe confirma o horário.' }]), 'MindOS é uma clínica de psicologia com atendimento responsável e linguagem institucional clara.', ownerUserId]
   );
   const serviceAreas = [
     ['Psicoterapia individual', 'Atendimento psicológico individual com presença e continuidade.'],
@@ -802,14 +818,20 @@ async function seed() {
   }
   await connection.execute(`INSERT INTO mindos_portal_documents (tenantId, patientId, title, documentType, status, version) VALUES (?, ?, ?, ?, ?, ?)`, [tenantId, patientIds[0], 'Termo de atendimento', 'CONSENT', 'SIGNED', 1]);
   await connection.execute(`INSERT INTO mindos_portal_documents (tenantId, patientId, title, documentType, status, version) VALUES (?, ?, ?, ?, ?, ?)`, [tenantId, patientIds[0], 'Orientações administrativas', 'GUIDANCE', 'AVAILABLE', 1]);
-  await connection.execute(`INSERT INTO mindos_reception_events (tenantId, patientId, eventType, messageTemplate, createdByUserId) VALUES (?, ?, ?, ?, ?)`, [tenantId, patientIds[0], 'CHECK_IN', null, 1]);
+  await connection.execute(`INSERT INTO mindos_reception_events (tenantId, patientId, eventType, messageTemplate, createdByUserId) VALUES (?, ?, ?, ?, ?)`, [tenantId, patientIds[0], 'CHECK_IN', null, ownerUserId]);
   console.log("MindOS operational data seeded.");
 
-  await connection.end();
-  console.log("Seed finished successfully!");
+  await connection.commit();
+  console.log("Seed demonstrativo concluído sem apagar registros.");
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    await connection.end();
+  }
 }
 
 seed().catch(err => {
-  console.error("Seed error:", err);
+  console.error("Seed error:", err.message);
   process.exit(1);
 });

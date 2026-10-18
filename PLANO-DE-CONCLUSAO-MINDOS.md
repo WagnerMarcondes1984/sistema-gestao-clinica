@@ -4,17 +4,19 @@ Data: 17/10/2026.
 
 Objetivo: concluir uma plataforma de gestão clínica para psicologia e saúde mental, com CRM administrativo, portal e financeiro. CRM comercial avançado será uma entrega posterior à estabilização da operação clínica.
 
+Acompanhe resultados e ponto de retomada em [docs/EXECUCAO-DO-PLANO.md](docs/EXECUCAO-DO-PLANO.md).
+
 Este plano complementa o `todo.md`. As marcações antigas não comprovam funcionamento: cada entrega abaixo precisa atender aos seus critérios de aceite. Nenhuma tarefa deste plano foi considerada concluída apenas por existir uma tela ou tabela.
 
 ## 1. Preparar ambiente e confirmar a situação atual — prioridade crítica
 
-- [ ] Instalar as dependências respeitando o arquivo de lock.
-- [ ] Criar `.env.example` com nomes e explicações das variáveis, sem segredos reais.
-- [ ] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
-- [ ] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
-- [ ] Executar `pnpm check`, `pnpm test` e `pnpm build`; registrar falhas e corrigir bloqueios.
-- [ ] Mapear cada rota e botão como funcional, parcial, demonstrativo ou ausente.
-- [ ] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
+- [x] Instalar as dependências respeitando o arquivo de lock.
+- [x] Criar `.env.example` com nomes e explicações das variáveis, sem segredos reais.
+- [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
+- [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
+- [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 137 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
 
@@ -22,70 +24,78 @@ Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e ve
 
 Depende da etapa 1. Esta etapa bloqueia qualquer piloto com dados reais.
 
-- [ ] Adaptar o login para um provedor independente, caso a operação não use Manus, incluindo saída e expiração de sessão.
-- [ ] Implementar entrada da clínica, convites, ativação/desativação de usuários e gestão de associações.
-- [ ] Definir matriz explícita de permissões para administrador, psicólogo, recepção, financeiro, comercial e paciente.
-- [ ] Exigir autenticação e autorização nas rotas financeiras e de auditoria.
-- [ ] Adicionar identificação da clínica às tabelas financeiras e migrar registros existentes com uma regra explícita de associação; não inferir clínica apenas pela vertical.
-- [ ] Aplicar o filtro da clínica autenticada em todas as leituras e alterações financeiras.
-- [ ] Vincular o usuário do portal ao seu paciente e remover o `patientId` fixo; impedir consulta a outro paciente pelo servidor.
-- [ ] Separar leitura e finalização de notas restritas das permissões gerais de prontuário.
+- [x] Decisão de autenticação: manter Manus por enquanto, conforme escolha do usuário. Validação do login real depende das credenciais do ambiente; revisão de sessão/saída implementada.
+- [x] Implementar entrada explícita da clínica, convites de uso único, ativação/desativação, reativação, papéis e permissões por associação. Interface em `/app/team` e `/invite`; validar login externo real quando configurado.
+- [x] Definir matriz explícita de permissões para administrador, psicólogo, recepção, financeiro, comercial e paciente. Modelos em `shared/permissions.ts`; gestão visual implementada nesta entrega.
+- [x] Exigir autenticação e autorização nas rotas financeiras e de auditoria.
+- [ ] Concluir associação revisada dos registros financeiros legados, quando houver base existente. Colunas de clínica e migrações já foram aplicadas e testadas; registros sem associação permanecem isolados. Não inferir clínica pela vertical.
+- [x] Aplicar o filtro da clínica autenticada em todas as leituras e alterações financeiras.
+- [x] Vincular o usuário do portal ao seu paciente e remover o `patientId` fixo; impedir consulta a outro paciente pelo servidor.
+- [x] Separar leitura e finalização de notas restritas das permissões gerais de prontuário.
 - [ ] Validar referências a pacientes, profissionais, documentos e sessões dentro da clínica correta em todas as alterações.
-- [ ] Resolver a clínica pública por domínio ou identificador validado, substituindo a seleção da primeira clínica ativa.
+- [x] Resolver a clínica pública por domínio ou identificador validado, substituindo a seleção da primeira clínica ativa.
 - [ ] Registrar autor autenticado nas operações e impedir que um nome enviado pelo cliente substitua sua identidade na auditoria.
 
 Aceite: testes com duas clínicas comprovam isolamento; usuário anônimo não consulta nem altera financeiro; recepção não acessa prontuário; paciente acessa somente os próprios dados; permissão clínica comum não libera notas restritas.
 
 ## 3. Concluir pacientes, equipe, agenda e recepção — prioridade alta
 
+**Revisada pelo usuário; etapa 4 autorizada em 18/10/2026. Evidências em `docs/ETAPA-3-OPERACAO.md`.**
+
 Depende da etapa 2.
 
-- [ ] Completar criação, listagem, busca, edição e inativação de pacientes, com validação e prevenção de duplicidades.
-- [ ] Concluir cadastro de profissionais, serviços, unidades e disponibilidade.
-- [ ] Conectar a seleção real de paciente às telas Paciente 360°, prontuário e agenda.
-- [ ] Implementar confirmação, cancelamento, reagendamento, falta e conclusão das sessões, com transições válidas.
-- [ ] Completar criação e edição visual de recorrências, incluindo alteração de uma ocorrência ou da série.
-- [ ] Garantir que reservas simultâneas não criem dupla marcação; a verificação deve resistir à concorrência no banco.
-- [ ] Transformar solicitações públicas em fluxo de triagem, contato, confirmação ou recusa, com proteção contra abuso.
-- [ ] Fazer o check-in atualizar a sessão correta e refletir a fila real do dia.
-- [ ] Substituir contadores, dados fixos e botões de mensagem por operações persistentes.
-- [ ] Conferir datas e horários no fuso da clínica.
+- [x] Completar criação, listagem, busca, edição e inativação de pacientes, com validação e prevenção de duplicidades. Interface e servidor entregues; limites e critérios de comparação em `docs/ETAPA-3-PACIENTES.md`.
+- [x] Concluir cadastro de profissionais, serviços, unidades e disponibilidade.
+- [x] Conectar a seleção real de paciente às telas Paciente 360°, prontuário e agenda. Seleção por URL e busca, sem ID fixo; alterações de agenda seguem nos próximos itens.
+- [x] Implementar confirmação, cancelamento, reagendamento, falta e conclusão das sessões, com transições válidas.
+- [x] Completar criação e edição visual de recorrências, incluindo alteração de uma ocorrência ou da série.
+- [x] Garantir que reservas simultâneas não criem dupla marcação; a verificação deve resistir à concorrência no banco.
+- [x] Transformar solicitações públicas em fluxo de triagem, contato, confirmação ou recusa, com proteção contra abuso.
+- [x] Fazer o check-in atualizar a sessão correta e refletir a fila real do dia.
+- [x] Substituir contadores, dados fixos e botões de mensagem por operações persistentes.
+- [x] Conferir datas e horários no fuso da clínica.
 
 Aceite: cadastrar paciente, agendar, receber solicitação online, confirmar, fazer check-in, concluir e reagendar funcionam de ponta a ponta; duas tentativas simultâneas não reservam o mesmo profissional no mesmo horário.
 
 ## 4. Concluir prontuário, documentos e portal — prioridade alta
 
+**Revisada pelo usuário; etapa 5 autorizada em 18/10/2026. Guia em `docs/ETAPA-4-PRONTUARIO-E-PORTAL.md`.**
+
 Depende das etapas 2 e 3.
 
-- [ ] Completar edição de rascunhos, finalização e adendos, preservando histórico e autoria.
-- [ ] Proteger versões finalizadas contra sobrescrita e validar integridade dos registros.
-- [ ] Definir quais profissionais podem acessar cada paciente e aplicar essa regra no servidor.
-- [ ] Implementar upload, armazenamento privado, download autorizado e revogação de documentos.
-- [ ] Implementar consentimentos versionados, aceite ou assinatura conforme o requisito definido, com evidência de autoria e data.
-- [ ] Conectar o portal ao nome, sessões, documentos e financeiro reais do paciente.
-- [ ] Persistir solicitações de reagendamento e encaminhá-las à equipe.
-- [ ] Implementar teleatendimento com controle de acesso por sessão se estiver no escopo do lançamento; caso contrário, remover a ação demonstrativa.
+- [x] Completar edição de rascunhos, finalização e adendos, preservando histórico e autoria.
+- [x] Proteger versões finalizadas contra sobrescrita e validar integridade dos registros.
+- [x] Definir quais profissionais podem acessar cada paciente e aplicar essa regra no servidor.
+- [x] Implementar upload, armazenamento privado, download autorizado e revogação de documentos.
+- [x] Implementar consentimentos versionados, aceite ou assinatura conforme o requisito definido, com evidência de autoria e data.
+- [x] Conectar o portal ao nome, sessões, documentos e financeiro reais do paciente.
+- [x] Persistir solicitações de reagendamento e encaminhá-las à equipe.
+- [x] Implementar teleatendimento com controle de acesso por sessão se estiver no escopo do lançamento; caso contrário, remover a ação demonstrativa.
 
 Aceite: profissional autorizado registra e finaliza atendimento; alteração posterior gera histórico; paciente vê apenas documentos liberados; revogação impede novo acesso; ações do portal produzem resultado persistente.
 
 ## 5. Concluir financeiro e integrações reais — prioridade alta
 
+**Em andamento (18/10/2026): controle financeiro interno implementado para revisão. Provedores a definir; pacotes/repasses sem automação por escolha do usuário. Guia em `docs/ETAPA-5-FINANCEIRO-INTERNO.md`. Não iniciar etapa 6.**
+
 Depende das etapas 2 e 3. A escolha dos provedores antecede sua implementação.
 
-- [ ] Recalcular totais, descontos, parcelas e troco no servidor; rejeitar valores inconsistentes ou negativos.
-- [ ] Garantir consistência entre cobrança, itens, parcelas, contas e caixa com transações de banco.
-- [ ] Vincular cobrança a paciente, clínica e atendimento; conectar sessões, pacotes e repasses às regras financeiras.
+- [x] Recalcular totais, descontos, parcelas e troco no servidor; rejeitar valores inconsistentes ou negativos.
+- [x] Garantir consistência entre cobrança, itens, parcelas, contas e caixa com transações de banco. Operações internas com idempotência, revisão, autorização e auditoria atômicas.
+- [x] Vincular nova cobrança a paciente, clínica e atendimento opcional, com referências validadas. Pacotes e repasses permanecem manuais por decisão explícita do usuário; nenhuma regra demonstrativa é aplicada automaticamente.
 - [ ] Integrar os meios de pagamento contratados; desativar simulação no ambiente de produção.
 - [ ] Validar autenticidade de webhooks e impedir processamento duplicado, inclusive em reenvios e eventos fora de ordem.
 - [ ] Implementar estorno real e conciliação com o provedor, com trilha de auditoria.
 - [ ] Integrar emissão fiscal com o serviço escolhido, incluindo rejeição, cancelamento e consulta de situação.
-- [ ] Separar recibo interno de documento fiscal autorizado e remover indicações falsas de emissão.
-- [ ] Completar contas a pagar/receber, baixas, abertura e fechamento de caixa com saldos verificáveis.
+- [x] Separar registro interno de documento fiscal autorizado e remover indicações falsas de emissão. Sem nota fiscal ou dados bancários inventados.
+- [x] Completar o controle interno de contas a pagar/receber, baixas, abertura e fechamento de caixa com saldos verificáveis. Conciliação bancária e migração financeira legada continuam pendentes.
 - [ ] Validar relatórios financeiros contra lançamentos e retornos dos provedores.
 
 Aceite: pagamento em ambiente de testes do provedor atualiza uma única cobrança; webhook duplicado não duplica receita; estorno corresponde ao retorno externo; nota só aparece como emitida após autorização; caixa e relatórios fecham com os lançamentos.
 
 ## 6. Concluir CRM administrativo e comunicação — prioridade alta
+
+**Não iniciada. Aguardar encerramento/revisão da etapa 5 e novo comando.**
 
 Depende da etapa 3 e das permissões da etapa 2.
 

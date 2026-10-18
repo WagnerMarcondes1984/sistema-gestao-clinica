@@ -36,6 +36,69 @@
       "when": 1788904450121,
       "tag": "0004_sour_harry_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1792287810947,
+      "tag": "0005_colossal_susan_delgado",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1792287870145,
+      "tag": "0006_sleepy_saracen",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1792291492634,
+      "tag": "0007_nervous_yellowjacket",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1792334918386,
+      "tag": "0008_lumpy_night_thrasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1792336990891,
+      "tag": "0009_volatile_dormammu",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1792337779678,
+      "tag": "0010_aromatic_warhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1792340000629,
+      "tag": "0011_goofy_maria_hill",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1792341582318,
+      "tag": "0012_sloppy_solo",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1792344330672,
+      "tag": "0013_marvelous_ronan",
+      "breakpoints": true
     }
   ]
 }

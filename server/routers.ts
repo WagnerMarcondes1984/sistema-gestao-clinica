@@ -1,8 +1,34 @@
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import {
+  publicProcedure,
+  protectedProcedure,
+  financialProcedure,
+  router,
+} from "./_core/trpc";
 import { z } from "zod";
+import * as finance from "./finance";
+import {
+  chargeInput,
+  receiptInput,
+  reversalInput,
+  payableInput,
+  openCashInput,
+  closeCashInput,
+  cashMoveInput,
+} from "../shared/finance";
+import { teamRouter } from "./team-router";
+import { careRouter } from "./care-router";
+import { patientsRouter } from "./patients-router";
+import { schedulingRouter } from "./scheduling-router";
+import {
+  publicSchedule,
+  requestPublicBooking,
+  listSchedule,
+} from "./scheduling";
+import { publicBookingInput } from "../shared/scheduling";
 import {
   listClinicalVerticals,
   getClinicalVerticalByCode,
@@ -32,7 +58,6 @@ import {
   listMindosClinicalRecords,
   createMindosClinicalRecord,
   finalizeMindosClinicalRecord,
-  createMindosPublicBooking,
   listMindosBookingRequests,
   listMindosPortalData,
   createMindosReceptionEvent,
@@ -43,19 +68,19 @@ import {
 } from "./db";
 
 export const appRouter = router({
+  team: teamRouter,
+  patients: patientsRouter,
+  care: careRouter,
+  scheduling: schedulingRouter,
   system: systemRouter,
   publicMindos: router({
     serviceAreas: publicProcedure.query(async () => listMindosServiceAreas()),
+    scheduling: publicProcedure.query(() => publicSchedule()),
     requestBooking: publicProcedure
-      .input(z.object({
-        name: z.string().min(2).max(160),
-        contactChannel: z.enum(["WHATSAPP_DISCREET", "EMAIL", "PHONE"]),
-        contactValue: z.string().min(5).max(200),
-        serviceType: z.string().min(2).max(160),
-        preferredDate: z.coerce.date(),
-        preferredTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-      }))
-      .mutation(async ({ input }) => createMindosPublicBooking(input)),
+      .input(publicBookingInput)
+      .mutation(({ ctx, input }) =>
+        requestPublicBooking(input, ctx.req.socket?.remoteAddress || "unknown")
+      ),
   }),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -80,55 +105,24 @@ export const appRouter = router({
   }),
 
   dashboard: router({
-    metrics: publicProcedure
+    metrics: financialProcedure("VIEW_FINANCIAL")
       .input(z.object({ verticalCode: z.string().optional() }))
-      .query(async ({ input }) => {
-        return await getDashboardMetrics(input.verticalCode);
+      .query(async ({ ctx, input }) => {
+        return await getDashboardMetrics(
+          ctx.financialActor,
+          input.verticalCode
+        );
       }),
   }),
 
   transactions: router({
-    list: publicProcedure
+    list: financialProcedure("VIEW_FINANCIAL")
       .input(
         z.object({
           verticalCode: z.string().optional(),
-          status: z.string().optional(),
-          paymentMethod: z.string().optional(),
-          search: z.string().optional(),
-          limit: z.number().optional(),
-          offset: z.number().optional(),
-        })
-      )
-      .query(async ({ input }) => {
-        return await listTransactions(input);
-      }),
-    getByCode: publicProcedure
-      .input(z.object({ code: z.string() }))
-      .query(async ({ input }) => {
-        return await getTransactionByCode(input.code);
-      }),
-    create: publicProcedure
-      .input(
-        z.object({
-          verticalCode: z.string(),
-          patientName: z.string(),
-          patientDocument: z.string(),
-          patientEmail: z.string().optional(),
-          patientPhone: z.string().optional(),
-          professionalName: z.string(),
-          unitName: z.string().optional(),
-          title: z.string(),
-          category: z.string(),
-          paymentMethod: z.enum([
-            "PIX",
-            "CREDIT_CARD",
-            "DEBIT_CARD",
-            "BOLETO",
-            "CASH",
-            "TRANSFER",
-          ]),
           status: z
             .enum([
+              "ALL",
               "PENDING",
               "PAID",
               "OVERDUE",
@@ -137,123 +131,116 @@ export const appRouter = router({
               "PARTIALLY_REFUNDED",
             ])
             .optional(),
-          subtotal: z.number(),
-          discount: z.number().default(0),
-          addition: z.number().default(0),
-          totalAmount: z.number(),
-          installments: z.number().default(1),
-          installmentValue: z.number().optional(),
-          dueDate: z.coerce.date(),
-          cardBrand: z.string().optional(),
-          cardLast4: z.string().optional(),
-          cashReceived: z.number().optional(),
-          cashChange: z.number().optional(),
-          operatorName: z.string().optional(),
-          notes: z.string().optional(),
-          items: z.array(
-            z.object({
-              name: z.string(),
-              type: z.string().optional(),
-              quantity: z.number().default(1),
-              unitPrice: z.number(),
-              subtotal: z.number(),
-            })
-          ),
+          openOnly: z.boolean().optional(),
+          paymentMethod: z
+            .enum([
+              "ALL",
+              "PIX",
+              "CREDIT_CARD",
+              "DEBIT_CARD",
+              "BOLETO",
+              "CASH",
+              "TRANSFER",
+            ])
+            .optional(),
+          search: z.string().max(128).optional(),
+          limit: z.number().int().min(1).max(500).optional(),
+          offset: z.number().int().min(0).max(100000).optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await createTransactionWithItems(input);
+      .query(async ({ ctx, input }) => {
+        return await listTransactions(ctx.financialActor, input);
       }),
-    confirm: publicProcedure
-      .input(
-        z.object({
-          code: z.string(),
-          operatorName: z.string().optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        return await confirmTransactionPayment(input.code, input.operatorName);
-      }),
-    refund: publicProcedure
-      .input(
-        z.object({
-          code: z.string(),
-          reason: z.string(),
-          operatorName: z.string().optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        return await refundTransactionPayment(
-          input.code,
-          input.reason,
-          input.operatorName
-        );
-      }),
-    simulateWebhook: publicProcedure
-      .input(
-        z.object({
-          code: z.string(),
-          event: z.string().default("PIX_RECEIVED"),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const updated = await confirmTransactionPayment(
-          input.code,
-          "Webhook Bancário Simulado"
-        );
-        return {
-          event: input.event,
-          processedAt: new Date(),
-          success: true,
-          transaction: updated,
-        };
-      }),
-  }),
-
-  accountsPayable: router({
-    list: publicProcedure
-      .input(
-        z.object({
-          verticalCode: z.string().optional(),
-          status: z.string().optional(),
-        })
-      )
-      .query(async ({ input }) => {
-        return await listAccountsPayable(input.verticalCode, input.status);
-      }),
-    pay: publicProcedure
+    getByCode: financialProcedure("VIEW_FINANCIAL")
       .input(z.object({ code: z.string() }))
-      .mutation(async ({ input }) => {
-        return await payAccountPayable(input.code);
+      .query(async ({ ctx, input }) => {
+        return await getTransactionByCode(ctx.financialActor, input.code);
       }),
+    create: financialProcedure("MANAGE_FINANCIAL")
+      .input(chargeInput)
+      .mutation(({ ctx, input }) =>
+        finance.createCharge(ctx.financialActor, input)
+      ),
+    confirm: financialProcedure("MANAGE_FINANCIAL")
+      .input(receiptInput)
+      .mutation(({ ctx, input }) =>
+        finance.recordReceipt(ctx.financialActor, input)
+      ),
+    refund: financialProcedure("MANAGE_FINANCIAL")
+      .input(reversalInput)
+      .mutation(({ ctx, input }) =>
+        finance.reverseReceipt(ctx.financialActor, input)
+      ),
+    simulateWebhook: financialProcedure("MANAGE_FINANCIAL")
+      .input(z.object({ code: z.string(), event: z.string().optional() }))
+      .mutation(() => {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Simulação financeira desativada. Provedor bancário ainda não configurado.",
+        });
+      }),
+    context: financialProcedure("VIEW_FINANCIAL").query(({ ctx }) =>
+      finance.financialContext(ctx.financialActor)
+    ),
+    movements: financialProcedure("VIEW_FINANCIAL").query(({ ctx }) =>
+      finance.movements(ctx.financialActor)
+    ),
   }),
-
-  cash: router({
-    current: publicProcedure
-      .input(z.object({ verticalCode: z.string() }))
-      .query(async ({ input }) => {
-        return await getCurrentCashSession(input.verticalCode);
-      }),
-    list: publicProcedure
-      .input(z.object({ verticalCode: z.string().optional() }))
-      .query(async ({ input }) => {
-        return await listCashSessions(input.verticalCode);
-      }),
-    close: publicProcedure
+  accountsPayable: router({
+    list: financialProcedure("VIEW_FINANCIAL")
       .input(
         z.object({
-          sessionId: z.number(),
-          closingBalance: z.number(),
-          notes: z.string().optional(),
+          verticalCode: z.string().max(32).optional(),
+          status: z
+            .enum(["ALL", "PENDING", "OVERDUE", "PAID", "CANCELLED"])
+            .optional(),
         })
       )
-      .mutation(async ({ input }) => {
-        return await closeCashSession(
-          input.sessionId,
-          input.closingBalance,
-          input.notes
-        );
-      }),
+      .query(({ ctx, input }) =>
+        finance.listPayables(
+          ctx.financialActor,
+          input.verticalCode,
+          input.status
+        )
+      ),
+    create: financialProcedure("MANAGE_FINANCIAL")
+      .input(payableInput)
+      .mutation(({ ctx, input }) =>
+        finance.createPayable(ctx.financialActor, input)
+      ),
+    pay: financialProcedure("MANAGE_FINANCIAL")
+      .input(receiptInput)
+      .mutation(({ ctx, input }) =>
+        finance.settlePayable(ctx.financialActor, input)
+      ),
+  }),
+  cash: router({
+    current: financialProcedure("VIEW_FINANCIAL")
+      .input(z.object({ verticalCode: z.string().max(32) }))
+      .query(({ ctx, input }) =>
+        getCurrentCashSession(ctx.financialActor, input.verticalCode)
+      ),
+    list: financialProcedure("VIEW_FINANCIAL")
+      .input(z.object({ verticalCode: z.string().max(32).optional() }))
+      .query(({ ctx, input }) =>
+        listCashSessions(ctx.financialActor, input.verticalCode)
+      ),
+    open: financialProcedure("MANAGE_FINANCIAL")
+      .input(openCashInput)
+      .mutation(({ ctx, input }) =>
+        finance.openCash(ctx.financialActor, input)
+      ),
+    move: financialProcedure("MANAGE_FINANCIAL")
+      .input(cashMoveInput)
+      .mutation(({ ctx, input }) =>
+        finance.moveCash(ctx.financialActor, input)
+      ),
+    close: financialProcedure("MANAGE_FINANCIAL")
+      .input(closeCashInput)
+      .mutation(({ ctx, input }) =>
+        finance.closeCash(ctx.financialActor, input)
+      ),
   }),
 
   mindos: router({
@@ -264,106 +251,206 @@ export const appRouter = router({
       return await listMindosAppointments(ctx.user.id, ctx.user.role);
     }),
     createAppointment: protectedProcedure
-      .input(z.object({
-        patientId: z.number(),
-        professionalName: z.string().min(2),
-        unitName: z.string().min(2),
-        serviceType: z.string().min(2),
-        mode: z.enum(["IN_PERSON", "ONLINE"]),
-        status: z.enum(["SCHEDULED", "CONFIRMED"]).optional(),
-        startsAt: z.coerce.date(),
-        endsAt: z.coerce.date(),
-        recurrenceId: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          patientId: z.number().int().positive(),
+          professionalName: z.string().min(2),
+          unitName: z.string().min(2),
+          serviceType: z.string().min(2),
+          mode: z.enum(["IN_PERSON", "ONLINE"]),
+          status: z.enum(["SCHEDULED", "CONFIRMED"]).optional(),
+          startsAt: z.coerce.date(),
+          endsAt: z.coerce.date(),
+          recurrenceId: z.string().optional(),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
         return await createMindosAppointment(ctx.user.id, ctx.user.role, input);
       }),
     createRecurring: protectedProcedure
-      .input(z.object({
-        patientId: z.number(),
-        professionalName: z.string().min(2),
-        unitName: z.string().min(2),
-        serviceType: z.string().min(2),
-        mode: z.enum(["IN_PERSON", "ONLINE"]),
-        startsAt: z.coerce.date(),
-        endsAt: z.coerce.date(),
-        count: z.number().int().min(1).max(24),
-        intervalWeeks: z.number().int().min(1).max(8),
-      }))
+      .input(
+        z.object({
+          patientId: z.number().int().positive(),
+          professionalName: z.string().min(2),
+          unitName: z.string().min(2),
+          serviceType: z.string().min(2),
+          mode: z.enum(["IN_PERSON", "ONLINE"]),
+          startsAt: z.coerce.date(),
+          endsAt: z.coerce.date(),
+          count: z.number().int().min(1).max(24),
+          intervalWeeks: z.number().int().min(1).max(8),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
-        return await createMindosRecurringAppointments(ctx.user.id, ctx.user.role, input);
+        return await createMindosRecurringAppointments(
+          ctx.user.id,
+          ctx.user.role,
+          input
+        );
       }),
     patient360: protectedProcedure
-      .input(z.object({ patientId: z.number() }))
+      .input(z.object({ patientId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        return await getMindosPatient360(ctx.user.id, ctx.user.role, input.patientId);
+        return await getMindosPatient360(
+          ctx.user.id,
+          ctx.user.role,
+          input.patientId
+        );
       }),
     cms: router({
       versions: protectedProcedure.query(async ({ ctx }) => {
         return await listMindosCmsVersions(ctx.user.id, ctx.user.role);
       }),
       saveDraft: protectedProcedure
-        .input(z.object({ contentJson: z.string(), changeSummary: z.string().optional() }))
+        .input(
+          z.object({
+            contentJson: z.string(),
+            changeSummary: z.string().optional(),
+          })
+        )
         .mutation(async ({ ctx, input }) => {
-          return await saveMindosCmsDraft(ctx.user.id, ctx.user.role, input.contentJson, input.changeSummary);
+          return await saveMindosCmsDraft(
+            ctx.user.id,
+            ctx.user.role,
+            input.contentJson,
+            input.changeSummary
+          );
         }),
       publish: protectedProcedure
         .input(z.object({ versionId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          return await publishMindosCmsVersion(ctx.user.id, ctx.user.role, input.versionId);
+          return await publishMindosCmsVersion(
+            ctx.user.id,
+            ctx.user.role,
+            input.versionId
+          );
         }),
       approve: protectedProcedure
         .input(z.object({ versionId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          return await approveMindosCmsVersion(ctx.user.id, ctx.user.role, input.versionId);
+          return await approveMindosCmsVersion(
+            ctx.user.id,
+            ctx.user.role,
+            input.versionId
+          );
         }),
       rollback: protectedProcedure
         .input(z.object({ versionId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          return await rollbackMindosCmsVersion(ctx.user.id, ctx.user.role, input.versionId);
+          return await rollbackMindosCmsVersion(
+            ctx.user.id,
+            ctx.user.role,
+            input.versionId
+          );
         }),
     }),
     financialRules: protectedProcedure.query(async ({ ctx }) => {
       return await listMindosFinancialRules(ctx.user.id, ctx.user.role);
     }),
     clinicalRecords: protectedProcedure
-      .input(z.object({ patientId: z.number() }))
+      .input(z.object({ patientId: z.number().int().positive() }))
       .query(async ({ ctx, input }) => {
-        return await listMindosClinicalRecords(ctx.user.id, ctx.user.role, input.patientId);
+        return await listMindosClinicalRecords(
+          ctx.user.id,
+          ctx.user.role,
+          input.patientId
+        );
       }),
     createClinicalRecord: protectedProcedure
-      .input(z.object({
-        patientId: z.number(),
-        appointmentId: z.number().optional(),
-        recordType: z.enum(["ANAMNESIS", "EVOLUTION", "RESTRICTED_NOTE", "GOAL", "CARE_PLAN"]),
-        content: z.string().min(1),
-      }))
+      .input(
+        z.object({
+          patientId: z.number().int().positive(),
+          appointmentId: z.number().optional(),
+          recordType: z.enum([
+            "ANAMNESIS",
+            "EVOLUTION",
+            "RESTRICTED_NOTE",
+            "GOAL",
+            "CARE_PLAN",
+          ]),
+          content: z.string().trim().min(1).max(30000),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
-        return await createMindosClinicalRecord(ctx.user.id, ctx.user.role, input);
+        return await createMindosClinicalRecord(
+          ctx.user.id,
+          ctx.user.role,
+          input
+        );
       }),
     finalizeClinicalRecord: protectedProcedure
-      .input(z.object({ recordId: z.number() }))
+      .input(
+        z.object({
+          recordId: z.number().int().positive(),
+          revision: z.number().int().positive(),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
-        return await finalizeMindosClinicalRecord(ctx.user.id, ctx.user.role, input.recordId);
+        return await finalizeMindosClinicalRecord(
+          ctx.user.id,
+          ctx.user.role,
+          input.recordId,
+          input.revision
+        );
       }),
-    bookingRequests: protectedProcedure.query(async ({ ctx }) => listMindosBookingRequests(ctx.user.id, ctx.user.role)),
-    receptionQueue: protectedProcedure.query(async ({ ctx }) => listMindosReceptionQueue(ctx.user.id, ctx.user.role)),
-    portalData: protectedProcedure.input(z.object({ patientId: z.number() })).query(async ({ ctx, input }) => listMindosPortalData(ctx.user.id, ctx.user.role, input.patientId)),
-    receptionEvent: protectedProcedure.input(z.object({ patientId: z.number(), eventType: z.enum(["CHECK_IN", "MESSAGE_SENT", "CALL_LOGGED", "PROFILE_REVIEWED"]), messageTemplate: z.string().max(160).optional() })).mutation(async ({ ctx, input }) => createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)),
-    institutionalProfile: protectedProcedure.query(async ({ ctx }) => getMindosInstitutionalProfile(ctx.user.id, ctx.user.role)),
-    saveInstitutionalProfile: protectedProcedure.input(z.object({ title: z.string().min(2), metaDescription: z.string().min(2), city: z.string().optional(), faqJson: z.string(), llmsTxt: z.string() })).mutation(async ({ ctx, input }) => saveMindosInstitutionalProfile(ctx.user.id, ctx.user.role, input)),
+    bookingRequests: protectedProcedure.query(async ({ ctx }) =>
+      listMindosBookingRequests(ctx.user.id, ctx.user.role)
+    ),
+    receptionQueue: protectedProcedure.query(async ({ ctx }) =>
+      listSchedule(ctx.user, undefined, undefined, true)
+    ),
+    portalData: protectedProcedure.query(async ({ ctx }) =>
+      listMindosPortalData(ctx.user.id, ctx.user.role)
+    ),
+    receptionEvent: protectedProcedure
+      .input(
+        z.object({
+          patientId: z.number().int().positive(),
+          eventType: z.enum([
+            "CHECK_IN",
+            "MESSAGE_SENT",
+            "CALL_LOGGED",
+            "PROFILE_REVIEWED",
+          ]),
+          appointmentId: z.number().int().positive().optional(),
+          messageTemplate: z.string().max(160).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) =>
+        createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)
+      ),
+    institutionalProfile: protectedProcedure.query(async ({ ctx }) =>
+      getMindosInstitutionalProfile(ctx.user.id, ctx.user.role)
+    ),
+    saveInstitutionalProfile: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().min(2),
+          metaDescription: z.string().min(2),
+          city: z.string().optional(),
+          faqJson: z.string(),
+          llmsTxt: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) =>
+        saveMindosInstitutionalProfile(ctx.user.id, ctx.user.role, input)
+      ),
   }),
 
   audit: router({
-    list: publicProcedure
+    list: financialProcedure("VIEW_FINANCIAL")
       .input(
         z.object({
           verticalCode: z.string().optional(),
-          limit: z.number().optional(),
+          limit: z.number().int().min(1).max(500).optional(),
         })
       )
-      .query(async ({ input }) => {
-        return await listAuditLogs(input.verticalCode, input.limit);
+      .query(async ({ ctx, input }) => {
+        return await listAuditLogs(
+          ctx.financialActor,
+          input.verticalCode,
+          input.limit
+        );
       }),
   }),
 });

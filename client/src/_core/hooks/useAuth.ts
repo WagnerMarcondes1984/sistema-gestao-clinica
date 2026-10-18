@@ -1,6 +1,7 @@
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo } from "react";
 
 type UseAuthOptions = {
@@ -15,6 +16,7 @@ export function useAuth(options?: UseAuthOptions) {
   // desync it from an in-flight login's `state`.
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
@@ -45,29 +47,53 @@ export function useAuth(options?: UseAuthOptions) {
       try {
         sessionStorage.removeItem("manus-cookie");
       } catch {}
+      await queryClient.cancelQueries();
+      // Preserve o observador de auth.me para que a interface receba o estado
+      // anônimo. clear() o removia e deixava o portal preso no carregamento.
+      queryClient.removeQueries({
+        predicate: query => {
+          const path = query.queryKey[0];
+          return !(
+            Array.isArray(path) &&
+            path.length === 2 &&
+            path[0] === "auth" &&
+            path[1] === "me"
+          );
+        },
+      });
+      queryClient.getMutationCache().clear();
       utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
     }
-  }, [logoutMutation, utils]);
+  }, [logoutMutation, utils, queryClient]);
 
-  const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
-    return {
+  useEffect(() => {
+    try {
+      if (meQuery.data)
+        localStorage.setItem(
+          "manus-runtime-user-info",
+          JSON.stringify(meQuery.data)
+        );
+      else localStorage.removeItem("manus-runtime-user-info");
+    } catch {
+      // Armazenamento bloqueado não deve interromper renderização ou logout.
+    }
+  }, [meQuery.data]);
+
+  const state = useMemo(
+    () => ({
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
-    };
-  }, [
-    meQuery.data,
-    meQuery.error,
-    meQuery.isLoading,
-    logoutMutation.error,
-    logoutMutation.isPending,
-  ]);
+    }),
+    [
+      meQuery.data,
+      meQuery.error,
+      meQuery.isLoading,
+      logoutMutation.error,
+      logoutMutation.isPending,
+    ]
+  );
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;

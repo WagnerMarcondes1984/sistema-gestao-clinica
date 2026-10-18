@@ -1,27 +1,478 @@
-import { useState } from 'react';
-import { FinancialLayout } from '../components/FinancialLayout';
-import { useAuth } from '../_core/hooks/useAuth';
-import { trpc } from '../lib/trpc';
-import { FileText, HeartPulse, LockKeyhole, Plus, ShieldCheck, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
-
-export default function ClinicalRecord() {
-  const { isAuthenticated } = useAuth();
-  const recordsQuery = trpc.mindos.clinicalRecords.useQuery({ patientId: 1 }, { enabled: isAuthenticated, retry: false });
-  const createMutation = trpc.mindos.createClinicalRecord.useMutation({ onSuccess: () => { recordsQuery.refetch(); toast.success('Registro salvo como rascunho versionado.'); } });
-  const [recordType, setRecordType] = useState<'ANAMNESIS' | 'EVOLUTION' | 'RESTRICTED_NOTE' | 'GOAL' | 'CARE_PLAN'>('EVOLUTION');
-  const [content, setContent] = useState('');
-  const submit = () => {
-    if (!content.trim()) { toast.error('Escreva o conteúdo antes de salvar.'); return; }
-    if (!isAuthenticated) { toast.info('Faça login para persistir o registro clínico.'); return; }
-    createMutation.mutate({ patientId: 1, recordType, content });
-    setContent('');
-  };
+import { useState } from "react";
+import { toast } from "sonner";
+import { FinancialLayout } from "../components/FinancialLayout";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../components/ui/dialog";
+import {
+  PatientSelector,
+  SessionNotice,
+  useSelectedPatient,
+  buttonClass,
+  fieldClass,
+} from "../components/patients/PatientSelector";
+import { useAuth } from "../_core/hooks/useAuth";
+import { trpc } from "../lib/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+const actionLabels: Record<string, string> = {
+  CREATE: "Criação",
+  CREATE_ADDENDUM: "Criação de adendo",
+  EDIT: "Edição de rascunho",
+  FINALIZE: "Finalização",
+  LEGACY_BASELINE:
+    "Registro legado observado; histórico anterior não verificável",
+};
+const recordTypes = {
+  ANAMNESIS: "Anamnese",
+  EVOLUTION: "Evolução",
+  RESTRICTED_NOTE: "Nota restrita",
+  GOAL: "Objetivo",
+  CARE_PLAN: "Plano de cuidado",
+};
+type RecordType = keyof typeof recordTypes;
+type RecordRow = inferRouterOutputs<AppRouter>["care"]["records"][number];
+function RecordWorkspace({
+  patientId,
+  onDirtyChange,
+}: {
+  patientId: number;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
+  const [recordType, setRecordType] = useState<RecordType>("EVOLUTION"),
+    [content, setContent] = useState("");
+  const [editing, setEditing] = useState<RecordRow | null>(null),
+    [parent, setParent] = useState<RecordRow | null>(null),
+    [finalizing, setFinalizing] = useState<RecordRow | null>(null),
+    [historyId, setHistoryId] = useState(0),
+    [appointmentId, setAppointmentId] = useState(0);
+  const context = trpc.scheduling.context.useQuery(undefined, { retry: false });
+  const zone = context.data?.clinic.timezone || "America/Sao_Paulo";
+  const records = trpc.mindos.clinicalRecords.useQuery(
+    { patientId },
+    { retry: false }
+  );
+  const profile = trpc.patients.get.useQuery({ patientId }, { retry: false });
+  const appointments = trpc.scheduling.list.useQuery(
+    { patientId },
+    { enabled: Boolean(context.data?.canSchedule), retry: false }
+  );
+  const history = trpc.care.recordHistory.useQuery(
+    { recordId: historyId },
+    { enabled: historyId > 0, retry: false }
+  );
+  function clear() {
+    setContent("");
+    setEditing(null);
+    setParent(null);
+    setAppointmentId(0);
+    onDirtyChange(false);
+  }
+  const create = trpc.mindos.createClinicalRecord.useMutation({
+    onSuccess: async () => {
+      await records.refetch();
+      clear();
+      toast.success("Rascunho salvo para o paciente selecionado.");
+    },
+  });
+  const addendum = trpc.care.createRecord.useMutation({
+    onSuccess: async () => {
+      await records.refetch();
+      clear();
+      toast.success("Rascunho de adendo salvo.");
+    },
+  });
+  const update = trpc.care.updateRecord.useMutation({
+    onSuccess: async () => {
+      await records.refetch();
+      if (historyId > 0) await history.refetch();
+      clear();
+      setFinalizing(null);
+      toast.success("Registro atualizado com histórico preservado.");
+    },
+  });
+  const busy = create.isPending || addendum.isPending || update.isPending;
+  const error = create.error || addendum.error || update.error;
+  const access = trpc.care.recordAccess.useQuery(
+    { patientId },
+    { retry: false }
+  );
+  const showEditor = records.data && profile.data;
   return (
-    <FinancialLayout>
+    <div className="space-y-4">
+      {profile.data && (
+        <h2 className="font-bold">
+          {profile.data.fullName} • #{patientId}
+        </h2>
+      )}
+      {(records.isLoading || profile.isLoading) && (
+        <p role="status">Carregando prontuário…</p>
+      )}
+      {(records.error || profile.error) && (
+        <p role="alert" className="text-red-700">
+          {records.error?.message || profile.error?.message}
+        </p>
+      )}
+      {showEditor && (
+        <>
+          {access.data?.canWrite && (
+            <form
+              className="rounded-2xl border bg-white p-5 space-y-3"
+              onSubmit={e => {
+                e.preventDefault();
+                if (editing)
+                  update.mutate({
+                    recordId: editing.id,
+                    revision: editing.revision,
+                    content: content.trim(),
+                    finalize: false,
+                  });
+                else if (parent)
+                  addendum.mutate({
+                    patientId,
+                    recordType,
+                    parentRecordId: parent.id,
+                    appointmentId: parent.appointmentId || undefined,
+                    content: content.trim(),
+                  });
+                else
+                  create.mutate({
+                    patientId,
+                    recordType,
+                    appointmentId: appointmentId || undefined,
+                    content: content.trim(),
+                  });
+              }}
+            >
+              <h3 className="font-bold">
+                {editing
+                  ? `Editar rascunho #${editing.id}`
+                  : parent
+                    ? `Adendo ao registro #${parent.id}`
+                    : "Novo rascunho"}
+              </h3>
+              <fieldset disabled={busy} className="space-y-3">
+                <label className="block text-sm">
+                  Tipo de registro
+                  <select
+                    className={fieldClass}
+                    value={recordType}
+                    disabled={Boolean(editing || parent)}
+                    onChange={e => setRecordType(e.target.value as RecordType)}
+                  >
+                    {Object.entries(recordTypes).map(([value, label]) => (
+                      <option
+                        key={value}
+                        value={value}
+                        disabled={
+                          value === "RESTRICTED_NOTE" &&
+                          !access.data?.canWriteRestricted
+                        }
+                      >
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!editing && !parent && appointments.data && (
+                  <label className="block text-sm">
+                    Sessão vinculada (opcional)
+                    <select
+                      id="clinical-appointment"
+                      className={fieldClass}
+                      value={appointmentId}
+                      onChange={e => setAppointmentId(Number(e.target.value))}
+                    >
+                      <option value={0}>Sem sessão vinculada</option>
+                      {appointments.data.items.map(a => (
+                        <option key={a.id} value={a.id}>
+                          #{a.id} • {a.local.date} {a.local.time} • {a.status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label className="block text-sm">
+                  Conteúdo
+                  <textarea
+                    required
+                    maxLength={30000}
+                    className={`${fieldClass} min-h-48`}
+                    value={content}
+                    onChange={e => {
+                      setContent(e.target.value);
+                      onDirtyChange(Boolean(e.target.value));
+                    }}
+                  />
+                </label>
+              </fieldset>
+              {error && (
+                <p role="alert" className="text-red-700">
+                  {error.message}
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button className={buttonClass} disabled={busy}>
+                  {busy
+                    ? "Salvando…"
+                    : editing
+                      ? "Salvar edição"
+                      : parent
+                        ? "Salvar adendo"
+                        : "Salvar rascunho"}
+                </button>
+                <button
+                  type="button"
+                  className="border rounded-xl px-3 py-2"
+                  disabled={busy}
+                  onClick={clear}
+                >
+                  Descartar texto
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">
+                Somente o autor edita ou finaliza o rascunho. Após finalizar,
+                mudanças ficam em adendos; notas restritas exigem concessão
+                adicional.
+              </p>
+            </form>
+          )}
+          <section className="rounded-2xl border bg-white p-5">
+            <h3 className="font-bold">
+              Registros autorizados ({records.data.length})
+            </h3>
+            {records.data.length === 0 && (
+              <p className="mt-3 text-sm text-slate-500">
+                Nenhum registro para este paciente.
+              </p>
+            )}
+            <div className="mt-4 space-y-4">
+              {records.data.map(record => (
+                <article
+                  key={record.id}
+                  className="border-t pt-3 space-y-2"
+                  data-record-id={record.id}
+                >
+                  <p className="font-semibold text-sm">
+                    {recordTypes[record.recordType]} •{" "}
+                    {record.status === "DRAFT"
+                      ? "Rascunho"
+                      : record.status === "ADDENDUM"
+                        ? "Adendo finalizado"
+                        : "Finalizado"}{" "}
+                    • v{record.version} • #{record.id}
+                  </p>
+                  {record.parentRecordId && (
+                    <p className="text-xs text-slate-500">
+                      Adendo ao registro #{record.parentRecordId}.
+                    </p>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap">
+                    {record.content}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Autor: {record.authorName} (conta #{record.authorUserId}) •{" "}
+                    {new Date(record.createdAt).toLocaleString("pt-BR", {
+                      timeZone: zone,
+                    })}{" "}
+                    •{" "}
+                    {record.integrityStatus === "VERIFIED"
+                      ? "Integridade verificada"
+                      : "Legado: integridade anterior não verificável"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {record.canEdit && (
+                      <>
+                        <button
+                          className="border rounded-xl px-3 py-2 text-sm"
+                          disabled={Boolean(content) || busy}
+                          onClick={() => {
+                            create.reset();
+                            update.reset();
+                            setEditing(record);
+                            setParent(null);
+                            setRecordType(record.recordType);
+                            setContent(record.content);
+                            onDirtyChange(true);
+                          }}
+                        >
+                          Editar rascunho
+                        </button>
+                        <button
+                          className="border rounded-xl px-3 py-2 text-sm"
+                          disabled={Boolean(content) || busy}
+                          onClick={() => {
+                            update.reset();
+                            setFinalizing(record);
+                          }}
+                        >
+                          Finalizar
+                        </button>
+                      </>
+                    )}
+                    {record.canAddendum && (
+                      <button
+                        className="border rounded-xl px-3 py-2 text-sm"
+                        disabled={Boolean(content) || busy}
+                        onClick={() => {
+                          setParent(record);
+                          setEditing(null);
+                          setRecordType(record.recordType);
+                        }}
+                      >
+                        Novo adendo
+                      </button>
+                    )}
+                    <button
+                      className="border rounded-xl px-3 py-2 text-sm"
+                      onClick={() => setHistoryId(record.id)}
+                    >
+                      Ver histórico
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+      <Dialog
+        open={Boolean(finalizing)}
+        onOpenChange={open => {
+          if (!open && !busy) setFinalizing(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Finalizar registro</DialogTitle>
+            <DialogDescription>
+              Confira o conteúdo. Após finalizar, o registro não poderá ser
+              sobrescrito; correções serão adendos identificados.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="whitespace-pre-wrap text-sm">{finalizing?.content}</p>
+          {update.error && (
+            <p role="alert" className="text-red-700">
+              {update.error.message}
+            </p>
+          )}
+          <button
+            className={buttonClass}
+            disabled={busy}
+            onClick={() => {
+              if (finalizing)
+                update.mutate({
+                  recordId: finalizing.id,
+                  revision: finalizing.revision,
+                  finalize: true,
+                });
+            }}
+          >
+            Confirmar finalização
+          </button>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={historyId > 0}
+        onOpenChange={open => {
+          if (!open) setHistoryId(0);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Histórico do registro #{historyId}</DialogTitle>
+            <DialogDescription>
+              Versões verificadas com autoria e ação registradas. Legado sem
+              versões anteriores permanece identificado.
+            </DialogDescription>
+          </DialogHeader>
+          {history.isLoading && <p role="status">Carregando histórico…</p>}
+          {history.error && <p role="alert">{history.error.message}</p>}
+          {history.data?.length === 0 && (
+            <p>Registro legado sem histórico verificável anterior.</p>
+          )}
+          {history.data?.map(v => (
+            <article key={v.id} className="border-t pt-3">
+              <p className="text-sm font-semibold">
+                Revisão {v.revision} •{" "}
+                {actionLabels[v.action] || "Alteração registrada"} • Autor #
+                {v.actorUserId}
+              </p>
+              <p className="text-xs text-slate-500">
+                {new Date(v.createdAt).toLocaleString("pt-BR", {
+                  timeZone: zone,
+                })}
+              </p>
+              <p className="mt-2 whitespace-pre-wrap text-sm">
+                {(JSON.parse(v.snapshotJson) as { content: string }).content}
+              </p>
+            </article>
+          ))}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+export default function ClinicalRecord() {
+  const { user, loading, isAuthenticated } = useAuth();
+  const { patientId, selectPatient } = useSelectedPatient();
+  const [pendingPatient, setPendingPatient] = useState<number | null>(null),
+    [dirty, setDirty] = useState(false);
+  return (
+    <FinancialLayout
+      operatorName={user?.name || "Conta autenticada"}
+      contextLabel="Prontuário"
+      showFiscalBanner={false}
+    >
       <div className="space-y-5">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4"><div><div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-wider text-indigo-600 font-bold mb-2"><HeartPulse className="w-3.5 h-3.5" /> Acesso clínico auditado</div><h1 className="text-2xl font-extrabold text-slate-900">Prontuário psicológico</h1><p className="text-sm text-slate-500 mt-1">Marina S. Andrade • registros versionados e sem sobrescrita silenciosa.</p></div><div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-700"><ShieldCheck className="w-4 h-4" /> Acesso clínico autorizado</div></div>
-        <div className="grid grid-cols-1 xl:grid-cols-[0.9fr_1.1fr] gap-5"><section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5"><div className="flex items-center gap-2 mb-4"><Sparkles className="w-4 h-4 text-indigo-600" /><h2 className="font-bold text-slate-900">Novo registro</h2></div><div className="grid grid-cols-2 gap-2 mb-4">{[['ANAMNESIS', 'Anamnese'], ['EVOLUTION', 'Evolução'], ['GOAL', 'Objetivo'], ['CARE_PLAN', 'Plano'], ['RESTRICTED_NOTE', 'Nota restrita']].map(([value, label]) => <button key={value} onClick={() => setRecordType(value as typeof recordType)} className={`px-3 py-2 rounded-xl text-[11px] font-bold border ${recordType === value ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'border-slate-200 text-slate-500'}`}>{label}{value === 'RESTRICTED_NOTE' && <LockKeyhole className="w-3 h-3 inline ml-1" />}</button>)}</div><textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Registre apenas informações necessárias ao cuidado..." className="w-full min-h-48 resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200" /><button onClick={submit} className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold"><Plus className="w-4 h-4" /> Salvar rascunho</button><p className="mt-3 text-[11px] text-slate-500">Notas restritas exigem a permissão <span className="font-mono">EDIT_RESTRICTED_NOTE</span> e geram auditoria específica.</p></section><section className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden"><div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between"><div><h2 className="font-bold text-slate-900">Histórico versionado</h2><p className="text-xs text-slate-500 mt-1">{recordsQuery.data?.length ?? 0} registros retornados pela camada clínica.</p></div><FileText className="w-5 h-5 text-slate-400" /></div><div className="divide-y divide-slate-100">{recordsQuery.data && recordsQuery.data.length > 0 ? recordsQuery.data.map((record) => <div key={record.id} className="p-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-800">{record.recordType}</span><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${record.status === 'FINALIZED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{record.status === 'FINALIZED' ? 'FINALIZADO' : 'RASCUNHO'}</span></div><span className="text-[10px] text-slate-400">v{record.version}</span></div><p className="text-xs text-slate-600 mt-2 leading-relaxed">{record.content}</p><div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400"><LockKeyhole className="w-3 h-3" /> Hash de integridade registrado</div></div>) : <div className="p-10 text-center"><div className="text-sm font-bold text-slate-700">Nenhum registro carregado</div><p className="text-xs text-slate-500 mt-1">A camada clínica retorna apenas dados autorizados.</p></div>}</div></section></div>
+        <h1 className="text-2xl font-bold">Prontuário psicológico</h1>
+        <SessionNotice loading={loading} authenticated={isAuthenticated} />
+        {isAuthenticated && (
+          <>
+            <PatientSelector
+              value={patientId}
+              onChange={id => {
+                if (dirty) setPendingPatient(id);
+                else selectPatient(id);
+              }}
+            />
+            {pendingPatient !== null && (
+              <div role="alert" className="rounded-xl border bg-amber-50 p-4">
+                <p>
+                  Trocar de paciente descarta o texto não salvo deste
+                  prontuário.
+                </p>
+                <button
+                  className={buttonClass}
+                  onClick={() => {
+                    selectPatient(pendingPatient);
+                    setPendingPatient(null);
+                    setDirty(false);
+                  }}
+                >
+                  Descartar e trocar
+                </button>
+                <button
+                  className="ml-3 underline"
+                  onClick={() => setPendingPatient(null)}
+                >
+                  Continuar editando
+                </button>
+              </div>
+            )}
+            {patientId > 0 && (
+              <RecordWorkspace
+                key={patientId}
+                patientId={patientId}
+                onDirtyChange={setDirty}
+              />
+            )}
+          </>
+        )}
       </div>
     </FinancialLayout>
   );

@@ -37,9 +37,12 @@ import {
 interface FinancialLayoutProps {
   children: React.ReactNode;
   onOpenQuickCheckout?: () => void;
+  operatorName?: string;
+  contextLabel?: string;
+  showFiscalBanner?: boolean;
 }
 
-export function FinancialLayout({ children, onOpenQuickCheckout }: FinancialLayoutProps) {
+export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, contextLabel, showFiscalBanner = false }: FinancialLayoutProps) {
   const { currentVertical, verticalCode, setVerticalCode, allPresets } = useVertical();
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
@@ -49,11 +52,15 @@ export function FinancialLayout({ children, onOpenQuickCheckout }: FinancialLayo
     { href: '/', label: 'MindOS', icon: Sparkles },
     { href: '/agenda', label: 'Agenda', icon: CalendarDays },
     { href: '/reception', label: 'Recepção', icon: UserRoundCheck },
-    { href: '/patients', label: 'Paciente 360°', icon: UsersRound },
+    { href: '/patients', label: 'Pacientes', icon: UsersRound },
+    { href: '/patient-care', label: 'Documentos e portal', icon: FileText },
+    { href: '/app/consents', label: 'Consentimentos', icon: FileHeart },
     { href: '/clinical-records', label: 'Prontuário', icon: FileHeart },
     { href: '/checkout', label: 'Financeiro', icon: CreditCard, highlight: true },
     { href: '/transactions', label: 'Transações', icon: Receipt },
     { href: '/app/admin-studio', label: 'Admin Studio', icon: Settings2 },
+    { href: '/app/scheduling', label: 'Configuração da agenda', icon: CalendarDays },
+    { href: '/app/team', label: 'Equipe', icon: UsersRound },
   ];
 
   const getVerticalIcon = (code: VerticalCode) => {
@@ -177,7 +184,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout }: FinancialLayo
             <div className="flex items-center gap-3">
               {/* Quick Checkout CTA */}
               <Link
-                href="/checkout"
+                href="/agenda"
                 className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white px-3.5 py-2 rounded-xl shadow-sm transition-all duration-150 hover:brightness-110 active:scale-95"
                 style={{ backgroundColor: currentVertical.primaryColor }}
               >
@@ -206,10 +213,10 @@ export function FinancialLayout({ children, onOpenQuickCheckout }: FinancialLayo
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="font-semibold text-slate-800 dark:text-zinc-200 leading-tight">
-                    {currentVertical.defaultOperator}
+                    {operatorName ?? currentVertical.defaultOperator}
                   </span>
                   <span className="text-[10px] text-slate-400">
-                    {currentVertical.defaultUnit}
+                    {contextLabel ?? currentVertical.defaultUnit}
                   </span>
                 </div>
               </div>
@@ -245,26 +252,6 @@ export function FinancialLayout({ children, onOpenQuickCheckout }: FinancialLayo
       </header>
 
       {/* Info Ribbon for Institutional & Fiscal Transparency */}
-      <div className="bg-slate-100/80 dark:bg-zinc-900/40 border-b border-slate-200/60 dark:border-zinc-800/60 py-1.5 px-4 text-[11px] text-slate-500 dark:text-zinc-400">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-semibold text-slate-700 dark:text-zinc-300">
-              CNPJ: {currentVertical.cnpj}
-            </span>
-            <span>•</span>
-            <span>Inscrição Municipal: {currentVertical.municipalReg}</span>
-            <span>•</span>
-            <span>Conselho: {currentVertical.council}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              Ambiente de Produção Fiscal NFS-e Conectado
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Page Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {children}

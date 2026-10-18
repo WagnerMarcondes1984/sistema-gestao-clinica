@@ -1,0 +1,1041 @@
+{
+  "base_commit": "2d098d19e609550f06e67f01ae3eef4e4733a182",
+  "branch": "codex/atualizacao-geral-sistema-gestao",
+  "commit_message": "atulização geral do sistema de gestão",
+  "file_count": 255,
+  "hash_algorithm": "Git blob SHA-1",
+  "self_excluded": "docs/MANIFESTO-DO-CHECKPOINT.json",
+  "seed": {
+    "published_git_blob": "0a887550038df4e893ee018a6286d1f9568ac524",
+    "local_git_blob": "50518930bbf99b2bfd01145b313d3966213c2900",
+    "difference": "patches/seed-finance-guard.patch",
+    "full_file_not_republished": true
+  },
+  "excluded": [
+    ".env e segredos",
+    "node_modules",
+    "dist e build",
+    ".mindos-private",
+    "dados do MySQL",
+    "logs",
+    "perfis e sessões de navegador"
+  ],
+  "files": [
+    {
+      "path": ".env.example",
+      "git_blob_sha": "141f3fc0eb6657333db01bc0a4763bdb06e11c8b"
+    },
+    {
+      "path": ".gitignore",
+      "git_blob_sha": "081ee6b6c820c458cc89ee5d7316dc3c24a35eea"
+    },
+    {
+      "path": ".gitkeep",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": ".prettierignore",
+      "git_blob_sha": "72842592fd0b2d2e7e186e4beeeacada46dabed7"
+    },
+    {
+      "path": ".prettierrc",
+      "git_blob_sha": "67c0bc83c28a85bbcd4cb081fa91d30b4a79fcfd"
+    },
+    {
+      "path": "GUIA-VS-CODE-CLINICA.md",
+      "git_blob_sha": "0a55114abf39269ff234ecab6b5b272a6ee4e57f"
+    },
+    {
+      "path": "PLANO-DE-CONCLUSAO-MINDOS.md",
+      "git_blob_sha": "68dbb89dec22ce46e1ed4ff2934e97b5c939dd8f"
+    },
+    {
+      "path": "README.md",
+      "git_blob_sha": "182ad7c47005964d91a3f30b49e2d9260b93c7f4"
+    },
+    {
+      "path": "client/index.html",
+      "git_blob_sha": "3a153763ba04d621c55556d844db14499ff080d8"
+    },
+    {
+      "path": "client/public/.gitkeep",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "client/public/__manus__/debug-collector.js",
+      "git_blob_sha": "050455560719c33e2e77041a1db51202aa034f45"
+    },
+    {
+      "path": "client/src/App.tsx",
+      "git_blob_sha": "fd7f7ffc7d6d612c215bdc36e7ad1c85f5d7a815"
+    },
+    {
+      "path": "client/src/_core/hooks/useAuth.ts",
+      "git_blob_sha": "391e8ee7782ddaf05d4d62f9e5b27b2c38d2f5d8"
+    },
+    {
+      "path": "client/src/components/AIChatBox.tsx",
+      "git_blob_sha": "1c00871fcd7099a42c6a73b8f96d1ec398d01bd2"
+    },
+    {
+      "path": "client/src/components/AppointmentForm.tsx",
+      "git_blob_sha": "bb0aa1292516d3961b29e20bdf1fa75361ca376d"
+    },
+    {
+      "path": "client/src/components/DashboardLayout.tsx",
+      "git_blob_sha": "2218f59b745e2909c50a14f3eb0c369a1cd1c52d"
+    },
+    {
+      "path": "client/src/components/DashboardLayoutSkeleton.tsx",
+      "git_blob_sha": "9ae93351cbc91de54746f6f6b6bb31a448051e8b"
+    },
+    {
+      "path": "client/src/components/ErrorBoundary.tsx",
+      "git_blob_sha": "1422986082c40e4ae64006dddbc25b8fa1bd48b9"
+    },
+    {
+      "path": "client/src/components/FinancialLayout.tsx",
+      "git_blob_sha": "73c5802d9d5b50a4f52cbd9aad68228b65fa7c6d"
+    },
+    {
+      "path": "client/src/components/InvoiceModal.tsx",
+      "git_blob_sha": "dfbce318da03b517505812d9c7718043cf76f707"
+    },
+    {
+      "path": "client/src/components/ManusDialog.tsx",
+      "git_blob_sha": "b3d229366d5cb1133721c2f6a01d6980f0057841"
+    },
+    {
+      "path": "client/src/components/Map.tsx",
+      "git_blob_sha": "4849e056d161a8ccd910c095da7235d50e856d4a"
+    },
+    {
+      "path": "client/src/components/PortalRescheduleInbox.tsx",
+      "git_blob_sha": "f8db6976c0e6fc7399fe9ac51649e1c3a451db78"
+    },
+    {
+      "path": "client/src/components/ReceiptModal.tsx",
+      "git_blob_sha": "55953115633b2e351406277d7febcecebbef9402"
+    },
+    {
+      "path": "client/src/components/patients/PatientSelector.tsx",
+      "git_blob_sha": "cbbcf0554fce2a131a6c09109a967a74b2f93b5c"
+    },
+    {
+      "path": "client/src/components/team/AccessFields.tsx",
+      "git_blob_sha": "09b169d0dedb8cf1ad8a862ec3af4c799fef684c"
+    },
+    {
+      "path": "client/src/components/ui/accordion.tsx",
+      "git_blob_sha": "62705e3dedcfc782ec545604f87a6c46ea0355a6"
+    },
+    {
+      "path": "client/src/components/ui/alert-dialog.tsx",
+      "git_blob_sha": "69499798f51dee32fe4dbc0cfa5efd7c41bba49f"
+    },
+    {
+      "path": "client/src/components/ui/alert.tsx",
+      "git_blob_sha": "5b1a0b5e303dc73c7e319b46f1711ab9cda16d78"
+    },
+    {
+      "path": "client/src/components/ui/aspect-ratio.tsx",
+      "git_blob_sha": "01d045dd7d07982e0920fb5d99c1cfe77dd61354"
+    },
+    {
+      "path": "client/src/components/ui/avatar.tsx",
+      "git_blob_sha": "02305fd474c861a8296e6d883da235f56684a073"
+    },
+    {
+      "path": "client/src/components/ui/badge.tsx",
+      "git_blob_sha": "83750ed1654afaa5e2a59b608774bbed393aa758"
+    },
+    {
+      "path": "client/src/components/ui/breadcrumb.tsx",
+      "git_blob_sha": "9d88a372abde7b226376e5b2128f47cf41b11b8e"
+    },
+    {
+      "path": "client/src/components/ui/button-group.tsx",
+      "git_blob_sha": "30139ec4faebfa691a58309779c6074b855266ab"
+    },
+    {
+      "path": "client/src/components/ui/button.tsx",
+      "git_blob_sha": "6d74f9afd218987d7185dc6b5ddead5c733e4dea"
+    },
+    {
+      "path": "client/src/components/ui/calendar.tsx",
+      "git_blob_sha": "48d454368f6bfe3880479fb884cb21ec75d9d4c5"
+    },
+    {
+      "path": "client/src/components/ui/card.tsx",
+      "git_blob_sha": "e8c09391c2dedc5e9bf76dc8b4206eea3f2d2e45"
+    },
+    {
+      "path": "client/src/components/ui/carousel.tsx",
+      "git_blob_sha": "03a9617491509f46c6a20680c5dab6e31c83c248"
+    },
+    {
+      "path": "client/src/components/ui/chart.tsx",
+      "git_blob_sha": "f93f6c449c09fb2dd7e9b5062d64e2c5f9993a89"
+    },
+    {
+      "path": "client/src/components/ui/checkbox.tsx",
+      "git_blob_sha": "6afea5dd3a8e36722da39a73b96a60d544efe924"
+    },
+    {
+      "path": "client/src/components/ui/collapsible.tsx",
+      "git_blob_sha": "849e7b66f5e9e7e2ee849edef452143b94c99fd2"
+    },
+    {
+      "path": "client/src/components/ui/command.tsx",
+      "git_blob_sha": "d710807ce59236be582af42265af91952cc7fd15"
+    },
+    {
+      "path": "client/src/components/ui/context-menu.tsx",
+      "git_blob_sha": "917f14052aa8a7b6b13c3bc03823c2805f1c8fc2"
+    },
+    {
+      "path": "client/src/components/ui/dialog.tsx",
+      "git_blob_sha": "9a84318ec908dab52096ee2f5ae6bb30c24ff962"
+    },
+    {
+      "path": "client/src/components/ui/drawer.tsx",
+      "git_blob_sha": "698dd324d33f6d318a625a5a0828ff043d264a67"
+    },
+    {
+      "path": "client/src/components/ui/dropdown-menu.tsx",
+      "git_blob_sha": "cc5562574aaace8a5da136d240e0c877d41835b8"
+    },
+    {
+      "path": "client/src/components/ui/empty.tsx",
+      "git_blob_sha": "e0c125a2175c1275f5ccdbc20887a023c7d66504"
+    },
+    {
+      "path": "client/src/components/ui/field.tsx",
+      "git_blob_sha": "9e23cfd73f0e590264635c5275c697434549716b"
+    },
+    {
+      "path": "client/src/components/ui/form.tsx",
+      "git_blob_sha": "0f3ccb67edaa62b36c40b5db085f1ca83600631c"
+    },
+    {
+      "path": "client/src/components/ui/hover-card.tsx",
+      "git_blob_sha": "cdaae11629950c11a65caa772c5ed5fa018f2971"
+    },
+    {
+      "path": "client/src/components/ui/input-group.tsx",
+      "git_blob_sha": "de9ddfd74edea065f6019682bc3d3689ae47eecc"
+    },
+    {
+      "path": "client/src/components/ui/input-otp.tsx",
+      "git_blob_sha": "e73a870ca428a9b861fa4263f85bb73343d70763"
+    },
+    {
+      "path": "client/src/components/ui/input.tsx",
+      "git_blob_sha": "159aa02b52d016654fe0ef85b7626f9c3be11de6"
+    },
+    {
+      "path": "client/src/components/ui/item.tsx",
+      "git_blob_sha": "a0adca27426bd7b0241905e3ec430e5753bbd830"
+    },
+    {
+      "path": "client/src/components/ui/kbd.tsx",
+      "git_blob_sha": "3add9eadcca76c4bbcb3a3181d1520e40a83bcb5"
+    },
+    {
+      "path": "client/src/components/ui/label.tsx",
+      "git_blob_sha": "2db054e6d48a61c3ee3245cab1d7093606b85d11"
+    },
+    {
+      "path": "client/src/components/ui/menubar.tsx",
+      "git_blob_sha": "f914796adefe81f1d1b268189f4a0d56e7245291"
+    },
+    {
+      "path": "client/src/components/ui/navigation-menu.tsx",
+      "git_blob_sha": "5ed6cb978c38716fe14532716196a6d22a1806d2"
+    },
+    {
+      "path": "client/src/components/ui/pagination.tsx",
+      "git_blob_sha": "71d763182e7e73dd61a2c74bb687805f1b142cae"
+    },
+    {
+      "path": "client/src/components/ui/popover.tsx",
+      "git_blob_sha": "d54f180c51721023e7f0adbecc259c9b50ebf2f1"
+    },
+    {
+      "path": "client/src/components/ui/progress.tsx",
+      "git_blob_sha": "4c9f4aba8e6b5eaf13428dcac98ecc796d8d6dd5"
+    },
+    {
+      "path": "client/src/components/ui/radio-group.tsx",
+      "git_blob_sha": "dbc548e2f3b8a7f6f5b2cc1a2e350ad8ddd33c66"
+    },
+    {
+      "path": "client/src/components/ui/resizable.tsx",
+      "git_blob_sha": "d703a532250a96e82fb997f7af998afac3eab954"
+    },
+    {
+      "path": "client/src/components/ui/scroll-area.tsx",
+      "git_blob_sha": "92b825efa67ab35205c3f5aa23c2be1c1939c133"
+    },
+    {
+      "path": "client/src/components/ui/select.tsx",
+      "git_blob_sha": "98d8d67462d1fb1edd20c703e7a96b3ae8babbe8"
+    },
+    {
+      "path": "client/src/components/ui/separator.tsx",
+      "git_blob_sha": "091415b67c4138d835e5949fce8a02c323c7bae2"
+    },
+    {
+      "path": "client/src/components/ui/sheet.tsx",
+      "git_blob_sha": "6d6efec6ab8b153e2afa84d9e1306ca188c188f0"
+    },
+    {
+      "path": "client/src/components/ui/sidebar.tsx",
+      "git_blob_sha": "2744889fee7e5c3907a238222d626ece16ab79e9"
+    },
+    {
+      "path": "client/src/components/ui/skeleton.tsx",
+      "git_blob_sha": "01689981c169cb8d70af0a3ee1b3b57d41ebfee1"
+    },
+    {
+      "path": "client/src/components/ui/slider.tsx",
+      "git_blob_sha": "b3204700c1874545807213e30686fd184afac852"
+    },
+    {
+      "path": "client/src/components/ui/sonner.tsx",
+      "git_blob_sha": "7264637e00958b9f64e6a05222bde2b2aa553a72"
+    },
+    {
+      "path": "client/src/components/ui/spinner.tsx",
+      "git_blob_sha": "055ac76763ed966520c0b2202fee0e569c6d4a2d"
+    },
+    {
+      "path": "client/src/components/ui/switch.tsx",
+      "git_blob_sha": "f0767f7367c3978788de63ef7cbc2f61bdb6dc05"
+    },
+    {
+      "path": "client/src/components/ui/table.tsx",
+      "git_blob_sha": "7d2e59a968fb1017b4ec228bf06a32a57cd25a0c"
+    },
+    {
+      "path": "client/src/components/ui/tabs.tsx",
+      "git_blob_sha": "d2c67a7dac4de09097ec9978c0efe5b45378d99b"
+    },
+    {
+      "path": "client/src/components/ui/textarea.tsx",
+      "git_blob_sha": "df7c37e32be3bb007ce306dfae227c55f22bfd50"
+    },
+    {
+      "path": "client/src/components/ui/toggle-group.tsx",
+      "git_blob_sha": "002e4cc10c788cebb100097e67dfda557c63dd39"
+    },
+    {
+      "path": "client/src/components/ui/toggle.tsx",
+      "git_blob_sha": "4b556ac85c43353202a463ff9f92c0dedde576ef"
+    },
+    {
+      "path": "client/src/components/ui/tooltip.tsx",
+      "git_blob_sha": "d0bc4fd86697e89e804b9f00877543a9b9f727bd"
+    },
+    {
+      "path": "client/src/const.ts",
+      "git_blob_sha": "2bc83ed810abd35856ae21ed2aafdf443a15fe37"
+    },
+    {
+      "path": "client/src/contexts/ThemeContext.tsx",
+      "git_blob_sha": "765d93cb95b2f05e72e04fe3a3aa17b16ae46db9"
+    },
+    {
+      "path": "client/src/contexts/VerticalContext.tsx",
+      "git_blob_sha": "fc2e9030044fdd2ac72b6972be91c21cc62dc4e6"
+    },
+    {
+      "path": "client/src/hooks/useComposition.ts",
+      "git_blob_sha": "8405ad06e16c867b1c32302c060781c87423d5ac"
+    },
+    {
+      "path": "client/src/hooks/useMobile.tsx",
+      "git_blob_sha": "48fab93c03d088ecd5f2124a4bc585294eab9255"
+    },
+    {
+      "path": "client/src/hooks/usePersistFn.ts",
+      "git_blob_sha": "6c4c0247138e64d19c4cca0e9c95322066c38725"
+    },
+    {
+      "path": "client/src/index.css",
+      "git_blob_sha": "d043166be9d6f15c5f44a84dec35d834a17670ae"
+    },
+    {
+      "path": "client/src/lib/trpc.ts",
+      "git_blob_sha": "df386074e1d3f3616e3e8161a3e1baa0f56772cc"
+    },
+    {
+      "path": "client/src/lib/utils.ts",
+      "git_blob_sha": "a5ef193506d07d0459fec4f187af08283094d7c8"
+    },
+    {
+      "path": "client/src/main.tsx",
+      "git_blob_sha": "bfecdf988398c93700bca3805cb919b0dc763dc1"
+    },
+    {
+      "path": "client/src/pages/AcceptInvite.tsx",
+      "git_blob_sha": "500206932f42a7d1e574a8efe070250fc8a7a0af"
+    },
+    {
+      "path": "client/src/pages/AdminStudio.tsx",
+      "git_blob_sha": "7fdd29c3dbd1b7ac99fd037ca74ca481ba2017ad"
+    },
+    {
+      "path": "client/src/pages/Agenda.tsx",
+      "git_blob_sha": "2ef306a7163f7e5430af4450bd103b256f6d8f19"
+    },
+    {
+      "path": "client/src/pages/AuditFiscal.tsx",
+      "git_blob_sha": "aaf2e449a721e86d7a9abacb0f2e7898b146e385"
+    },
+    {
+      "path": "client/src/pages/CashManagement.tsx",
+      "git_blob_sha": "63ec7d7b0337320dc7e50b57dd55ce5a9367df46"
+    },
+    {
+      "path": "client/src/pages/Checkout.tsx",
+      "git_blob_sha": "dcbd2badb24c68b467b9f6d048b456ff8a12baeb"
+    },
+    {
+      "path": "client/src/pages/ClinicalRecord.tsx",
+      "git_blob_sha": "79c8c840d67c6ba70b0ee7afe6a29129c5a191f4"
+    },
+    {
+      "path": "client/src/pages/ComponentShowcase.tsx",
+      "git_blob_sha": "b7725c2319c59d244bc8ad8db750f19e8a5cb583"
+    },
+    {
+      "path": "client/src/pages/ConsentTemplates.tsx",
+      "git_blob_sha": "faf15cf92612157a925ad49e57589e1e337e6637"
+    },
+    {
+      "path": "client/src/pages/Dashboard.tsx",
+      "git_blob_sha": "f5f2a4e389fc14cb16a2cb5411e98e01c896230c"
+    },
+    {
+      "path": "client/src/pages/FinancialWorkspace.tsx",
+      "git_blob_sha": "ac7420afd0499ecf424b7f81d1a361ba9d931a60"
+    },
+    {
+      "path": "client/src/pages/Home.tsx",
+      "git_blob_sha": "3d6a9d5709484df7748b5575125e690cab9ef9d5"
+    },
+    {
+      "path": "client/src/pages/MindOSDashboard.tsx",
+      "git_blob_sha": "6fd5042e5d4a7d8cb5a127421a5ae14391314c75"
+    },
+    {
+      "path": "client/src/pages/NotFound.tsx",
+      "git_blob_sha": "c4374ee7a2f4d832bc8510c40953c558246079ad"
+    },
+    {
+      "path": "client/src/pages/OnlineBooking.tsx",
+      "git_blob_sha": "0527d102d97da3a5c7f563d1d8c29faeab918113"
+    },
+    {
+      "path": "client/src/pages/Patient360.tsx",
+      "git_blob_sha": "b2d1e37862dbbbecb9d32e47168d7d205dd07576"
+    },
+    {
+      "path": "client/src/pages/PatientCare.tsx",
+      "git_blob_sha": "5c69a95f3a14bb35e888919413f508da445fec61"
+    },
+    {
+      "path": "client/src/pages/PatientPortal.tsx",
+      "git_blob_sha": "64e2c80c7f35864e397fc74c5e05bdaad489bb90"
+    },
+    {
+      "path": "client/src/pages/Patients.tsx",
+      "git_blob_sha": "af6e96fd46c5649874d54015d4368c1c5ec40304"
+    },
+    {
+      "path": "client/src/pages/Payables.tsx",
+      "git_blob_sha": "cf8bcde2995c6ffe06464d848b32207021904287"
+    },
+    {
+      "path": "client/src/pages/Receivables.tsx",
+      "git_blob_sha": "031ca2744db3f851c4bb7ddafe69fe1ea4741d8e"
+    },
+    {
+      "path": "client/src/pages/Reception.tsx",
+      "git_blob_sha": "0225c8fbc9484207e102949216b2470597991ef0"
+    },
+    {
+      "path": "client/src/pages/SchedulingSettings.tsx",
+      "git_blob_sha": "76ee3b54bb89b80d40db9d3f050da9d4cad3cee4"
+    },
+    {
+      "path": "client/src/pages/Team.tsx",
+      "git_blob_sha": "f2bd13b22cea9e7103c02d0780588b274e593875"
+    },
+    {
+      "path": "client/src/pages/Transactions.tsx",
+      "git_blob_sha": "ea878e4e58f8d809b517349b5afcfc5d2873da64"
+    },
+    {
+      "path": "client/src/types/finance.ts",
+      "git_blob_sha": "a152a42f691b246227f83ac96edfafefe0f9b615"
+    },
+    {
+      "path": "components.json",
+      "git_blob_sha": "c1919783e91b1bb4993fc904018c4f6a524f9d05"
+    },
+    {
+      "path": "compose.dev.yaml",
+      "git_blob_sha": "2005650102bc7da72d5b59fb1632ac93664afc31"
+    },
+    {
+      "path": "docs/ACOES-DA-INTERFACE.md",
+      "git_blob_sha": "70d6ded96438e3387665260ac64e38b1673304fa"
+    },
+    {
+      "path": "docs/ARVORE-DO-PROJETO.md",
+      "git_blob_sha": "6f13307cd53e499f158e49176b88f34f80d2ee86"
+    },
+    {
+      "path": "docs/ATUALIZACAO-GERAL.md",
+      "git_blob_sha": "05c12b8291bc312777d45069c1e21106cb3a83b1"
+    },
+    {
+      "path": "docs/DESENVOLVIMENTO-LOCAL.md",
+      "git_blob_sha": "c8901f31f2bc699ecaa56a673c21d9ffe152908b"
+    },
+    {
+      "path": "docs/EQUIPE-E-CONVITES.md",
+      "git_blob_sha": "bcd6e0a9b384e54790a8c0cd2328b920b6928559"
+    },
+    {
+      "path": "docs/ETAPA-3-OPERACAO.md",
+      "git_blob_sha": "61cd4bd826603e03ae802d2cc1ca85b84acedc48"
+    },
+    {
+      "path": "docs/ETAPA-3-PACIENTES.md",
+      "git_blob_sha": "09b061f04ab60a7535a23cb38410472092c5c10c"
+    },
+    {
+      "path": "docs/ETAPA-4-PRONTUARIO-E-PORTAL.md",
+      "git_blob_sha": "d5140c704540dd3a76b8f06724f7586a6883619c"
+    },
+    {
+      "path": "docs/ETAPA-5-FINANCEIRO-INTERNO.md",
+      "git_blob_sha": "f8ff32d94f8343ef3f21a89f7e87ae7979fe2127"
+    },
+    {
+      "path": "docs/EXECUCAO-DO-PLANO.md",
+      "git_blob_sha": "1e87ad3f5ff711442e0dc88f7576c2020ff149e6"
+    },
+    {
+      "path": "docs/INVENTARIO-FUNCIONAL.md",
+      "git_blob_sha": "f0650db51ab848c4801138b128daf5e307fb16cf"
+    },
+    {
+      "path": "docs/PERMISSOES.md",
+      "git_blob_sha": "ce0e62608f5edb213675fe28c8eaa98dd8d2bfa5"
+    },
+    {
+      "path": "docs/previews/README.md",
+      "git_blob_sha": "8611a95b3f1bd00225756d5ed0acb64c395c8eea"
+    },
+    {
+      "path": "docs/previews/agenda-etapa3.png",
+      "git_blob_sha": "e596e9c6e69381335de1f407d09333f99e0a47d5"
+    },
+    {
+      "path": "docs/previews/configuracao-agenda.png",
+      "git_blob_sha": "a8eeeb66e40ae5a856416334d5f4955b242ed255"
+    },
+    {
+      "path": "docs/previews/documentos-etapa4.png",
+      "git_blob_sha": "a7f48d00fc862414f74f92e8ec0e5f36d6d69508"
+    },
+    {
+      "path": "docs/previews/equipe-desktop.png",
+      "git_blob_sha": "d98850bb0d302489a213bada7b8a77a1ffb355bc"
+    },
+    {
+      "path": "docs/previews/equipe-mobile.png",
+      "git_blob_sha": "caf0c58f17befb154e8447d9d910f41b1c34a783"
+    },
+    {
+      "path": "docs/previews/financeiro-etapa5-mobile.png",
+      "git_blob_sha": "040fdbaa000cf28702a4215f59ca11ccdc8ae9c6"
+    },
+    {
+      "path": "docs/previews/financeiro-etapa5.png",
+      "git_blob_sha": "63c64c5447b5102a796217533967d76bdf734982"
+    },
+    {
+      "path": "docs/previews/pacientes-desktop.png",
+      "git_blob_sha": "129fc53e3680129acd6abfb2dcfd7636f639c4dc"
+    },
+    {
+      "path": "docs/previews/pacientes-mobile.png",
+      "git_blob_sha": "acbe276d3ad2fb0bd778232e11d424d4cfd029e9"
+    },
+    {
+      "path": "docs/previews/portal-consentimentos-etapa4.png",
+      "git_blob_sha": "8cc2bc91393d21d229e1f17777a34ac014a32619"
+    },
+    {
+      "path": "docs/previews/portal-etapa4-mobile.png",
+      "git_blob_sha": "05e27807c93ff43e24eccbfc57eb0ddfb0665d41"
+    },
+    {
+      "path": "docs/previews/prontuario-etapa4.png",
+      "git_blob_sha": "3375d140a25f284712be775f3d6d50fdbf39090b"
+    },
+    {
+      "path": "docs/previews/reagendamento-portal-etapa4.png",
+      "git_blob_sha": "4a833e3ea553caf1c9ffb682fc3e0e7355d81503"
+    },
+    {
+      "path": "docs/previews/recepcao-etapa3-mobile.png",
+      "git_blob_sha": "08d407d8f1d247ed565d03fd75682cf7abddeb60"
+    },
+    {
+      "path": "docs/previews/recepcao-etapa3.png",
+      "git_blob_sha": "6ef5cb7b94ee983fc153397f96417b2db81a05fb"
+    },
+    {
+      "path": "drizzle.config.ts",
+      "git_blob_sha": "d972e690f27ce43f3c15b505ba39e60ecd072cc4"
+    },
+    {
+      "path": "drizzle/0000_quiet_peter_parker.sql",
+      "git_blob_sha": "737ef259ca60174dfb6245ebe6c9b50b58e2406e"
+    },
+    {
+      "path": "drizzle/0001_quick_luckman.sql",
+      "git_blob_sha": "4fe43215fe9404a4a8cb5e8d55bf25371c0da83f"
+    },
+    {
+      "path": "drizzle/0002_tranquil_molten_man.sql",
+      "git_blob_sha": "ccb56de8070c8a0b52d5fcec68fedce490bf0f88"
+    },
+    {
+      "path": "drizzle/0003_unusual_layla_miller.sql",
+      "git_blob_sha": "fbd574c67cea8e0ce2bb78cd596c7978db8af093"
+    },
+    {
+      "path": "drizzle/0004_sour_harry_osborn.sql",
+      "git_blob_sha": "9df1c525ac90b28b4bae023f420cf17bb7986a0c"
+    },
+    {
+      "path": "drizzle/0005_colossal_susan_delgado.sql",
+      "git_blob_sha": "9e7b9e63e6677c6c260e1a1729d6b1be47d15597"
+    },
+    {
+      "path": "drizzle/0006_sleepy_saracen.sql",
+      "git_blob_sha": "39261d22360b61cb4a6c64838ba93635a1d311e6"
+    },
+    {
+      "path": "drizzle/0007_nervous_yellowjacket.sql",
+      "git_blob_sha": "d2863f62c972579422256d2f75649ef37089a4ec"
+    },
+    {
+      "path": "drizzle/0008_lumpy_night_thrasher.sql",
+      "git_blob_sha": "0ea3e409ddb7d33e7a2390332dc53fbed9c027c2"
+    },
+    {
+      "path": "drizzle/0009_volatile_dormammu.sql",
+      "git_blob_sha": "a7cd46380c6ede401997e64862c494b22641c73a"
+    },
+    {
+      "path": "drizzle/0010_aromatic_warhawk.sql",
+      "git_blob_sha": "44e744638d51a9f7dcfffcc906b59c742fdcb988"
+    },
+    {
+      "path": "drizzle/0011_goofy_maria_hill.sql",
+      "git_blob_sha": "6bb632467c693d159b3c10f94e365bae8b132f79"
+    },
+    {
+      "path": "drizzle/0012_sloppy_solo.sql",
+      "git_blob_sha": "854d961cda128807fa0a1cfe444d4f11a8aaafd2"
+    },
+    {
+      "path": "drizzle/0013_marvelous_ronan.sql",
+      "git_blob_sha": "68e15a18ddf0d24ee4a1226a37448ba753895b74"
+    },
+    {
+      "path": "drizzle/meta/0001_snapshot.json",
+      "git_blob_sha": "f2750f8182f594b833f7663728f042628bd1fafc"
+    },
+    {
+      "path": "drizzle/meta/0002_snapshot.json",
+      "git_blob_sha": "d2b9d3ca6aab85ea0c3dfd21685f2b3d2fa95993"
+    },
+    {
+      "path": "drizzle/meta/0003_snapshot.json",
+      "git_blob_sha": "20014c5c7f064f3b8c0bb7a6f9b7bded1070d0c6"
+    },
+    {
+      "path": "drizzle/meta/0004_snapshot.json",
+      "git_blob_sha": "c6671fc7d6cda8037d9635b4e4942ec8429a364c"
+    },
+    {
+      "path": "drizzle/meta/0005_snapshot.json",
+      "git_blob_sha": "4c140011c4b5aedc849ede96a90dfd76869587c4"
+    },
+    {
+      "path": "drizzle/meta/0006_snapshot.json",
+      "git_blob_sha": "d8a64d9825c484adb115f59908194fa7438610ed"
+    },
+    {
+      "path": "drizzle/meta/0007_snapshot.json",
+      "git_blob_sha": "629ed06e2edbb22996b8d528bcb15cb313b809c9"
+    },
+    {
+      "path": "drizzle/meta/0008_snapshot.json",
+      "git_blob_sha": "e2d3d67a494010cc99e60bc2d1ab966b5aad1439"
+    },
+    {
+      "path": "drizzle/meta/0009_snapshot.json",
+      "git_blob_sha": "b75a0cb498762a310264aff51d5328f30539ed66"
+    },
+    {
+      "path": "drizzle/meta/0010_snapshot.json",
+      "git_blob_sha": "13b83f1a98e9228c37abb79fd6b040da3179cb33"
+    },
+    {
+      "path": "drizzle/meta/0011_snapshot.json",
+      "git_blob_sha": "3883acf6d639e4012c4cde11c0805473136e7117"
+    },
+    {
+      "path": "drizzle/meta/0012_snapshot.json",
+      "git_blob_sha": "42c6bb0b0df50b1fd4036d2e8f9f04e879ee5a6b"
+    },
+    {
+      "path": "drizzle/meta/0013_snapshot.json",
+      "git_blob_sha": "6fbadaa37428d47c6f6cf8a3d9c2375bf471cbc5"
+    },
+    {
+      "path": "drizzle/meta/_journal.json",
+      "git_blob_sha": "0e6822b5bd524900807ed98e138143fa9f3d1ff0"
+    },
+    {
+      "path": "drizzle/migrations/.gitkeep",
+      "git_blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "drizzle/relations.ts",
+      "git_blob_sha": "941a2680ecb07e975c52555be045261d007181ae"
+    },
+    {
+      "path": "drizzle/schema.ts",
+      "git_blob_sha": "7fa4128d02ab902a23b13f9f4cf8906c778dbdc0"
+    },
+    {
+      "path": "package.json",
+      "git_blob_sha": "e156b55e2ce21f1cd59e2c3a43ae5fc2c9231eb1"
+    },
+    {
+      "path": "patches/seed-finance-guard.patch",
+      "git_blob_sha": "bd638c625c575cd0f65f0b53b3ef3dd2f8319a1a"
+    },
+    {
+      "path": "patches/wouter@3.7.1.patch",
+      "git_blob_sha": "133e386e0e3c254c3c59d0db99dfd82e1837228f"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "git_blob_sha": "4360e46a2716367989c7502774edc87f82c99a5e"
+    },
+    {
+      "path": "scripts/inventory-actions.mjs",
+      "git_blob_sha": "1b5bf95fe24a2cd282a04d56de4475f3f8676480"
+    },
+    {
+      "path": "scripts/open-review.mjs",
+      "git_blob_sha": "eddb0761a0a57097125b8882c51e53b4a52ec786"
+    },
+    {
+      "path": "scripts/verify-browser.mjs",
+      "git_blob_sha": "35ac3c6ea21e1e234030240b1ffdbe44fa2a7a8d"
+    },
+    {
+      "path": "scripts/verify-db.ts",
+      "git_blob_sha": "285ab61a021eb88db430da1a789b569a474d2e25"
+    },
+    {
+      "path": "scripts/verify-demo.ts",
+      "git_blob_sha": "0624c57903ef9aa0d09252b563f6221f65b6f05a"
+    },
+    {
+      "path": "server/_core/context.ts",
+      "git_blob_sha": "e4ae108e5c326e4bfbee9144980a2336af876b6e"
+    },
+    {
+      "path": "server/_core/cookies.ts",
+      "git_blob_sha": "8677dc3af8584b3abd96516f96347a84ab6c1b84"
+    },
+    {
+      "path": "server/_core/dataApi.ts",
+      "git_blob_sha": "7ef81b5c1c760e71be1cf130e94c822a3bdf8349"
+    },
+    {
+      "path": "server/_core/env.ts",
+      "git_blob_sha": "2792b99ebd9d9a07c1194237822d8adf06ba2441"
+    },
+    {
+      "path": "server/_core/heartbeat.ts",
+      "git_blob_sha": "378da2409dce641402e43624b2251f11f9e5b4d5"
+    },
+    {
+      "path": "server/_core/imageGeneration.ts",
+      "git_blob_sha": "9cd4ed4282d1d06ada282d023e5d18c33d23d2ab"
+    },
+    {
+      "path": "server/_core/index.ts",
+      "git_blob_sha": "95ddd387fa823d58de2f1d9b730983ec80559ef0"
+    },
+    {
+      "path": "server/_core/llm.ts",
+      "git_blob_sha": "14e0da25a82520d5d2166cbd2a5f005e5e1eb16f"
+    },
+    {
+      "path": "server/_core/map.ts",
+      "git_blob_sha": "ac2c28c3e446a325f816060a47125f8a2cc9301b"
+    },
+    {
+      "path": "server/_core/notification.ts",
+      "git_blob_sha": "889a573b5eab3383b56873b7c2e8ee971ca219c4"
+    },
+    {
+      "path": "server/_core/oauth.ts",
+      "git_blob_sha": "af147bd6a00af78f70893712edcfc1e1ec365a95"
+    },
+    {
+      "path": "server/_core/sdk.ts",
+      "git_blob_sha": "6bf1a310613ec9f32b7a2986613cd2606efb76d3"
+    },
+    {
+      "path": "server/_core/storageProxy.ts",
+      "git_blob_sha": "d2e897881d7618ed5134b3e640fc161becf18fd8"
+    },
+    {
+      "path": "server/_core/systemRouter.ts",
+      "git_blob_sha": "babf6a468495908f0b9ed15bdb8380b814a12b37"
+    },
+    {
+      "path": "server/_core/trpc.ts",
+      "git_blob_sha": "27eff720f036a2ebcb5e4b5e5c8b4ca422d86be1"
+    },
+    {
+      "path": "server/_core/types/cookie.d.ts",
+      "git_blob_sha": "d6d4e8866751a566b2d30fc83ea051caf941611c"
+    },
+    {
+      "path": "server/_core/types/manusTypes.ts",
+      "git_blob_sha": "7f8e30076d3e9f3ec7cc5d96a27e2af228cae9a6"
+    },
+    {
+      "path": "server/_core/vite.ts",
+      "git_blob_sha": "86d07f6d5d74ece8c3447e4e3c072a4a69c2495e"
+    },
+    {
+      "path": "server/_core/voiceTranscription.ts",
+      "git_blob_sha": "ed511f6963e9cd25391521a38a5c27dd940f2ed9"
+    },
+    {
+      "path": "server/auth.logout.test.ts",
+      "git_blob_sha": "a4d8ad744a77a37fbbab46f29bfbe2511cff1501"
+    },
+    {
+      "path": "server/auth.session.test.ts",
+      "git_blob_sha": "0e119031a7b21b24a2ee99514f6fc8fa4b856472"
+    },
+    {
+      "path": "server/care-access.ts",
+      "git_blob_sha": "c2860d00f8d6e090232d12dd6a512de04fa875cd"
+    },
+    {
+      "path": "server/care-router.ts",
+      "git_blob_sha": "54d3a5be3e8364aeb92f1df9db6f397e4f4e404d"
+    },
+    {
+      "path": "server/care.integration.test.ts",
+      "git_blob_sha": "eb0204af5ee717387c61e493e73a866e30b4a04e"
+    },
+    {
+      "path": "server/care.test.ts",
+      "git_blob_sha": "f96cbbf147814a7c31d8fca085c28b53eb6e3fe6"
+    },
+    {
+      "path": "server/clinical.ts",
+      "git_blob_sha": "5dcb643f2637d0d9bd98cdd392274e63ca0fdd84"
+    },
+    {
+      "path": "server/db.ts",
+      "git_blob_sha": "78d3d9c8cde2ec30d58a3d3a5c2c3bf3ccdd6290"
+    },
+    {
+      "path": "server/finance.integration.test.ts",
+      "git_blob_sha": "d57dbd2878fdb007d6f99ef2fd5ddcbc978110d8"
+    },
+    {
+      "path": "server/finance.ts",
+      "git_blob_sha": "5aae8d670e3c5a585e74ab937bae6bf3aeea1d96"
+    },
+    {
+      "path": "server/financial-access.test.ts",
+      "git_blob_sha": "1444779bb80967e948958a75935b928b90e58e89"
+    },
+    {
+      "path": "server/financial.test.ts",
+      "git_blob_sha": "aedc186aa5c57f55426bf9223784441ca8e50d07"
+    },
+    {
+      "path": "server/migrations.test.ts",
+      "git_blob_sha": "fc3ce01e523deec3ac660a3f38ea59b1049d7f5a"
+    },
+    {
+      "path": "server/mindos.test.ts",
+      "git_blob_sha": "c6fbbf4e0d60018b4f8fde3aa826d642580f0e07"
+    },
+    {
+      "path": "server/oauth.invite.test.ts",
+      "git_blob_sha": "0440a9cced69f5221f3ea6febc9ce200bfa01f88"
+    },
+    {
+      "path": "server/patients-router.ts",
+      "git_blob_sha": "856ce4a4b9c7ce28fbf14def93e40423d1461c62"
+    },
+    {
+      "path": "server/patients.integration.test.ts",
+      "git_blob_sha": "80d25d50b866d7661603819cf0b2ab5d3cd64d1e"
+    },
+    {
+      "path": "server/patients.test.ts",
+      "git_blob_sha": "193af26d161b7d2b6cce6a158184ddeb5bc5fb33"
+    },
+    {
+      "path": "server/patients.ts",
+      "git_blob_sha": "da39665b32499d00c4813c1f8d2a6bee4c24e7b9"
+    },
+    {
+      "path": "server/permissions.test.ts",
+      "git_blob_sha": "af3fd51bf9a3a19f2998509823b33853cd480dab"
+    },
+    {
+      "path": "server/portal-care.ts",
+      "git_blob_sha": "456b572c4cc2af7eb2c17a77eb7c2b5d520978dd"
+    },
+    {
+      "path": "server/private-documents.ts",
+      "git_blob_sha": "a517928d16a9ec59337c8fef05a462db1f98dbd3"
+    },
+    {
+      "path": "server/routers.ts",
+      "git_blob_sha": "69eccc418cde01459a9425607ca36e79b289abca"
+    },
+    {
+      "path": "server/scheduling-router.ts",
+      "git_blob_sha": "0889ed4391e45e61b87644018fcf38eaec2c5ad2"
+    },
+    {
+      "path": "server/scheduling.integration.test.ts",
+      "git_blob_sha": "222ff9275fb279dad549b3a7b15ed82fe3749ab6"
+    },
+    {
+      "path": "server/scheduling.test.ts",
+      "git_blob_sha": "34f9a061b6d9c859090e2592750625b81f4dddeb"
+    },
+    {
+      "path": "server/scheduling.ts",
+      "git_blob_sha": "df5abd4719ba2cea8eff881c32545acd8e5c5bc8"
+    },
+    {
+      "path": "server/security.integration.test.ts",
+      "git_blob_sha": "ed8ecc0d42875cb37f31a413a498a7a5e9cb39b7"
+    },
+    {
+      "path": "server/seed-db.mjs",
+      "git_blob_sha": "0a887550038df4e893ee018a6286d1f9568ac524"
+    },
+    {
+      "path": "server/seed-safety.mjs",
+      "git_blob_sha": "e38d996eb28ab57e99b1ea776b6c4a0c717a0040"
+    },
+    {
+      "path": "server/seed-safety.test.ts",
+      "git_blob_sha": "cfbbd44be94e5fb60878221f3ff6754bfc1bdf36"
+    },
+    {
+      "path": "server/storage.ts",
+      "git_blob_sha": "1d884705258647f8b55ca07155bd454e135702a7"
+    },
+    {
+      "path": "server/team-router.ts",
+      "git_blob_sha": "da7dd212a3b207146b0190d2ebfd5d90b01bc349"
+    },
+    {
+      "path": "server/team.integration.test.ts",
+      "git_blob_sha": "6e9a7ed8e35634a67287f01a1f30fec9683ce3b0"
+    },
+    {
+      "path": "server/team.test.ts",
+      "git_blob_sha": "5820948477e0016dbc7a9d4c13ee4713f973f5ab"
+    },
+    {
+      "path": "server/team.ts",
+      "git_blob_sha": "4345c1c6e66267dbb0995815b57b8888b8468882"
+    },
+    {
+      "path": "shared/_core/errors.ts",
+      "git_blob_sha": "15fa7ed2b30ba57b317c878422f42be92ca6a2c0"
+    },
+    {
+      "path": "shared/const.ts",
+      "git_blob_sha": "8449a8a1e2df2900ad940ccecfa83524554c7eef"
+    },
+    {
+      "path": "shared/finance.ts",
+      "git_blob_sha": "4f6d046495273359f3bf0b3a22c708dc7865aa8a"
+    },
+    {
+      "path": "shared/patients.ts",
+      "git_blob_sha": "07b9c5411ad5fe42cae0be9273a9b3ceb1bf9d52"
+    },
+    {
+      "path": "shared/permissions.ts",
+      "git_blob_sha": "35da1c99ba63f69fea5df7853a071212ae286b70"
+    },
+    {
+      "path": "shared/scheduling.ts",
+      "git_blob_sha": "4efde6b7e40fca173ecbeca5cc422f29d30701ff"
+    },
+    {
+      "path": "shared/types.ts",
+      "git_blob_sha": "47ca6e0ce7e588a4eec5502534f678fec47d3eb4"
+    },
+    {
+      "path": "template.json",
+      "git_blob_sha": "1975c08d61e4c241dbca0db26f50309744ea6fc5"
+    },
+    {
+      "path": "todo.md",
+      "git_blob_sha": "c1bb172de3e1f62bee77988d1930098e00499c44"
+    },
+    {
+      "path": "tsconfig.json",
+      "git_blob_sha": "b9ecb79a777df288a29d56e2cb88d918af374341"
+    },
+    {
+      "path": "vite.config.ts",
+      "git_blob_sha": "6da0dcddaddc55bf02cfdb0fea23f06f62e151f7"
+    },
+    {
+      "path": "vitest.config.ts",
+      "git_blob_sha": "1f3ae896cb7ee74c11c8a511fa7c56455119e069"
+    },
+    {
+      "path": "vitest.integration.config.ts",
+      "git_blob_sha": "db6c809051db78cae28eecac5229f68c191b35d2"
+    }
+  ]
+}
