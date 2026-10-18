@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { trpc } from "../../lib/trpc";
 import { useAuth } from "../../_core/hooks/useAuth";
@@ -47,8 +47,10 @@ export function SessionNotice({
 export function PatientSelector({
   value,
   onChange,
+  disabled = false,
 }: {
   value: number;
+  disabled?: boolean;
   onChange: (id: number) => void;
 }) {
   const { isAuthenticated } = useAuth();
@@ -64,35 +66,43 @@ export function PatientSelector({
   );
   const items = options.data?.items || [];
   const includeSelected = selected.data && !items.some(p => p.id === value);
-  function find(event: FormEvent) {
-    event.preventDefault();
-    setSearch(text.trim());
-  }
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-      <form onSubmit={find} className="flex gap-2 items-end">
+      <div role="search" className="flex gap-2 items-end">
         <label className="flex-1 text-sm font-medium">
           Buscar paciente
           <input
             className={fieldClass}
+            disabled={disabled}
             type="search"
             maxLength={160}
             value={text}
             onChange={e => setText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setSearch(text.trim());
+              }
+            }}
             placeholder="Nome, e-mail ou telefone"
           />
         </label>
-        <button className={buttonClass} disabled={options.isFetching}>
+        <button
+          type="button"
+          onClick={() => setSearch(text.trim())}
+          className={buttonClass}
+          disabled={disabled || options.isFetching}
+        >
           Buscar
         </button>
-      </form>
+      </div>
       <label className="block text-sm font-medium">
         Paciente selecionado
         <select
           className={fieldClass}
           value={value || ""}
           onChange={e => onChange(Number(e.target.value))}
-          disabled={!options.data}
+          disabled={disabled || !options.data}
         >
           <option value="">Selecione um paciente</option>
           {includeSelected && (

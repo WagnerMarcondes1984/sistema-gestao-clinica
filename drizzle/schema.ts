@@ -202,6 +202,7 @@ export type FinancialAuditLog = typeof financialAuditLogs.$inferSelect;
  * Tenant MindOS. Todas as entidades operacionais abaixo devem ser filtradas por tenantId no backend.
  */
 export const mindosTenants = mysqlTable("mindos_tenants", {
+  timezone: varchar("timezone", { length: 64 }).default("America/Sao_Paulo").notNull(),
   id: int("id").autoincrement().primaryKey(),
   slug: varchar("slug", { length: 96 }).notNull().unique(),
   name: varchar("name", { length: 160 }).notNull(),
@@ -263,6 +264,11 @@ export type MindosPatient = typeof mindosPatients.$inferSelect;
 export type InsertMindosPatient = typeof mindosPatients.$inferInsert;
 
 export const mindosAppointments = mysqlTable("mindos_appointments", {
+  professionalId: int("professionalId"),
+  unitId: int("unitId"),
+  serviceId: int("serviceId"),
+  revision: int("revision").default(1).notNull(),
+  replacedByAppointmentId: int("replacedByAppointmentId"),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   patientId: int("patientId").notNull(),
@@ -278,7 +284,7 @@ export const mindosAppointments = mysqlTable("mindos_appointments", {
   notesAdmin: text("notesAdmin"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, table => [index("mindos_appointments_tenant_starts_idx").on(table.tenantId,table.startsAt), index("mindos_appointments_tenant_series_idx").on(table.tenantId,table.recurrenceId)]);
 export type MindosAppointment = typeof mindosAppointments.$inferSelect;
 export type InsertMindosAppointment = typeof mindosAppointments.$inferInsert;
 
@@ -342,6 +348,10 @@ export type MindosFinancialRule = typeof mindosFinancialRules.$inferSelect;
 
 
 export const mindosBookingRequests = mysqlTable("mindos_booking_requests", {
+  serviceId: int("serviceId"),
+  patientId: int("patientId"),
+  appointmentId: int("appointmentId"),
+  revision: int("revision").default(1).notNull(),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   name: varchar("name", { length: 160 }).notNull(),
@@ -393,6 +403,7 @@ export const mindosPortalDocuments = mysqlTable("mindos_portal_documents", {
 export type MindosPortalDocument = typeof mindosPortalDocuments.$inferSelect;
 
 export const mindosReceptionEvents = mysqlTable("mindos_reception_events", {
+  appointmentId: int("appointmentId"),
   id: int("id").autoincrement().primaryKey(),
   tenantId: int("tenantId").notNull(),
   patientId: int("patientId").notNull(),
@@ -402,3 +413,33 @@ export const mindosReceptionEvents = mysqlTable("mindos_reception_events", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type MindosReceptionEvent = typeof mindosReceptionEvents.$inferSelect;
+
+
+export const mindosProfessionals = mysqlTable("mindos_professionals", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(), nameKey: varchar("nameKey", { length: 160 }).notNull(),
+  registration: varchar("registration", { length: 80 }), userId: int("userId"),
+  active: boolean("active").default(true).notNull(), revision: int("revision").default(1).notNull(),
+}, table => [uniqueIndex("mindos_professionals_name_unique").on(table.tenantId, table.nameKey)]);
+export const mindosUnits = mysqlTable("mindos_units", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 128 }).notNull(), nameKey: varchar("nameKey", { length: 128 }).notNull(),
+  active: boolean("active").default(true).notNull(), revision: int("revision").default(1).notNull(),
+}, table => [uniqueIndex("mindos_units_name_unique").on(table.tenantId, table.nameKey)]);
+export const mindosServices = mysqlTable("mindos_services", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(), nameKey: varchar("nameKey", { length: 160 }).notNull(),
+  durationMinutes: int("durationMinutes").notNull(), mode: mysqlEnum("mode", ["BOTH", "ONLINE", "IN_PERSON"]).default("BOTH").notNull(),
+  publicEnabled: boolean("publicEnabled").default(false).notNull(), active: boolean("active").default(true).notNull(), revision: int("revision").default(1).notNull(),
+}, table => [uniqueIndex("mindos_services_name_unique").on(table.tenantId, table.nameKey)]);
+export const mindosAvailability = mysqlTable("mindos_availability", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(),
+  professionalId: int("professionalId").notNull(), unitId: int("unitId").notNull(), weekday: int("weekday").notNull(),
+  startMinute: int("startMinute").notNull(), endMinute: int("endMinute").notNull(),
+  active: boolean("active").default(true).notNull(), revision: int("revision").default(1).notNull(),
+}, table => [index("mindos_availability_professional_idx").on(table.tenantId, table.professionalId)]);
+export const mindosBookingLimits = mysqlTable("mindos_booking_limits", {
+  id: int("id").autoincrement().primaryKey(), tenantId: int("tenantId").notNull(),
+  keyHash: varchar("keyHash", { length: 64 }).notNull(), windowStart: timestamp("windowStart").notNull(),
+  attempts: int("attempts").default(0).notNull(),
+}, table => [uniqueIndex("mindos_booking_limits_key_unique").on(table.tenantId, table.keyHash)]);

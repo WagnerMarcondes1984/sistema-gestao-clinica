@@ -57,6 +57,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
     { href: '/checkout', label: 'Financeiro', icon: CreditCard, highlight: true },
     { href: '/transactions', label: 'Transações', icon: Receipt },
     { href: '/app/admin-studio', label: 'Admin Studio', icon: Settings2 },
+    { href: '/app/scheduling', label: 'Configuração da agenda', icon: CalendarDays },
     { href: '/app/team', label: 'Equipe', icon: UsersRound },
   ];
 
@@ -181,7 +182,7 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
             <div className="flex items-center gap-3">
               {/* Quick Checkout CTA */}
               <Link
-                href="/checkout"
+                href="/agenda"
                 className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white px-3.5 py-2 rounded-xl shadow-sm transition-all duration-150 hover:brightness-110 active:scale-95"
                 style={{ backgroundColor: currentVertical.primaryColor }}
               >

@@ -29,6 +29,7 @@ function RecordWorkspace({
   const [recordType, setRecordType] = useState<RecordType>("EVOLUTION");
   const [content, setContent] = useState("");
   const [validation, setValidation] = useState("");
+  const clinic = trpc.scheduling.context.useQuery(undefined, { retry: false });
   const records = trpc.mindos.clinicalRecords.useQuery(
     { patientId },
     { retry: false }
@@ -132,7 +133,11 @@ function RecordWorkspace({
                     {record.content}
                   </p>
                   <p className="mt-2 text-xs text-slate-500">
-                    {new Date(record.createdAt).toLocaleString("pt-BR")} •{" "}
+                    {new Date(record.createdAt).toLocaleString("pt-BR", {
+                      timeZone:
+                        clinic.data?.clinic.timezone || "America/Sao_Paulo",
+                    })}{" "}
+                    •{" "}
                     {record.integrityHash
                       ? "Hash registrado"
                       : "Sem hash registrado"}

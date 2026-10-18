@@ -10,7 +10,7 @@ Início autorizado em 18/10/2026. Esta entrega implementa o primeiro item da eta
 - O nome na lista abre `/patients/view?patientId=...`, com dados reais, sessões autorizadas e atividade administrativa registrada.
 - Prontuário e agenda recebem a seleção pelo endereço e permitem buscar/trocar de paciente. Não há seleção automática do paciente de ID 1.
 - O prontuário pede confirmação para descartar texto não salvo ao trocar pela seleção. Salvar mantém o texto até o servidor confirmar. Edição de versões e adendos continua na etapa 4.
-- Agenda mostra apenas sessões existentes. Dados ilustrativos, indicadores fixos e botões que apenas simulavam ações foram removidos dessa tela; criação e edição visual continuam no próximo bloco da etapa 3.
+- Agenda mostra apenas sessões existentes. Dados ilustrativos, indicadores fixos e botões que apenas simulavam ações foram removidos dessa tela; criação e edição visual foram concluídas no bloco descrito em `ETAPA-3-OPERACAO.md`.
 
 ## Permissões e isolamento
 
@@ -36,7 +36,7 @@ Todas as operações derivam a clínica da sessão, sem aceitar `tenantId`, `por
 
 Manus permanece como provedor e exige credenciais reais para login no navegador normal. Os testes de interface usam sessões assinadas de contas fictícias locais; não homologam OAuth externo.
 
-Próximos itens: profissionais, serviços, unidades e disponibilidade; criação/edição de agenda, recorrências e concorrência; triagem pública; check-in por sessão e fila do dia; revisão do fuso da clínica. Os horários desta entrega continuam identificados como horários do navegador.
+Os demais itens da etapa 3 foram concluídos no bloco descrito em `ETAPA-3-OPERACAO.md`. As datas administrativas agora usam o fuso da clínica.
 
 Evidências e situação no plano: `EXECUCAO-DO-PLANO.md` e `PLANO-DE-CONCLUSAO-MINDOS.md`.
 

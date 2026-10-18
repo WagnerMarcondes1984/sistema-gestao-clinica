@@ -38,3 +38,7 @@ Depois do build, `pnpm test:browser` inicia temporariamente o servidor e o Googl
 ## Cadastro de pacientes (etapa 3)
 
 A migração 0008 adiciona `revision` sem apagar dados. Em `/patients`, contas com `MANAGE_PATIENTS` criam e editam cadastros. O administrador deve conceder essa nova permissão explicitamente aos vínculos existentes em Equipe. Regras de duplicidade e seleção em `ETAPA-3-PACIENTES.md`. A verificação de navegador também cobre cadastro, duplicidade, persistência e seleção real no 360°, prontuário e agenda, com limpeza dos pacientes fictícios criados pelo teste.
+
+## Revisão visual da etapa 3 sem credenciais OAuth
+
+Depois das migrações e do build, execute `node scripts/open-review.mjs`. O script abre Google Chrome com sessão temporária em uma clínica fictícia separada, normalmente em `http://localhost:3420/agenda`. Exige ambiente gráfico, banco local e JWT_SECRET configurado; recusa produção. Não altera `.env` nem registra rota de login alternativo. Ao fechar a janela, encerra o servidor e remove o perfil temporário; dados fictícios de revisão são preservados no banco. Guia completo em `ETAPA-3-OPERACAO.md`. Para iniciar apenas o servidor padrão, `pnpm dev` permanece em `http://localhost:3000`, exigindo autenticação Manus real para módulos protegidos.

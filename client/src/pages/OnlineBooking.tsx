@@ -1,15 +1,163 @@
-import { useState } from 'react';
-import { Link } from 'wouter';
-import { trpc } from '../lib/trpc';
-import { CalendarDays, CheckCircle2, Clock3, LockKeyhole, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
-
+import { useState, type FormEvent } from "react";
+import { Link } from "wouter";
+import { trpc } from "../lib/trpc";
+import { publicBookingInput, clinicParts } from "../../../shared/scheduling";
+import {
+  buttonClass,
+  fieldClass,
+} from "../components/patients/PatientSelector";
 export default function OnlineBooking() {
-  const [submitted, setSubmitted] = useState(false);
-  const [service, setService] = useState('Psicoterapia individual');
-  const serviceAreasQuery = trpc.publicMindos.serviceAreas.useQuery();
-  const bookingMutation = trpc.publicMindos.requestBooking.useMutation({ onSuccess: () => { setSubmitted(true); toast.success('Solicitação enviada com sucesso.'); }, onError: (error) => toast.error(error.message) });
-  const serviceOptions = serviceAreasQuery.data?.map((area) => area.name) ?? [];
-  if (submitted) return <div className="min-h-screen bg-slate-50 flex items-center justify-center p-5"><div className="max-w-md w-full bg-white rounded-3xl border border-slate-200 shadow-xl p-8 text-center"><div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto"><CheckCircle2 className="w-7 h-7" /></div><h1 className="text-2xl font-extrabold text-slate-900 mt-5">Solicitação recebida</h1><p className="text-sm text-slate-500 mt-2 leading-relaxed">A equipe MindOS entrará em contato usando o canal escolhido. Nenhum motivo clínico foi solicitado.</p><Link href="/" className="inline-block mt-6 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">Voltar ao início</Link></div></div>;
-  return <div className="min-h-screen bg-slate-50"><header className="px-5 sm:px-8 py-4 bg-white border-b border-slate-200 flex items-center justify-between"><Link href="/" className="font-extrabold text-lg text-indigo-900">MindOS</Link><div className="inline-flex items-center gap-2 text-[11px] text-slate-500"><LockKeyhole className="w-3.5 h-3.5 text-emerald-600" /> Dados mínimos</div></header><main className="max-w-4xl mx-auto px-4 sm:px-6 py-10"><div className="max-w-xl"><div className="text-[10px] uppercase tracking-wider font-bold text-indigo-600">Agendamento online</div><h1 className="text-3xl font-extrabold text-slate-900 mt-2">Encontre um horário para começar.</h1><p className="text-sm text-slate-500 mt-2">Escolha apenas informações administrativas. Você não precisa informar o motivo do atendimento.</p></div><div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5 mt-7"><form onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); bookingMutation.mutate({ name: String(form.get('name') || ''), contactChannel: String(form.get('contactChannel') || 'WHATSAPP_DISCREET') as 'WHATSAPP_DISCREET' | 'EMAIL' | 'PHONE', contactValue: String(form.get('contactValue') || ''), serviceType: service, preferredDate: new Date(`${String(form.get('preferredDate'))}T00:00:00`), preferredTime: String(form.get('preferredTime') || '') }); }} className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4"><label className="block text-xs font-bold text-slate-700">Nome<input name="name" required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" placeholder="Como prefere ser chamado" /></label><label className="block text-xs font-bold text-slate-700">Canal de contato<select name="contactChannel" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="WHATSAPP_DISCREET">WhatsApp discreto</option><option value="EMAIL">E-mail</option><option value="PHONE">Telefone</option></select></label><label className="block text-xs font-bold text-slate-700">Contato<input name="contactValue" required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" placeholder="Telefone ou e-mail" /></label><label className="block text-xs font-bold text-slate-700">Área de atendimento<select value={service} onChange={(e) => setService(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">{serviceAreasQuery.isLoading ? <option>Carregando áreas…</option> : serviceAreasQuery.isError ? <option>Áreas indisponíveis</option> : serviceOptions.length === 0 ? <option>Nenhuma área disponível</option> : serviceOptions.map((area) => <option key={area}>{area}</option>)}</select></label><div className="grid grid-cols-2 gap-3"><label className="block text-xs font-bold text-slate-700">Data<input required name="preferredDate" type="date" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /></label><label className="block text-xs font-bold text-slate-700">Preferência<input required name="preferredTime" type="time" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /></label></div><label className="flex items-start gap-2 text-[11px] text-slate-500"><input required type="checkbox" className="mt-0.5" /> Concordo com o uso dos dados mínimos para contato e agendamento.</label>{serviceAreasQuery.isError && <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-[11px] text-amber-800">As áreas de atendimento estão temporariamente indisponíveis. Tente novamente mais tarde.</div>}<button disabled={bookingMutation.isPending || serviceAreasQuery.isError || serviceOptions.length === 0} className="w-full py-3 rounded-xl bg-indigo-600 text-white text-xs font-bold disabled:opacity-60">{bookingMutation.isPending ? 'Enviando...' : 'Solicitar horário'}</button><div className="text-center text-[10px] text-slate-400">Proteção anti-spam e rate limiting aplicados no envio.</div></form><aside className="space-y-4"><div className="bg-indigo-950 rounded-3xl p-5 text-white"><div className="flex items-center gap-2 text-indigo-200 text-xs font-bold"><CalendarDays className="w-4 h-4" /> Como funciona</div><div className="space-y-3 mt-4 text-xs text-indigo-100/80"><div className="flex gap-2"><span className="font-bold text-white">1.</span> Você escolhe uma preferência.</div><div className="flex gap-2"><span className="font-bold text-white">2.</span> A equipe valida conflitos.</div><div className="flex gap-2"><span className="font-bold text-white">3.</span> Você recebe confirmação discreta.</div></div></div><div className="bg-white rounded-3xl border border-slate-200 p-5"><div className="flex items-center gap-2 text-xs font-bold text-slate-800"><ShieldCheck className="w-4 h-4 text-emerald-600" /> Privacidade</div><p className="text-[11px] text-slate-500 mt-2">Dados clínicos ficam fora deste formulário e só podem ser acessados em camadas autorizadas.</p></div></aside></div></main></div>;
+  const context = trpc.publicMindos.scheduling.useQuery(undefined, {
+    retry: false,
+  });
+  const [validation, setValidation] = useState("");
+  const request = trpc.publicMindos.requestBooking.useMutation();
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const parsed = publicBookingInput.safeParse({
+      name: form.get("name"),
+      contactChannel: form.get("contactChannel"),
+      contactValue: form.get("contactValue"),
+      serviceId: Number(form.get("serviceId")),
+      date: form.get("date"),
+      time: form.get("time"),
+      consent: form.get("consent") === "on",
+      website: String(form.get("website") || ""),
+    });
+    if (!parsed.success) {
+      setValidation(parsed.error.issues[0].message);
+      return;
+    }
+    setValidation("");
+    request.mutate(parsed.data);
+  }
+  return (
+    <main className="min-h-screen bg-slate-50 p-5">
+      <div className="mx-auto max-w-xl space-y-5">
+        <Link href="/" className="font-bold text-indigo-700">
+          MindOS
+        </Link>
+        <h1 className="text-3xl font-bold">Solicitar um horário</h1>
+        <p className="text-slate-600">
+          {context.data?.clinicName || "Clínica"}. Informe somente dados para
+          contato. Esta solicitação será analisada pela equipe e ainda não
+          reserva um horário.
+        </p>
+        {request.data ? (
+          <section className="rounded-2xl bg-white border p-6">
+            <h2 className="font-bold text-xl">Solicitação recebida</h2>
+            <p className="mt-3">
+              Protocolo #{request.data.requestId}. Aguarde o contato da equipe
+              para confirmar disponibilidade.
+            </p>
+          </section>
+        ) : (
+          <form
+            onSubmit={submit}
+            className="rounded-2xl bg-white border p-6 space-y-4"
+          >
+            <fieldset disabled={request.isPending} className="space-y-4">
+              <label className="block text-sm">
+                Nome
+                <input
+                  name="name"
+                  required
+                  minLength={2}
+                  maxLength={160}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="block text-sm">
+                Canal de contato
+                <select name="contactChannel" className={fieldClass}>
+                  <option value="WHATSAPP_DISCREET">WhatsApp discreto</option>
+                  <option value="EMAIL">E-mail</option>
+                  <option value="PHONE">Telefone</option>
+                </select>
+              </label>
+              <label className="block text-sm">
+                Telefone ou e-mail
+                <input
+                  name="contactValue"
+                  required
+                  maxLength={200}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="block text-sm">
+                Serviço
+                <select
+                  name="serviceId"
+                  required
+                  className={fieldClass}
+                  defaultValue=""
+                >
+                  <option value="">Selecione</option>
+                  {context.data?.services.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.durationMinutes} min)
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-sm">
+                  Data na clínica
+                  <input
+                    name="date"
+                    type="date"
+                    required
+                    min={
+                      context.data
+                        ? clinicParts(new Date(), context.data.timezone).date
+                        : undefined
+                    }
+                    className={fieldClass}
+                  />
+                </label>
+                <label className="text-sm">
+                  Horário na clínica
+                  <input
+                    name="time"
+                    type="time"
+                    required
+                    className={fieldClass}
+                  />
+                </label>
+              </div>
+              <p className="text-sm text-slate-500">
+                Fuso: {context.data?.timezone || "carregando…"}.
+              </p>
+              <label className="flex gap-2 text-sm">
+                <input name="consent" type="checkbox" required /> Autorizo o uso
+                destes dados para contato sobre esta solicitação.
+              </label>
+              <div className="hidden" aria-hidden="true">
+                <label>
+                  Website
+                  <input name="website" tabIndex={-1} autoComplete="off" />
+                </label>
+              </div>
+            </fieldset>
+            {context.isLoading && <p role="status">Carregando serviços…</p>}
+            {(context.error || request.error || validation) && (
+              <p role="alert" className="text-red-700">
+                {validation || request.error?.message || context.error?.message}
+              </p>
+            )}
+            {context.data?.services.length === 0 && (
+              <p>Nenhum serviço público disponível no momento.</p>
+            )}
+            <button
+              className={buttonClass}
+              disabled={request.isPending || !context.data?.services.length}
+            >
+              {request.isPending ? "Enviando…" : "Solicitar horário"}
+            </button>
+          </form>
+        )}
+      </div>
+    </main>
+  );
 }

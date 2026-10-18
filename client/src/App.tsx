@@ -13,6 +13,7 @@ import Payables from "./pages/Payables";
 import CashManagement from "./pages/CashManagement";
 import AuditFiscal from "./pages/AuditFiscal";
 import MindOSDashboard from "./pages/MindOSDashboard";
+import SchedulingSettings from "./pages/SchedulingSettings";
 import Agenda from "./pages/Agenda";
 import Patients from "./pages/Patients";
 import Patient360 from "./pages/Patient360";
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/" component={MindOSDashboard} />
       <Route path="/finance" component={Dashboard} />
       <Route path="/agenda" component={Agenda} />
+      <Route path="/app/scheduling" component={SchedulingSettings} />
       <Route path="/patients" component={Patients} />
       <Route path="/patients/view" component={Patient360} />
       <Route path="/clinical-records" component={ClinicalRecord} />

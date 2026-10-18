@@ -138,15 +138,19 @@ export default function Patient360() {
                   {appointments.filter(a => a.status === "COMPLETED").length}{" "}
                   sessão(ões) concluída(s). Próxima sessão:{" "}
                   {next
-                    ? new Date(next.startsAt).toLocaleString("pt-BR")
+                    ? new Date(next.startsAt).toLocaleString("pt-BR", {
+                        timeZone: access.data?.timezone || "America/Sao_Paulo",
+                      })
                     : "nenhuma sessão futura"}
                   .
                 </p>
                 <div className="mt-3 space-y-2">
                   {appointments.map(a => (
                     <div key={a.id} className="border-t pt-2 text-sm">
-                      {new Date(a.startsAt).toLocaleString("pt-BR")} •{" "}
-                      {a.professionalName} • {a.serviceType} • {a.status}
+                      {new Date(a.startsAt).toLocaleString("pt-BR", {
+                        timeZone: access.data?.timezone || "America/Sao_Paulo",
+                      })}{" "}
+                      • {a.professionalName} • {a.serviceType} • {a.status}
                     </div>
                   ))}
                 </div>
@@ -164,7 +168,9 @@ export default function Patient360() {
                 {history.data?.map(e => (
                   <li key={e.id}>
                     {actions[e.action] || "Ação administrativa registrada"} •{" "}
-                    {new Date(e.createdAt).toLocaleString("pt-BR")}
+                    {new Date(e.createdAt).toLocaleString("pt-BR", {
+                      timeZone: access.data?.timezone || "America/Sao_Paulo",
+                    })}
                   </li>
                 ))}
               </ul>
