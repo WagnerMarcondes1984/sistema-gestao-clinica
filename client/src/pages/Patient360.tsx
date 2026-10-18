@@ -121,6 +121,7 @@ export default function Patient360() {
                     Abrir agenda deste paciente
                   </Link>
                 )}
+                <Link className="text-indigo-700 underline" href={`/patient-care?patientId=${patientId}`}>Documentos e acesso ao portal</Link>
                 {access.data?.canViewClinical && (
                   <Link
                     className="text-indigo-700 underline"

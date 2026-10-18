@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/ui/dialog";
+import PortalRescheduleInbox from "../components/PortalRescheduleInbox";
 import AppointmentForm from "../components/AppointmentForm";
 import { useAuth } from "../_core/hooks/useAuth";
 import { trpc } from "../lib/trpc";
@@ -62,10 +63,10 @@ export default function Reception() {
   });
   const process = trpc.scheduling.processRequest.useMutation({
     onSuccess: async () => {
+      await refresh();
       setSelected(null);
       setPending(null);
       toast.success("Triagem salva.");
-      await refresh();
     },
   });
   const data = queue.data;
@@ -312,6 +313,7 @@ export default function Reception() {
                 </article>
               ))}
             </section>
+            <PortalRescheduleInbox canSchedule={Boolean(data?.canSchedule)} />
           </>
         )}
         <Dialog

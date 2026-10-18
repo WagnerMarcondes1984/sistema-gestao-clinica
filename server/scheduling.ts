@@ -34,8 +34,8 @@ import {
 } from "../shared/patients";
 
 type Database = NonNullable<Awaited<ReturnType<typeof getDb>>>;
-type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
-type Clinic = typeof mindosTenants.$inferSelect;
+export type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
+export type Clinic = typeof mindosTenants.$inferSelect;
 const failure = (
   code:
     | "BAD_REQUEST"
@@ -73,7 +73,7 @@ async function audit(
     reason: "Operação de agenda e recepção",
   });
 }
-async function withClinic<T>(
+export async function withClinic<T>(
   user: User,
   permission: string,
   action: (tx: Tx, clinic: Clinic) => Promise<T>
@@ -713,108 +713,117 @@ export async function changeAppointment(
     return { id: a.id, revision: a.revision + 1 };
   });
 }
+export type RescheduleInput = {
+  appointmentId: number;
+  revision: number;
+  scope: "ONE" | "SERIES";
+  data: AppointmentInput;
+};
 export async function rescheduleAppointments(
   user: User,
-  input: {
-    appointmentId: number;
-    revision: number;
-    scope: "ONE" | "SERIES";
-    data: AppointmentInput;
-  }
+  input: RescheduleInput
 ) {
-  return withClinic(user, "MANAGE_APPOINTMENTS", async (tx, clinic) => {
-    const all = await tx
-      .select()
-      .from(mindosAppointments)
-      .where(eq(mindosAppointments.tenantId, clinic.id))
-      .for("update");
-    const anchor = all.find(a => a.id === input.appointmentId);
-    if (!anchor) return missing();
-    if (anchor.revision !== input.revision)
-      return failure("CONFLICT", "Sessão alterada. Recarregue.");
-    if (
-      !["SCHEDULED", "CONFIRMED"].includes(anchor.status) ||
-      anchor.startsAt < new Date()
-    )
-      return failure(
-        "BAD_REQUEST",
-        "Somente sessões futuras agendadas ou confirmadas podem ser reagendadas"
-      );
-    if (input.data.patientId !== anchor.patientId)
-      return failure("BAD_REQUEST", "Reagendamento não troca o paciente");
-    if (input.scope === "SERIES" && !anchor.recurrenceId)
-      return failure("BAD_REQUEST", "Sessão sem série recorrente");
-    const targets =
-      input.scope === "ONE"
-        ? [anchor]
-        : all.filter(
-            a =>
-              a.recurrenceId === anchor.recurrenceId &&
-              a.patientId === anchor.patientId &&
-              a.startsAt >= anchor.startsAt &&
-              ["SCHEDULED", "CONFIRMED"].includes(a.status)
-          );
-    const oldDate = clinicParts(anchor.startsAt, clinic.timezone).date;
-    const delta = Math.round(
-      (Date.parse(`${input.data.date}T12:00:00Z`) -
-        Date.parse(`${oldDate}T12:00:00Z`)) /
-        86400000
+  return withClinic(user, "MANAGE_APPOINTMENTS", (tx, clinic) =>
+    rescheduleInTransaction(tx, clinic, user, input)
+  );
+}
+export async function rescheduleInTransaction(
+  tx: Tx,
+  clinic: Clinic,
+  user: User,
+  input: RescheduleInput
+) {
+  const all = await tx
+    .select()
+    .from(mindosAppointments)
+    .where(eq(mindosAppointments.tenantId, clinic.id))
+    .for("update");
+  const anchor = all.find(a => a.id === input.appointmentId);
+  if (!anchor) return missing();
+  if (anchor.revision !== input.revision)
+    return failure("CONFLICT", "Sessão alterada. Recarregue.");
+  if (
+    !["SCHEDULED", "CONFIRMED"].includes(anchor.status) ||
+    anchor.startsAt < new Date()
+  )
+    return failure(
+      "BAD_REQUEST",
+      "Somente sessões futuras agendadas ou confirmadas podem ser reagendadas"
     );
-    const dates = targets.map(a =>
-      addCivilDays(clinicParts(a.startsAt, clinic.timezone).date, delta)
-    );
-    const replacement = await buildOccurrences(
-      tx,
-      clinic,
-      input.data,
-      targets.map(a => a.id),
-      dates
-    );
-    if (replacement.some(a => a.startsAt < new Date()))
-      return failure("BAD_REQUEST", "Escolha um horário futuro para reagendar");
-    const ids: number[] = [];
-    for (let index = 0; index < targets.length; index++) {
-      const previous = targets[index];
-      const [r] = await tx
-        .insert(mindosAppointments)
-        .values({ ...replacement[index], recurrenceId: previous.recurrenceId });
-      ids.push(r.insertId);
-      await tx
-        .update(mindosAppointments)
-        .set({
-          status: "RESCHEDULED",
-          revision: previous.revision + 1,
-          replacedByAppointmentId: r.insertId,
-        })
-        .where(eq(mindosAppointments.id, previous.id));
-      await tx
-        .update(mindosBookingRequests)
-        .set({ appointmentId: r.insertId })
-        .where(
-          and(
-            eq(mindosBookingRequests.tenantId, clinic.id),
-            eq(mindosBookingRequests.appointmentId, previous.id)
-          )
+  if (input.data.patientId !== anchor.patientId)
+    return failure("BAD_REQUEST", "Reagendamento não troca o paciente");
+  if (input.scope === "SERIES" && !anchor.recurrenceId)
+    return failure("BAD_REQUEST", "Sessão sem série recorrente");
+  const targets =
+    input.scope === "ONE"
+      ? [anchor]
+      : all.filter(
+          a =>
+            a.recurrenceId === anchor.recurrenceId &&
+            a.patientId === anchor.patientId &&
+            a.startsAt >= anchor.startsAt &&
+            ["SCHEDULED", "CONFIRMED"].includes(a.status)
         );
-      await audit(
-        tx,
-        clinic.id,
-        user.id,
-        "APPOINTMENT",
-        previous.id,
-        "RESCHEDULE_APPOINTMENT"
+  const oldDate = clinicParts(anchor.startsAt, clinic.timezone).date;
+  const delta = Math.round(
+    (Date.parse(`${input.data.date}T12:00:00Z`) -
+      Date.parse(`${oldDate}T12:00:00Z`)) /
+      86400000
+  );
+  const dates = targets.map(a =>
+    addCivilDays(clinicParts(a.startsAt, clinic.timezone).date, delta)
+  );
+  const replacement = await buildOccurrences(
+    tx,
+    clinic,
+    input.data,
+    targets.map(a => a.id),
+    dates
+  );
+  if (replacement.some(a => a.startsAt < new Date()))
+    return failure("BAD_REQUEST", "Escolha um horário futuro para reagendar");
+  const ids: number[] = [];
+  for (let index = 0; index < targets.length; index++) {
+    const previous = targets[index];
+    const [r] = await tx
+      .insert(mindosAppointments)
+      .values({ ...replacement[index], recurrenceId: previous.recurrenceId });
+    ids.push(r.insertId);
+    await tx
+      .update(mindosAppointments)
+      .set({
+        status: "RESCHEDULED",
+        revision: previous.revision + 1,
+        replacedByAppointmentId: r.insertId,
+      })
+      .where(eq(mindosAppointments.id, previous.id));
+    await tx
+      .update(mindosBookingRequests)
+      .set({ appointmentId: r.insertId })
+      .where(
+        and(
+          eq(mindosBookingRequests.tenantId, clinic.id),
+          eq(mindosBookingRequests.appointmentId, previous.id)
+        )
       );
-      await audit(
-        tx,
-        clinic.id,
-        user.id,
-        "APPOINTMENT",
-        r.insertId,
-        "CREATE_RESCHEDULED_APPOINTMENT"
-      );
-    }
-    return { ids };
-  });
+    await audit(
+      tx,
+      clinic.id,
+      user.id,
+      "APPOINTMENT",
+      previous.id,
+      "RESCHEDULE_APPOINTMENT"
+    );
+    await audit(
+      tx,
+      clinic.id,
+      user.id,
+      "APPOINTMENT",
+      r.insertId,
+      "CREATE_RESCHEDULED_APPOINTMENT"
+    );
+  }
+  return { ids };
 }
 export async function listSchedule(
   user: User,

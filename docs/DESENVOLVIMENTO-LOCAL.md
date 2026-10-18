@@ -42,3 +42,9 @@ A migração 0008 adiciona `revision` sem apagar dados. Em `/patients`, contas c
 ## Revisão visual da etapa 3 sem credenciais OAuth
 
 Depois das migrações e do build, execute `node scripts/open-review.mjs`. O script abre Google Chrome com sessão temporária em uma clínica fictícia separada, normalmente em `http://localhost:3420/agenda`. Exige ambiente gráfico, banco local e JWT_SECRET configurado; recusa produção. Não altera `.env` nem registra rota de login alternativo. Ao fechar a janela, encerra o servidor e remove o perfil temporário; dados fictícios de revisão são preservados no banco. Guia completo em `ETAPA-3-OPERACAO.md`. Para iniciar apenas o servidor padrão, `pnpm dev` permanece em `http://localhost:3000`, exigindo autenticação Manus real para módulos protegidos.
+
+## Revisão da etapa 4
+
+Use `node scripts/open-review.mjs --care` após compilar. Abre equipe e paciente em janelas com sessões isoladas de duas horas; fechar todas encerra o servidor. O banco fictício é preservado.
+
+Configure os dois segredos independentes `CLINICAL_INTEGRITY_SECRET` e `DOCUMENT_ENCRYPTION_SECRET` (aleatórios, pelo menos 32 caracteres). Não publique `.env` nem `.mindos-private`. `PRIVATE_DOCUMENT_ROOT` deve ser persistente e privado, fora de `client` e `dist/public`. Backup precisa preservar banco, arquivos e chaves. Migrações 0011/0012 são necessárias. Guia completo em [ETAPA-4-PRONTUARIO-E-PORTAL.md](ETAPA-4-PRONTUARIO-E-PORTAL.md).

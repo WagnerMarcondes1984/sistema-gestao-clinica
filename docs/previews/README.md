@@ -1,3 +1,5 @@
-# Prévias das etapas 2 e 3
+# Prévias das etapas 2, 3 e 4
 
-Capturas desktop e celular de equipe, pacientes, configurações, agenda e recepção, verificadas no Chrome com contas e dados fictícios locais. A etapa 3 está implementada e validada localmente, aguardando revisão visual do usuário antes da etapa 4. As capturas não homologam OAuth Manus nem produção.
+Capturas de equipe, pacientes, agenda, recepção, prontuário, documentos e portal em desktop e celular, verificadas no Chrome com contas e dados fictícios locais. A etapa 4 aguarda revisão visual do usuário antes da etapa 5. As capturas não homologam OAuth Manus nem produção.
+
+As cinco capturas da etapa 4 permanecem somente no ambiente local; não fazem parte do checkpoint público do GitHub.

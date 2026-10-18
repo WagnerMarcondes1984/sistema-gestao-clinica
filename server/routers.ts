@@ -5,6 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, financialProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { teamRouter } from "./team-router";
+import { careRouter } from "./care-router";
 import { patientsRouter } from "./patients-router";
 import { schedulingRouter } from "./scheduling-router";
 import { publicSchedule, requestPublicBooking, listSchedule } from "./scheduling";
@@ -50,6 +51,7 @@ import {
 export const appRouter = router({
   team: teamRouter,
   patients: patientsRouter,
+  care: careRouter,
   scheduling: schedulingRouter,
   system: systemRouter,
   publicMindos: router({
@@ -337,15 +339,15 @@ export const appRouter = router({
         patientId: z.number().int().positive(),
         appointmentId: z.number().optional(),
         recordType: z.enum(["ANAMNESIS", "EVOLUTION", "RESTRICTED_NOTE", "GOAL", "CARE_PLAN"]),
-        content: z.string().min(1),
+        content: z.string().trim().min(1).max(30000),
       }))
       .mutation(async ({ ctx, input }) => {
         return await createMindosClinicalRecord(ctx.user.id, ctx.user.role, input);
       }),
     finalizeClinicalRecord: protectedProcedure
-      .input(z.object({ recordId: z.number() }))
+      .input(z.object({ recordId: z.number().int().positive(), revision: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
-        return await finalizeMindosClinicalRecord(ctx.user.id, ctx.user.role, input.recordId);
+        return await finalizeMindosClinicalRecord(ctx.user.id, ctx.user.role, input.recordId, input.revision);
       }),
     bookingRequests: protectedProcedure.query(async ({ ctx }) => listMindosBookingRequests(ctx.user.id, ctx.user.role)),
     receptionQueue: protectedProcedure.query(async ({ ctx }) => listSchedule(ctx.user, undefined, undefined, true)),

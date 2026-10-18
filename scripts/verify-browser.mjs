@@ -17,7 +17,7 @@ const appId = "mindos-local-verification";
 const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 const profile = await mkdtemp(join(tmpdir(), "mindos-browser-"));
-let server, browser, socket;
+let server, browser, socket, debugPage;
 const fixture = {
   userId: null,
   tenantId: null,
@@ -25,6 +25,7 @@ const fixture = {
   patientNames: [],
   operationTenantId: null,
   operationUserId: null,
+  careUserIds: [],
   publicSlug: `browser-public-${randomUUID()}`,
 };
 try {
@@ -52,6 +53,7 @@ try {
       VITE_APP_ID: appId,
       PORT: "3410",
       PUBLIC_TENANT_SLUG: fixture.publicSlug,
+      PRIVATE_DOCUMENT_ROOT: join(profile, "private-documents"),
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -201,6 +203,7 @@ try {
     flatten: true,
   });
   const page = (method, params) => cdp(method, params, sessionId);
+  debugPage = page;
   await page("Page.enable");
   await page("Runtime.enable");
   await page("Network.enable");
@@ -291,14 +294,24 @@ try {
     throw new Error(message);
   }
   async function fill(selector, value, tag = "input") {
+    if (tag === "select")
+      await waitForCondition(
+        `(() => {const element=document.querySelector(${JSON.stringify(selector)});return !!element && !element.disabled && [...element.options].some(o=>o.value===${JSON.stringify(String(value))});})()`,
+        `Seleção não ficou disponível: ${selector}`
+      );
     await evaluate(
       `(() => { const element = document.querySelector(${JSON.stringify(selector)}); const proto = ${tag === "select" ? "HTMLSelectElement" : tag === "textarea" ? "HTMLTextAreaElement" : "HTMLInputElement"}.prototype; Object.getOwnPropertyDescriptor(proto, "value").set.call(element, ${JSON.stringify(value)}); element.dispatchEvent(new Event(${JSON.stringify(tag === "select" ? "change" : "input")}, { bubbles: true })); })()`
     );
   }
-  const click = text =>
-    evaluate(
-      `[...document.querySelectorAll('button')].find(button => button.textContent.trim() === ${JSON.stringify(text)}).click()`
+  const click = async text => {
+    await waitForCondition(
+      `[...document.querySelectorAll('button')].some(button => button.textContent.trim()===${JSON.stringify(text)} && !button.disabled)`,
+      `Botão não ficou disponível: ${text}`
     );
+    return evaluate(
+      `[...document.querySelectorAll('button')].find(button => button.textContent.trim()===${JSON.stringify(text)} && !button.disabled).click()`
+    );
+  };
   const setCookie = value =>
     page("Network.setCookie", {
       name: "app_session_id",
@@ -716,10 +729,15 @@ try {
   ).items;
   const first = sessions[0],
     secondSession = sessions[1];
-  const rowClick = (id, text) =>
-    evaluate(
-      `[...document.querySelector('article[data-appointment-id="${id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}).click()`
+  const rowClick = async (id, text) => {
+    await waitForCondition(
+      `(() => {const row=document.querySelector('article[data-appointment-id="${id}"]');return row && [...row.querySelectorAll('button')].some(b=>b.textContent.trim()===${JSON.stringify(text)} && !b.disabled);})()`,
+      `Ação de sessão não ficou disponível: ${text}`
     );
+    return evaluate(
+      `[...document.querySelector('article[data-appointment-id="${id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)} && !b.disabled).click()`
+    );
+  };
   await rowClick(first.id, "Reagendar");
   await waitForText("Salvar reagendamento");
   await fill("#schedule-time", "10:00");
@@ -859,11 +877,466 @@ try {
   console.log(
     "Chrome: configurações, disponibilidade, criação de série, edição individual e da série, cancelamento, check-in, conclusão, formulário público, contato, confirmação e recusa aprovados."
   );
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await page("Page.navigate", {
+    url: `${base}/clinical-records?patientId=${opPatient.id}`,
+  });
+  await waitForText("Novo rascunho");
+  const clinicalText = `Registro clínico fictício ${suffix}`,
+    revisedText = `Registro clínico fictício revisado ${suffix}`;
+  await fill("textarea", clinicalText, "textarea");
+  await click("Salvar rascunho");
+  await waitForCondition(
+    "document.querySelector('textarea').value === ''",
+    "Rascunho não salvou."
+  );
+  let record = (
+    await operation.care.records.query({ patientId: opPatient.id })
+  )[0];
+  const recordClick = async (id, text) => {
+    await waitForCondition(
+      `(() => {const row=document.querySelector('article[data-record-id="${id}"]');return row && [...row.querySelectorAll('button')].some(b=>b.textContent.trim()===${JSON.stringify(text)} && !b.disabled);})()`,
+      `Ação clínica não ficou disponível: ${text}`
+    );
+    return evaluate(
+      `[...document.querySelector('article[data-record-id="${id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)} && !b.disabled).click()`
+    );
+  };
+  await recordClick(record.id, "Editar rascunho");
+  await fill("textarea", revisedText, "textarea");
+  await click("Salvar edição");
+  await waitForCondition(
+    "document.querySelector('textarea').value === ''",
+    "Edição não salvou."
+  );
+  await recordClick(record.id, "Finalizar");
+  await click("Confirmar finalização");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Finalização não salvou."
+  );
+  record = (
+    await operation.care.records.query({ patientId: opPatient.id })
+  ).find(r => r.id === record.id);
+  assert.equal(record.status, "FINALIZED");
+  assert.equal(record.integrityStatus, "VERIFIED");
+  await recordClick(record.id, "Ver histórico");
+  await waitForText("Revisão 3");
+  assert.ok(
+    (
+      await evaluate("document.querySelector('[role=dialog]').innerText")
+    ).includes(clinicalText)
+  );
+  await page("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+  });
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Histórico não fechou."
+  );
+  await recordClick(record.id, "Novo adendo");
+  await fill("textarea", `Adendo fictício ${suffix}`, "textarea");
+  await click("Salvar adendo");
+  await waitForCondition(
+    "document.querySelector('textarea').value === ''",
+    "Adendo não salvou."
+  );
+  const addendum = (
+    await operation.care.records.query({ patientId: opPatient.id })
+  ).find(r => r.parentRecordId === record.id);
+  await recordClick(addendum.id, "Finalizar");
+  await click("Confirmar finalização");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Finalização do adendo não salvou."
+  );
+  assert.equal(
+    (await operation.care.records.query({ patientId: opPatient.id })).find(
+      r => r.id === addendum.id
+    ).status,
+    "ADDENDUM"
+  );
+  await takeScreenshot("mindos-prontuario-etapa4.png");
+  const portalOpenId = `browser-portal-${randomUUID()}`,
+    clinicianOpenId = `browser-clinician-${randomUUID()}`;
+  async function careAccount(openId, name, role, permissions) {
+    const [r] = await db.execute(
+      "INSERT INTO users(openId,name,role) VALUES(?,?,'user')",
+      [openId, name]
+    );
+    fixture.careUserIds.push(r.insertId);
+    await db.execute(
+      "INSERT INTO mindos_memberships(tenantId,userId,role,permissionsJson) VALUES(?,?,?,?)",
+      [fixture.operationTenantId, r.insertId, role, JSON.stringify(permissions)]
+    );
+    return { id: r.insertId, token: await tokenFor({ openId, name }) };
+  }
+  const portalAccount = await careAccount(
+    portalOpenId,
+    `Paciente portal fictício ${suffix}`,
+    "PATIENT",
+    []
+  );
+  const clinicianName = `Psicólogo navegador ${suffix}`;
+  const clinicianAccount = await careAccount(
+    clinicianOpenId,
+    clinicianName,
+    "PSYCHOLOGIST",
+    [
+      "VIEW_PATIENT_BASIC",
+      "VIEW_CLINICAL_RECORD",
+      "EDIT_CLINICAL_RECORD",
+      "VIEW_DOCUMENTS",
+      "MANAGE_DOCUMENTS",
+    ]
+  );
+  await db.execute("UPDATE mindos_patients SET portalUserId=? WHERE id=?", [
+    portalAccount.id,
+    opPatient.id,
+  ]);
+  await assert.rejects(
+    client(clinicianAccount.token).care.records.query({
+      patientId: opPatient.id,
+    }),
+    e => e.data?.code === "FORBIDDEN"
+  );
+  await page("Page.navigate", {
+    url: `${base}/patient-care?patientId=${opPatient.id}`,
+  });
+  await waitForText("Acesso clínico");
+  await click("Acesso clínico");
+  await waitForText(clinicianName);
+  const clinicianCheckbox = `[...document.querySelectorAll('label')].find(l=>l.textContent.includes(${JSON.stringify(clinicianName)})).querySelector('input')`;
+  await evaluate(`${clinicianCheckbox}.click()`);
+  await waitForCondition(
+    `${clinicianCheckbox}.checked`,
+    "Vínculo clínico não ativou."
+  );
+  assert.ok(
+    (
+      await client(clinicianAccount.token).care.records.query({
+        patientId: opPatient.id,
+      })
+    ).length >= 2
+  );
+  await evaluate(`${clinicianCheckbox}.click()`);
+  await waitForCondition(
+    `!${clinicianCheckbox}.checked`,
+    "Vínculo clínico não revogou."
+  );
+  await assert.rejects(
+    client(clinicianAccount.token).care.records.query({
+      patientId: opPatient.id,
+    }),
+    e => e.data?.code === "FORBIDDEN"
+  );
+  await click("Documentos");
+  await waitForText("Enviar documento privado");
+  const docTitle = `Documento privado fictício ${suffix}`;
+  await fill('input[required][maxlength="180"]', docTitle);
+  const pdfBytes = Buffer.from(
+    "%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n"
+  );
+  const pdfPath = join(profile, "ficticio.pdf");
+  await writeFile(pdfPath, pdfBytes);
+  await page("DOM.enable");
+  const dom = await page("DOM.getDocument");
+  const fileInput = await page("DOM.querySelector", {
+    nodeId: dom.root.nodeId,
+    selector: "#care-upload",
+  });
+  await page("DOM.setFileInputFiles", {
+    nodeId: fileInput.nodeId,
+    files: [pdfPath],
+  });
+  await click("Enviar documento privado");
+  await waitForText(docTitle);
+  let document = (
+    await operation.care.documents.query({ patientId: opPatient.id })
+  ).find(d => d.title === docTitle);
+  assert.ok(document.hasFile);
+  assert.equal(document.portalVisible, false);
+  const downloadUrl = `${base}/api/private-documents/${document.id}/download`;
+  assert.equal((await fetch(downloadUrl)).status, 401);
+  assert.equal(
+    (
+      await fetch(`${base}/api/private-documents/${opPatient.id}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${portalAccount.token}`,
+          "Content-Type": "application/pdf",
+          "X-File-Name": "teste.pdf",
+          "X-Document-Title": "Teste",
+        },
+        body: pdfBytes,
+      })
+    ).status,
+    403
+  );
+  assert.equal(
+    (await client(portalAccount.token).care.portal.query()).documents.length,
+    0
+  );
+  const documentClick = text =>
+    evaluate(
+      `[...document.querySelector('article[data-document-id="${document.id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}).click()`
+    );
+  await documentClick("Liberar no portal");
+  await waitForText("Liberado no portal");
+  const released = await fetch(downloadUrl, {
+    headers: { Authorization: `Bearer ${portalAccount.token}` },
+  });
+  assert.equal(released.status, 200);
+  assert.ok(released.headers.get("cache-control").includes("no-store"));
+  assert.ok(Buffer.from(await released.arrayBuffer()).equals(pdfBytes));
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/portal` });
+  await waitForText(`Olá, ${opPatient.fullName}`);
+  await click("Documentos");
+  await waitForText(docTitle);
+  await waitForText("Baixar documento");
+  await setCookie(operationToken);
+  await page("Page.navigate", {
+    url: `${base}/patient-care?patientId=${opPatient.id}`,
+  });
+  await waitForText(docTitle);
+  await documentClick("Revogar documento");
+  await waitForText("Revogado");
+  assert.equal(
+    (
+      await fetch(downloadUrl, {
+        headers: { Authorization: `Bearer ${portalAccount.token}` },
+      })
+    ).status,
+    404
+  );
+  await takeScreenshot("mindos-documentos-etapa4.png");
+  await page("Page.navigate", { url: `${base}/app/consents` });
+  await waitForText("Novo termo");
+  await click("Novo termo");
+  await waitForText("Salvar versão");
+  await fill("input[pattern]", `termo-${suffix}`);
+  await fill("#consent-title", `Termo fictício ${suffix}`);
+  await fill(
+    "textarea",
+    `Texto fictício integral versão um ${suffix}`,
+    "textarea"
+  );
+  await click("Salvar versão");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Termo não salvou."
+  );
+  await click("Publicar versão");
+  await click("Confirmar publicação");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Termo não publicou."
+  );
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/portal` });
+  await waitForText(`Olá, ${opPatient.fullName}`);
+  await click("Consentimentos");
+  await waitForText(`Texto fictício integral versão um ${suffix}`);
+  await click("Aceitar termo");
+  await evaluate("document.querySelector('#portal-consent-ack').click()");
+  await click("Confirmar decisão");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Aceite não salvou."
+  );
+  assert.equal(
+    (await client(portalAccount.token).care.portal.query()).consentHistory[0]
+      .decision,
+    "ACCEPTED"
+  );
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/app/consents` });
+  await waitForText("Criar nova versão");
+  await click("Criar nova versão");
+  await waitForText("Salvar versão");
+  await fill(
+    "textarea",
+    `Texto fictício integral versão dois ${suffix}`,
+    "textarea"
+  );
+  await click("Salvar versão");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Nova versão não salvou."
+  );
+  await click("Publicar versão");
+  await click("Confirmar publicação");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Nova versão não publicou."
+  );
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/portal` });
+  await waitForText(`Olá, ${opPatient.fullName}`);
+  await click("Consentimentos");
+  await waitForText(`Texto fictício integral versão dois ${suffix}`);
+  await waitForText("Aguardando sua decisão");
+  await click("Não aceitar");
+  await evaluate("document.querySelector('#portal-consent-ack').click()");
+  await click("Confirmar decisão");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Não aceite não salvou."
+  );
+  await click("Aceitar termo");
+  await evaluate("document.querySelector('#portal-consent-ack').click()");
+  await click("Confirmar decisão");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Segundo aceite não salvou."
+  );
+  await click("Retirar aceite");
+  await evaluate("document.querySelector('#portal-consent-ack').click()");
+  await click("Confirmar decisão");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Retirada não salvou."
+  );
+  let portalState = await client(portalAccount.token).care.portal.query();
+  assert.deepEqual(
+    portalState.consentHistory.map(d => d.decision),
+    ["ACCEPTED", "DECLINED", "ACCEPTED", "WITHDRAWN"]
+  );
+  await takeScreenshot("mindos-portal-consentimentos-etapa4.png");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await takeScreenshot("mindos-portal-etapa4-mobile.png");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  const chargeCode = `PORTAL-${suffix}`;
+  await db.execute(
+    "INSERT INTO transactions(tenantId,code,verticalCode,patientName,patientDocument,professionalName,title,category,subtotal,totalAmount,dueDate) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    [
+      fixture.operationTenantId,
+      chargeCode,
+      "PSYCHOLOGY_CLINIC",
+      opPatient.fullName,
+      "FICTICIO",
+      professionalName,
+      "Lançamento fictício de teste",
+      "TEST",
+      12345,
+      12345,
+      new Date(),
+    ]
+  );
+  assert.equal(
+    (await client(portalAccount.token).care.portal.query()).financial.length,
+    0
+  );
+  await setCookie(operationToken);
+  await page("Page.navigate", {
+    url: `${base}/patient-care?patientId=${opPatient.id}`,
+  });
+  await waitForText("Financeiro no portal");
+  await click("Financeiro no portal");
+  await fill('input[maxlength="32"]', chargeCode);
+  await click("Vincular e liberar");
+  await waitForText(chargeCode);
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/portal` });
+  await waitForText(`Olá, ${opPatient.fullName}`);
+  await click("Financeiro");
+  await waitForText(chargeCode);
+  assert.equal(
+    (await client(portalAccount.token).care.portal.query()).financial.length,
+    1
+  );
+  await click("Agenda");
+  portalState = await client(portalAccount.token).care.portal.query();
+  const futureSession = portalState.appointments.find(
+    a =>
+      ["SCHEDULED", "CONFIRMED"].includes(a.status) &&
+      new Date(a.startsAt) > new Date()
+  );
+  assert.ok(futureSession);
+  await evaluate(
+    `[...document.querySelector('article[data-portal-appointment-id="${futureSession.id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()==='Solicitar reagendamento').click()`
+  );
+  await waitForText("Enviar solicitação");
+  const preferredDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: config.clinic.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(futureSession.startsAt));
+  await fill("#portal-request-date", preferredDate);
+  await fill("#portal-request-time", "12:00");
+  await click("Enviar solicitação");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Pedido de reagendamento não salvou."
+  );
+  await waitForText("Aguardando equipe");
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/reception` });
+  await waitForText("Aprovar reagendamento");
+  await click("Aprovar reagendamento");
+  await waitForText("Salvar reagendamento");
+  await fillAppointment(preferredDate, "12:00");
+  await click("Salvar reagendamento");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Aprovação de reagendamento não salvou."
+  );
+  await waitForText("Aprovada");
+  portalState = await client(portalAccount.token).care.portal.query();
+  assert.equal(portalState.rescheduleRequests[0].status, "APPROVED");
+  assert.ok(portalState.rescheduleRequests[0].replacementAppointmentId);
+  assert.equal(
+    portalState.appointments.find(a => a.id === futureSession.id).status,
+    "RESCHEDULED"
+  );
+  await takeScreenshot("mindos-reagendamento-portal-etapa4.png");
+  console.log(
+    "Chrome: edição, finalização, adendo, histórico, vínculo clínico, upload privado, liberação, download autenticado, revogação, termos versionados, aceite/não aceite/retirada, financeiro liberado e reagendamento pelo portal aprovados."
+  );
   assert.deepEqual(exceptions, []);
   console.log(
     "Chrome: portal sem sessão, dados do paciente correto, documentos liberados e limpeza após logout aprovados."
   );
   console.log("Screenshot de demonstração: /tmp/mindos-portal-verificado.png");
+} catch (error) {
+  if (debugPage)
+    try {
+      const state = await debugPage("Runtime.evaluate", {
+        expression:
+          "document.querySelector('[role=dialog]')?.innerText || document.body.innerText.slice(-2500)",
+        returnByValue: true,
+      });
+      console.error("Estado fictício da falha:", state.result.value);
+      const shot = await debugPage("Page.captureScreenshot", {
+        format: "png",
+        captureBeyondViewport: true,
+      });
+      await writeFile(
+        join(tmpdir(), "mindos-browser-falha.png"),
+        Buffer.from(shot.data, "base64")
+      );
+    } catch {}
+  throw error;
 } finally {
   socket?.close();
   for (const child of [browser, server]) {
@@ -882,6 +1355,13 @@ try {
   }
   if (fixture.operationTenantId) {
     for (const table of [
+      "mindos_consent_decisions",
+      "mindos_consent_templates",
+      "mindos_reschedule_requests",
+      "mindos_clinical_versions",
+      "mindos_patient_clinicians",
+      "mindos_portal_documents",
+      "transactions",
       "mindos_booking_limits",
       "mindos_booking_requests",
       "mindos_reception_events",
@@ -898,6 +1378,8 @@ try {
       await db.execute(`DELETE FROM ${table} WHERE tenantId=?`, [
         fixture.operationTenantId,
       ]);
+    for (const userId of fixture.careUserIds)
+      await db.execute("DELETE FROM users WHERE id=?", [userId]);
     if (fixture.operationUserId)
       await db.execute("DELETE FROM users WHERE id=?", [
         fixture.operationUserId,
@@ -917,11 +1399,16 @@ try {
         "SELECT id FROM mindos_clinical_records WHERE tenantId = ? AND patientId = ?",
         [fixture.tenantId, patient.id]
       );
-      for (const record of records)
+      for (const record of records) {
+        await db.execute(
+          "DELETE FROM mindos_clinical_versions WHERE tenantId=? AND recordId=?",
+          [fixture.tenantId, record.id]
+        );
         await db.execute(
           "DELETE FROM mindos_access_audits WHERE tenantId = ? AND subjectType = 'CLINICAL_RECORD' AND subjectId = ?",
           [fixture.tenantId, record.id]
         );
+      }
       for (const table of ["mindos_clinical_records", "mindos_appointments"])
         await db.execute(
           `DELETE FROM ${table} WHERE tenantId = ? AND patientId = ?`,

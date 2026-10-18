@@ -185,7 +185,7 @@ export default defineConfig({
     ],
     fs: {
       strict: true,
-      deny: ["**/.*"],
+      deny: ["**/.*", "**/.mindos-private/**", ...(process.env.PRIVATE_DOCUMENT_ROOT ? [path.resolve(process.env.PRIVATE_DOCUMENT_ROOT) + "/**"] : [])],
     },
   },
 });

@@ -126,3 +126,19 @@ Verificação: TypeScript/build aprovados, 91 testes unitários aprovados e 1 ig
 A revisão visual usa `node scripts/open-review.mjs`: janela separada, servidor limitado ao loopback, sessão temporária e clínica fictícia exclusiva. Não altera credenciais nem cria login alternativo no produto. A conta de revisão não recebe administração global e não tem associação a clínicas reais.
 
 **Parada solicitada atendida: abrir localhost para revisão e não iniciar a etapa 4.** Guia: `ETAPA-3-OPERACAO.md`. Checkpoint: branch `codex/etapa-3-operacao`, baseada em `codex/etapa-3-pacientes`, sem merge. OAuth Manus real, associação financeira legada e homologação para produção continuam pendentes nas respectivas etapas.
+
+## Etapa 4 — prontuário, documentos e portal (18/10/2026)
+
+Etapa 3 revisada e início autorizado pelo usuário. Implementados rascunhos editáveis pelo autor, finalização imutável, adendos, histórico com integridade HMAC e identificação explícita de legado; acesso por vínculo clínico e concessões adicionais para notas restritas. Documentos reais privados, criptografados, com autorização em cada download, liberação ao portal e revogação. Consentimentos publicados por versão, aceite eletrônico simples, recusa, retirada e evidência preservada. Portal com dados próprios, financeiro interno explicitamente vinculado/liberado e pedidos persistentes de reagendamento com decisão atômica da equipe. Teleatendimento demonstrativo removido; integração de vídeo fora desta entrega.
+
+Migrações 0011 e 0012 preservam o legado; campos extensos usam MEDIUMTEXT, validado com Unicode e snapshots. Segredos independentes configurados somente no ambiente local, sem envio ao repositório. Diretório privado ignorado e negado pelo Vite. Modelos novos de documentos não ampliam permissões de associações existentes.
+
+Validação: TypeScript e build aprovados; 114 testes unitários aprovados e 1 ignorado (caso antigo dependente de banco), 54 testes de integração em MySQL aprovados. Chrome aprovou prontuário, adendos, vínculo/revogação clínica, upload/liberação/download/revogação, versões e decisões de consentimento, financeiro liberado e reagendamento, além das regressões de equipe, agenda, recepção e logout. Capturas fictícias em `previews/`. Permanece aviso de tamanho do bundle.
+
+Foram corrigidos espera por atualização após mutações da interface, sincronização dos seletores do teste e a exigência de revisão no teste legado de finalização. Testes de banco e Chrome executados sequencialmente após identificar lentidão de commits quando concorriam pelo disco; a suíte final passou integralmente. Registros temporários de teste são removidos pelo harness.
+
+Guia em `ETAPA-4-PRONTUARIO-E-PORTAL.md`. Revisão: `node scripts/open-review.mjs --care`, equipe e paciente em contextos separados, contas fictícias sem administração global, sessão de duas horas. Nenhum provedor de autenticação foi trocado. OAuth Manus real permanece pendente de configuração.
+
+Checkpoint previsto: `codex/etapa-4-prontuario-e-portal`, baseado em `codex/etapa-3-operacao`, para revisão sem merge. **Parar antes da etapa 5, aguardando análise e novo comando.** Financeiro bancário/fiscal, assinatura certificada e homologação de produção não foram declarados entregues.
+
+Conferência final: 31 tabelas e 373 colunas correspondem ao código; seed original preservado e repetição recusada. Revisão aberta com sucesso em `http://localhost:3420/clinical-records?patientId=84` e `http://localhost:3420/portal`, com contextos separados. As cinco capturas da etapa 4 ficam somente no ambiente local após bloqueio da revisão automática para envio ao repositório público; código e documentação seguem no checkpoint, sem arquivos privados.
