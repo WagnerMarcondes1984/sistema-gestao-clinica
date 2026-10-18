@@ -1,0 +1,377 @@
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "drizzle-orm/mysql-core";
+
+/**
+ * Core user table backing auth flow.
+ * Extend this file with additional tables as your product grows.
+ * Columns use camelCase to match both database fields and generated types.
+ */
+export const users = mysqlTable("users", {
+  /**
+   * Surrogate primary key. Auto-incremented numeric value managed by the database.
+   * Use this for relations between tables.
+   */
+  id: int("id").autoincrement().primaryKey(),
+  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * Configuração das verticais clínicas suportadas
+ */
+export const clinicalVerticals = mysqlTable("clinical_verticals", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(), // DENTAL_CLINIC, MEDICAL_CLINIC, etc.
+  name: varchar("name", { length: 128 }).notNull(),
+  tagline: varchar("tagline", { length: 255 }).notNull(),
+  primaryColor: varchar("primaryColor", { length: 32 }).notNull(),
+  accentColor: varchar("accentColor", { length: 32 }).notNull(),
+  badgeLabel: varchar("badgeLabel", { length: 64 }).notNull(),
+  cnpj: varchar("cnpj", { length: 20 }),
+  municipalRegistration: varchar("municipalRegistration", { length: 32 }),
+  city: varchar("city", { length: 64 }).default("São Paulo - SP"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ClinicalVertical = typeof clinicalVerticals.$inferSelect;
+
+/**
+ * Transações Financeiras e Cobranças Clínicas
+ */
+export const transactions = mysqlTable("transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(), // ex: COB-2026-8812
+  verticalCode: varchar("verticalCode", { length: 32 }).notNull(), // DENTAL_CLINIC, etc.
+  patientName: varchar("patientName", { length: 128 }).notNull(),
+  patientDocument: varchar("patientDocument", { length: 32 }).notNull(), // CPF ou CNPJ
+  patientEmail: varchar("patientEmail", { length: 128 }),
+  patientPhone: varchar("patientPhone", { length: 32 }),
+  professionalName: varchar("professionalName", { length: 128 }).notNull(),
+  unitName: varchar("unitName", { length: 128 }).default("Unidade Central"),
+  title: varchar("title", { length: 255 }).notNull(),
+  type: mysqlEnum("type", ["RECEITA", "DESPESA"]).default("RECEITA").notNull(),
+  category: varchar("category", { length: 64 }).notNull(), // Consulta, Procedimento, Pacote, Exame, etc.
+  paymentMethod: mysqlEnum("paymentMethod", [
+    "PIX",
+    "CREDIT_CARD",
+    "DEBIT_CARD",
+    "BOLETO",
+    "CASH",
+    "TRANSFER"
+  ]).default("PIX").notNull(),
+  status: mysqlEnum("status", [
+    "PENDING",
+    "PAID",
+    "OVERDUE",
+    "FAILED",
+    "REFUNDED",
+    "PARTIALLY_REFUNDED"
+  ]).default("PENDING").notNull(),
+  subtotal: int("subtotal").notNull(), // em centavos
+  discount: int("discount").default(0).notNull(), // em centavos
+  addition: int("addition").default(0).notNull(), // em centavos
+  totalAmount: int("totalAmount").notNull(), // subtotal - discount + addition
+  paidAmount: int("paidAmount").default(0).notNull(),
+  installments: int("installments").default(1).notNull(),
+  installmentValue: int("installmentValue"),
+  dueDate: timestamp("dueDate").notNull(),
+  paidAt: timestamp("paidAt"),
+  // Dados do método específico
+  pixQrCode: text("pixQrCode"),
+  pixCopiaECola: text("pixCopiaECola"),
+  pixExpiresAt: timestamp("pixExpiresAt"),
+  barcode: varchar("barcode", { length: 64 }),
+  digitableLine: varchar("digitableLine", { length: 64 }),
+  cardBrand: varchar("cardBrand", { length: 32 }),
+  cardLast4: varchar("cardLast4", { length: 4 }),
+  nsu: varchar("nsu", { length: 64 }),
+  authorizationCode: varchar("authorizationCode", { length: 64 }),
+  cashReceived: int("cashReceived"),
+  cashChange: int("cashChange"),
+  // Informações Fiscais
+  invoiceNumber: varchar("invoiceNumber", { length: 64 }),
+  invoiceSeries: varchar("invoiceSeries", { length: 16 }).default("1"),
+  invoiceStatus: mysqlEnum("invoiceStatus", ["NOT_ISSUED", "ISSUED", "CANCELLED", "ERROR"]).default("NOT_ISSUED").notNull(),
+  invoiceKey: varchar("invoiceKey", { length: 64 }),
+  invoiceIssuedAt: timestamp("invoiceIssuedAt"),
+  notes: text("notes"),
+  operatorName: varchar("operatorName", { length: 64 }).default("Recepção Central"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = typeof transactions.$inferInsert;
+
+/**
+ * Itens de Procedimentos/Serviços do Atendimento
+ */
+export const transactionItems = mysqlTable("transaction_items", {
+  id: int("id").autoincrement().primaryKey(),
+  transactionId: int("transactionId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 32 }).default("PROCEDURE").notNull(),
+  quantity: int("quantity").default(1).notNull(),
+  unitPrice: int("unitPrice").notNull(), // centavos
+  subtotal: int("subtotal").notNull(), // centavos
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TransactionItem = typeof transactionItems.$inferSelect;
+
+/**
+ * Contas a Pagar (Despesas clínicas, fornecedores, repasses)
+ */
+export const accountsPayable = mysqlTable("accounts_payable", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  verticalCode: varchar("verticalCode", { length: 32 }).notNull(),
+  supplierName: varchar("supplierName", { length: 128 }).notNull(),
+  description: text("description").notNull(),
+  category: varchar("category", { length: 64 }).notNull(), // Materiais Clínicos, Aluguel, Repasse Médico, Energia, etc.
+  amount: int("amount").notNull(), // centavos
+  dueDate: timestamp("dueDate").notNull(),
+  paidAt: timestamp("paidAt"),
+  status: mysqlEnum("status", ["PENDING", "PAID", "OVERDUE", "CANCELLED"]).default("PENDING").notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 32 }).default("BOLETO"),
+  beneficiaryDocument: varchar("beneficiaryDocument", { length: 32 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AccountPayable = typeof accountsPayable.$inferSelect;
+
+/**
+ * Sessões de Caixa (Abertura, Movimentações e Fechamento)
+ */
+export const cashSessions = mysqlTable("cash_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  verticalCode: varchar("verticalCode", { length: 32 }).notNull(),
+  sessionNumber: varchar("sessionNumber", { length: 32 }).notNull(),
+  operatorName: varchar("operatorName", { length: 64 }).notNull(),
+  status: mysqlEnum("status", ["OPEN", "CLOSED"]).default("OPEN").notNull(),
+  openingBalance: int("openingBalance").default(0).notNull(), // centavos
+  cashInflow: int("cashInflow").default(0).notNull(),
+  cashOutflow: int("cashOutflow").default(0).notNull(),
+  expectedBalance: int("expectedBalance").default(0).notNull(),
+  closingBalance: int("closingBalance"),
+  difference: int("difference").default(0),
+  openedAt: timestamp("openedAt").defaultNow().notNull(),
+  closedAt: timestamp("closedAt"),
+  closingNotes: text("closingNotes"),
+});
+
+export type CashSession = typeof cashSessions.$inferSelect;
+
+/**
+ * Log de Auditoria de Operações Financeiras
+ */
+export const financialAuditLogs = mysqlTable("financial_audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  verticalCode: varchar("verticalCode", { length: 32 }).notNull(),
+  transactionCode: varchar("transactionCode", { length: 32 }),
+  action: varchar("action", { length: 64 }).notNull(), // CREATE_CHARGE, CONFIRM_PAYMENT, REFUND, ISSUE_INVOICE, CASH_OPEN, CASH_CLOSE
+  operator: varchar("operator", { length: 64 }).notNull(),
+  details: text("details").notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }).default("127.0.0.1"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FinancialAuditLog = typeof financialAuditLogs.$inferSelect;
+
+
+/**
+ * Tenant MindOS. Todas as entidades operacionais abaixo devem ser filtradas por tenantId no backend.
+ */
+export const mindosTenants = mysqlTable("mindos_tenants", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 96 }).notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  legalName: varchar("legalName", { length: 200 }),
+  businessType: varchar("businessType", { length: 64 }).default("PSYCHOLOGY_CLINIC").notNull(),
+  status: mysqlEnum("status", ["ACTIVE", "PAUSED"]).default("ACTIVE").notNull(),
+  primaryColor: varchar("primaryColor", { length: 32 }).default("#4338CA").notNull(),
+  accentColor: varchar("accentColor", { length: 32 }).default("#6366F1").notNull(),
+  siteConfigJson: text("siteConfigJson").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MindosTenant = typeof mindosTenants.$inferSelect;
+export type InsertMindosTenant = typeof mindosTenants.$inferInsert;
+
+export const mindosMemberships = mysqlTable("mindos_memberships", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["OWNER", "CLINIC_ADMIN", "PSYCHOLOGIST", "ASSISTANT", "RECEPTIONIST", "FINANCIAL", "SALES", "VIEWER", "PATIENT", "SUPER_ADMIN"]).default("VIEWER").notNull(),
+  permissionsJson: text("permissionsJson").notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MindosMembership = typeof mindosMemberships.$inferSelect;
+
+export const mindosPatients = mysqlTable("mindos_patients", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  fullName: varchar("fullName", { length: 160 }).notNull(),
+  preferredName: varchar("preferredName", { length: 96 }),
+  email: varchar("email", { length: 200 }),
+  phone: varchar("phone", { length: 40 }),
+  birthDate: timestamp("birthDate"),
+  administrativeStatus: mysqlEnum("administrativeStatus", ["LEAD", "ACTIVE", "INACTIVE", "CLOSED"]).default("LEAD").notNull(),
+  preferredChannel: mysqlEnum("preferredChannel", ["WHATSAPP_DISCREET", "EMAIL", "PHONE"]).default("WHATSAPP_DISCREET").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MindosPatient = typeof mindosPatients.$inferSelect;
+export type InsertMindosPatient = typeof mindosPatients.$inferInsert;
+
+export const mindosAppointments = mysqlTable("mindos_appointments", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  patientId: int("patientId").notNull(),
+  professionalUserId: int("professionalUserId"),
+  professionalName: varchar("professionalName", { length: 160 }).notNull(),
+  unitName: varchar("unitName", { length: 128 }).notNull(),
+  serviceType: varchar("serviceType", { length: 160 }).notNull(),
+  mode: mysqlEnum("mode", ["IN_PERSON", "ONLINE"]).default("IN_PERSON").notNull(),
+  status: mysqlEnum("status", ["SCHEDULED", "CONFIRMED", "ARRIVED", "WAITING", "IN_PROGRESS", "COMPLETED", "NO_SHOW", "CANCELLED", "RESCHEDULED"]).default("SCHEDULED").notNull(),
+  startsAt: timestamp("startsAt").notNull(),
+  endsAt: timestamp("endsAt").notNull(),
+  recurrenceId: varchar("recurrenceId", { length: 64 }),
+  notesAdmin: text("notesAdmin"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MindosAppointment = typeof mindosAppointments.$inferSelect;
+export type InsertMindosAppointment = typeof mindosAppointments.$inferInsert;
+
+export const mindosClinicalRecords = mysqlTable("mindos_clinical_records", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  patientId: int("patientId").notNull(),
+  appointmentId: int("appointmentId"),
+  authorUserId: int("authorUserId").notNull(),
+  recordType: mysqlEnum("recordType", ["ANAMNESIS", "EVOLUTION", "RESTRICTED_NOTE", "GOAL", "CARE_PLAN"]).notNull(),
+  status: mysqlEnum("status", ["DRAFT", "FINALIZED", "ADDENDUM"]).default("DRAFT").notNull(),
+  content: text("content").notNull(),
+  version: int("version").default(1).notNull(),
+  integrityHash: varchar("integrityHash", { length: 128 }),
+  finalizedAt: timestamp("finalizedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MindosClinicalRecord = typeof mindosClinicalRecords.$inferSelect;
+
+export const mindosCmsVersions = mysqlTable("mindos_cms_versions", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  versionNumber: int("versionNumber").default(1).notNull(),
+  status: mysqlEnum("status", ["DRAFT", "PREVIEW", "APPROVED", "PUBLISHED", "ARCHIVED"]).default("DRAFT").notNull(),
+  contentJson: text("contentJson").notNull(),
+  changeSummary: varchar("changeSummary", { length: 255 }),
+  createdByUserId: int("createdByUserId").notNull(),
+  approvedByUserId: int("approvedByUserId"),
+  publishedAt: timestamp("publishedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MindosCmsVersion = typeof mindosCmsVersions.$inferSelect;
+
+export const mindosAccessAudits = mysqlTable("mindos_access_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  actorUserId: int("actorUserId").notNull(),
+  subjectType: varchar("subjectType", { length: 64 }).notNull(),
+  subjectId: int("subjectId"),
+  dataLayer: mysqlEnum("dataLayer", ["ADMINISTRATIVE", "CLINICAL", "HIGHLY_RESTRICTED_CLINICAL", "FINANCIAL", "PUBLIC"]).notNull(),
+  action: varchar("action", { length: 64 }).notNull(),
+  reason: varchar("reason", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MindosAccessAudit = typeof mindosAccessAudits.$inferSelect;
+
+export const mindosFinancialRules = mysqlTable("mindos_financial_rules", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  ruleType: mysqlEnum("ruleType", ["SESSION", "PACKAGE", "PAYOUT", "COMMISSION"]).notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  valueInCents: int("valueInCents"),
+  percentageBps: int("percentageBps"),
+  basis: mysqlEnum("basis", ["PER_SESSION", "PER_RECEIPT", "PER_PRODUCTION"]).default("PER_SESSION").notNull(),
+  version: int("version").default(1).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MindosFinancialRule = typeof mindosFinancialRules.$inferSelect;
+
+
+export const mindosBookingRequests = mysqlTable("mindos_booking_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  contactChannel: mysqlEnum("contactChannel", ["WHATSAPP_DISCREET", "EMAIL", "PHONE"]).default("WHATSAPP_DISCREET").notNull(),
+  contactValue: varchar("contactValue", { length: 200 }).notNull(),
+  serviceType: varchar("serviceType", { length: 160 }).notNull(),
+  preferredDate: timestamp("preferredDate").notNull(),
+  preferredTime: varchar("preferredTime", { length: 8 }).notNull(),
+  status: mysqlEnum("status", ["NEW", "CONTACTED", "CONFIRMED", "DECLINED", "SPAM"]).default("NEW").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MindosBookingRequest = typeof mindosBookingRequests.$inferSelect;
+
+export const mindosInstitutionalProfiles = mysqlTable("mindos_institutional_profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull().unique(),
+  title: varchar("title", { length: 180 }).notNull(),
+  metaDescription: varchar("metaDescription", { length: 320 }).notNull(),
+  city: varchar("city", { length: 96 }),
+  faqJson: text("faqJson").notNull(),
+  llmsTxt: text("llmsTxt").notNull(),
+  updatedByUserId: int("updatedByUserId"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MindosInstitutionalProfile = typeof mindosInstitutionalProfiles.$inferSelect;
+
+export const mindosServiceAreas = mysqlTable("mindos_service_areas", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  publicDescription: text("publicDescription").notNull(),
+  active: boolean("active").default(true).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MindosServiceArea = typeof mindosServiceAreas.$inferSelect;
+
+export const mindosPortalDocuments = mysqlTable("mindos_portal_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  patientId: int("patientId").notNull(),
+  title: varchar("title", { length: 180 }).notNull(),
+  documentType: mysqlEnum("documentType", ["CONSENT", "ADMINISTRATIVE", "RECEIPT", "GUIDANCE"]).notNull(),
+  status: mysqlEnum("status", ["AVAILABLE", "REVOKED", "SIGNED"]).default("AVAILABLE").notNull(),
+  version: int("version").default(1).notNull(),
+  releasedAt: timestamp("releasedAt").defaultNow().notNull(),
+});
+export type MindosPortalDocument = typeof mindosPortalDocuments.$inferSelect;
+
+export const mindosReceptionEvents = mysqlTable("mindos_reception_events", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  patientId: int("patientId").notNull(),
+  eventType: mysqlEnum("eventType", ["CHECK_IN", "MESSAGE_SENT", "CALL_LOGGED", "PROFILE_REVIEWED"]).notNull(),
+  messageTemplate: varchar("messageTemplate", { length: 160 }),
+  createdByUserId: int("createdByUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MindosReceptionEvent = typeof mindosReceptionEvents.$inferSelect;

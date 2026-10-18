@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1788661363808,
+      "tag": "0000_quiet_peter_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1788661487955,
+      "tag": "0001_quick_luckman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1788663172769,
+      "tag": "0002_tranquil_molten_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1788663233815,
+      "tag": "0003_unusual_layla_miller",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1788904450121,
+      "tag": "0004_sour_harry_osborn",
+      "breakpoints": true
+    }
+  ]
+}
