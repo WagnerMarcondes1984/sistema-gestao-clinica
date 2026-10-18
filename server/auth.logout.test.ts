@@ -42,6 +42,12 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
 }
 
 describe("auth.logout", () => {
+  it("usa cookie válido no desenvolvimento HTTP local", async () => {
+    const { ctx, clearedCookies } = createAuthContext();
+    ctx.req = { protocol: "http", headers: {} } as TrpcContext["req"];
+    await appRouter.createCaller(ctx).auth.logout();
+    expect(clearedCookies[0]?.options).toMatchObject({ secure: false, sameSite: "lax", maxAge: -1 });
+  });
   it("clears the session cookie and reports success", async () => {
     const { ctx, clearedCookies } = createAuthContext();
     const caller = appRouter.createCaller(ctx);

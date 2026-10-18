@@ -1,0 +1,24 @@
+name: mindos-development
+services:
+  mysql:
+    # Debian evita o requisito x86-64-v2 da imagem Oracle Linux neste computador.
+    image: mysql:8.0.46-debian
+    command: ["--innodb-buffer-pool-size=64M", "--max-connections=30", "--performance-schema=OFF"]
+    environment:
+      MYSQL_DATABASE: mindos_dev
+      MYSQL_USER: mindos
+      MYSQL_PASSWORD: ${DEV_DB_PASSWORD:?Defina DEV_DB_PASSWORD no .env}
+      MYSQL_ROOT_PASSWORD: ${DEV_DB_ROOT_PASSWORD:?Defina DEV_DB_ROOT_PASSWORD no .env}
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u mindos mindos_dev -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      start_period: 120s
+      retries: 60
+volumes:
+  mysql_data:
+    name: ${DEV_DB_VOLUME:-mindos-development_mysql_data}

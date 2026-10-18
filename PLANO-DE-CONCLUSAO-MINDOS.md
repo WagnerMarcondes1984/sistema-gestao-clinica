@@ -4,17 +4,19 @@ Data: 17/10/2026.
 
 Objetivo: concluir uma plataforma de gestão clínica para psicologia e saúde mental, com CRM administrativo, portal e financeiro. CRM comercial avançado será uma entrega posterior à estabilização da operação clínica.
 
+Acompanhe resultados e ponto de retomada em [docs/EXECUCAO-DO-PLANO.md](docs/EXECUCAO-DO-PLANO.md).
+
 Este plano complementa o `todo.md`. As marcações antigas não comprovam funcionamento: cada entrega abaixo precisa atender aos seus critérios de aceite. Nenhuma tarefa deste plano foi considerada concluída apenas por existir uma tela ou tabela.
 
 ## 1. Preparar ambiente e confirmar a situação atual — prioridade crítica
 
-- [ ] Instalar as dependências respeitando o arquivo de lock.
-- [ ] Criar `.env.example` com nomes e explicações das variáveis, sem segredos reais.
-- [ ] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
-- [ ] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
-- [ ] Executar `pnpm check`, `pnpm test` e `pnpm build`; registrar falhas e corrigir bloqueios.
-- [ ] Mapear cada rota e botão como funcional, parcial, demonstrativo ou ausente.
-- [ ] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
+- [x] Instalar as dependências respeitando o arquivo de lock.
+- [x] Criar `.env.example` com nomes e explicações das variáveis, sem segredos reais.
+- [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
+- [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
+- [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 105 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
 
@@ -22,16 +24,16 @@ Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e ve
 
 Depende da etapa 1. Esta etapa bloqueia qualquer piloto com dados reais.
 
-- [ ] Adaptar o login para um provedor independente, caso a operação não use Manus, incluindo saída e expiração de sessão.
+- [x] Decisão de autenticação: manter Manus por enquanto, conforme escolha do usuário. Validação do login real depende das credenciais do ambiente; revisão de sessão/saída implementada.
 - [ ] Implementar entrada da clínica, convites, ativação/desativação de usuários e gestão de associações.
-- [ ] Definir matriz explícita de permissões para administrador, psicólogo, recepção, financeiro, comercial e paciente.
-- [ ] Exigir autenticação e autorização nas rotas financeiras e de auditoria.
-- [ ] Adicionar identificação da clínica às tabelas financeiras e migrar registros existentes com uma regra explícita de associação; não inferir clínica apenas pela vertical.
-- [ ] Aplicar o filtro da clínica autenticada em todas as leituras e alterações financeiras.
-- [ ] Vincular o usuário do portal ao seu paciente e remover o `patientId` fixo; impedir consulta a outro paciente pelo servidor.
-- [ ] Separar leitura e finalização de notas restritas das permissões gerais de prontuário.
+- [x] Definir matriz explícita de permissões para administrador, psicólogo, recepção, financeiro, comercial e paciente. Modelos em `shared/permissions.ts`; gestão visual ainda pendente.
+- [x] Exigir autenticação e autorização nas rotas financeiras e de auditoria.
+- [ ] Concluir associação revisada dos registros financeiros legados, quando houver base existente. Colunas de clínica e migrações já foram aplicadas e testadas; registros sem associação permanecem isolados. Não inferir clínica pela vertical.
+- [x] Aplicar o filtro da clínica autenticada em todas as leituras e alterações financeiras.
+- [x] Vincular o usuário do portal ao seu paciente e remover o `patientId` fixo; impedir consulta a outro paciente pelo servidor.
+- [x] Separar leitura e finalização de notas restritas das permissões gerais de prontuário.
 - [ ] Validar referências a pacientes, profissionais, documentos e sessões dentro da clínica correta em todas as alterações.
-- [ ] Resolver a clínica pública por domínio ou identificador validado, substituindo a seleção da primeira clínica ativa.
+- [x] Resolver a clínica pública por domínio ou identificador validado, substituindo a seleção da primeira clínica ativa.
 - [ ] Registrar autor autenticado nas operações e impedir que um nome enviado pelo cliente substitua sua identidade na auditoria.
 
 Aceite: testes com duas clínicas comprovam isolamento; usuário anônimo não consulta nem altera financeiro; recepção não acessa prontuário; paciente acessa somente os próprios dados; permissão clínica comum não libera notas restritas.

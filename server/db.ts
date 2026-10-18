@@ -1,5 +1,6 @@
+import { TRPCError } from "@trpc/server";
 import { createHash } from "node:crypto";
-import { and, desc, sql, like, inArray, eq, gt } from "drizzle-orm";
+import { and, desc, sql, like, inArray, eq, gt, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -130,10 +131,16 @@ export async function getClinicalVerticalByCode(code: string) {
   return result[0];
 }
 
+export type FinancialActor = {
+  tenantId: number;
+  userId: number;
+  operatorName: string;
+};
+
 /**
  * Transações e Cobranças
  */
-export async function listTransactions(filters: {
+export async function listTransactions(actor: FinancialActor, filters: {
   verticalCode?: string;
   status?: string;
   paymentMethod?: string;
@@ -144,7 +151,7 @@ export async function listTransactions(filters: {
   const db = await getDb();
   if (!db) return [];
 
-  const conditions = [];
+  const conditions = [eq(transactions.tenantId, actor.tenantId)];
   if (filters.verticalCode && filters.verticalCode !== 'ALL') {
     conditions.push(eq(transactions.verticalCode, filters.verticalCode));
   }
@@ -171,11 +178,11 @@ export async function listTransactions(filters: {
   return txs;
 }
 
-export async function getTransactionByCode(code: string) {
+export async function getTransactionByCode(actor: FinancialActor, code: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const txList = await db.select().from(transactions).where(eq(transactions.code, code)).limit(1);
+  const txList = await db.select().from(transactions).where(and(eq(transactions.tenantId, actor.tenantId), eq(transactions.code, code))).limit(1);
   if (txList.length === 0) return undefined;
   const tx = txList[0];
 
@@ -189,7 +196,7 @@ export async function getTransactionByCode(code: string) {
   };
 }
 
-export async function createTransactionWithItems(data: {
+export async function createTransactionWithItems(actor: FinancialActor, data: {
   verticalCode: string;
   patientName: string;
   patientDocument: string;
@@ -269,6 +276,7 @@ export async function createTransactionWithItems(data: {
   }
 
   const [result] = await db.insert(transactions).values({
+    tenantId: actor.tenantId,
     code,
     verticalCode: data.verticalCode,
     patientName: data.patientName,
@@ -306,7 +314,7 @@ export async function createTransactionWithItems(data: {
     invoiceStatus,
     invoiceKey,
     invoiceIssuedAt,
-    operatorName: data.operatorName || "Recepção Central",
+    operatorName: actor.operatorName,
     notes: data.notes,
   });
 
@@ -327,21 +335,23 @@ export async function createTransactionWithItems(data: {
 
   // Auditoria
   await db.insert(financialAuditLogs).values({
+    tenantId: actor.tenantId,
+    actorUserId: actor.userId,
     verticalCode: data.verticalCode,
     transactionCode: code,
     action: isPaid ? "CONFIRM_PAYMENT" : "CREATE_CHARGE",
-    operator: data.operatorName || "Recepção Central",
+    operator: actor.operatorName,
     details: `Cobrança ${code} criada no valor de R$ ${(data.totalAmount / 100).toFixed(2)} via ${data.paymentMethod}. Status: ${finalStatus}.`,
   });
 
-  return await getTransactionByCode(code);
+  return await getTransactionByCode(actor, code);
 }
 
-export async function confirmTransactionPayment(code: string, operatorName: string = "Operador Financeiro") {
+export async function confirmTransactionPayment(actor: FinancialActor, code: string) {
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
 
-  const tx = await getTransactionByCode(code);
+  const tx = await getTransactionByCode(actor, code);
   if (!tx) throw new Error("Transação não encontrada");
   if (tx.status === "PAID") return tx;
 
@@ -362,24 +372,26 @@ export async function confirmTransactionPayment(code: string, operatorName: stri
       nsu: tx.nsu || `${Math.floor(10000000 + Math.random() * 90000000)}`,
       authorizationCode: tx.authorizationCode || `AUTH${Math.floor(1000 + Math.random() * 9000)}`,
     })
-    .where(eq(transactions.code, code));
+    .where(and(eq(transactions.tenantId, actor.tenantId), eq(transactions.code, code)));
 
   await db.insert(financialAuditLogs).values({
+    tenantId: actor.tenantId,
+    actorUserId: actor.userId,
     verticalCode: tx.verticalCode,
     transactionCode: code,
     action: "CONFIRM_PAYMENT",
-    operator: operatorName,
+    operator: actor.operatorName,
     details: `Pagamento de R$ ${(tx.totalAmount / 100).toFixed(2)} confirmado para a cobrança ${code}. Nota fiscal ${randomInvoice} emitida automaticamente.`,
   });
 
-  return await getTransactionByCode(code);
+  return await getTransactionByCode(actor, code);
 }
 
-export async function refundTransactionPayment(code: string, reason: string, operatorName: string = "Gestor Financeiro") {
+export async function refundTransactionPayment(actor: FinancialActor, code: string, reason: string) {
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
 
-  const tx = await getTransactionByCode(code);
+  const tx = await getTransactionByCode(actor, code);
   if (!tx) throw new Error("Transação não encontrada");
 
   await db
@@ -389,23 +401,25 @@ export async function refundTransactionPayment(code: string, reason: string, ope
       invoiceStatus: "CANCELLED",
       notes: sql`CONCAT(COALESCE(${transactions.notes}, ''), '\n[ESTORNO]: ', ${reason})`,
     })
-    .where(eq(transactions.code, code));
+    .where(and(eq(transactions.tenantId, actor.tenantId), eq(transactions.code, code)));
 
   await db.insert(financialAuditLogs).values({
+    tenantId: actor.tenantId,
+    actorUserId: actor.userId,
     verticalCode: tx.verticalCode,
     transactionCode: code,
     action: "REFUND",
-    operator: operatorName,
+    operator: actor.operatorName,
     details: `Estorno realizado para a cobrança ${code}. Motivo: ${reason}. Nota fiscal cancelada.`,
   });
 
-  return await getTransactionByCode(code);
+  return await getTransactionByCode(actor, code);
 }
 
 /**
  * Métricas Consolidadas do Dashboard
  */
-export async function getDashboardMetrics(verticalCode?: string) {
+export async function getDashboardMetrics(actor: FinancialActor, verticalCode?: string) {
   const db = await getDb();
   if (!db) {
     return {
@@ -422,7 +436,7 @@ export async function getDashboardMetrics(verticalCode?: string) {
     };
   }
 
-  const whereTx = verticalCode && verticalCode !== 'ALL' ? eq(transactions.verticalCode, verticalCode) : undefined;
+  const whereTx = and(eq(transactions.tenantId, actor.tenantId), verticalCode && verticalCode !== 'ALL' ? eq(transactions.verticalCode, verticalCode) : undefined);
   const allTxs = await db.select().from(transactions).where(whereTx);
 
   let totalReceived = 0;
@@ -474,7 +488,7 @@ export async function getDashboardMetrics(verticalCode?: string) {
   }
 
   // Contas a pagar
-  const wherePay = verticalCode && verticalCode !== 'ALL' ? eq(accountsPayable.verticalCode, verticalCode) : undefined;
+  const wherePay = and(eq(accountsPayable.tenantId, actor.tenantId), verticalCode && verticalCode !== 'ALL' ? eq(accountsPayable.verticalCode, verticalCode) : undefined);
   const allPayables = await db.select().from(accountsPayable).where(wherePay);
 
   let totalPayable = 0;
@@ -488,11 +502,11 @@ export async function getDashboardMetrics(verticalCode?: string) {
   }
 
   // Caixa
-  const whereCash = verticalCode && verticalCode !== 'ALL' ? eq(cashSessions.verticalCode, verticalCode) : undefined;
+  const whereCash = and(eq(cashSessions.tenantId, actor.tenantId), verticalCode && verticalCode !== 'ALL' ? eq(cashSessions.verticalCode, verticalCode) : undefined);
   const activeCash = await db.select().from(cashSessions).where(whereCash).orderBy(desc(cashSessions.openedAt)).limit(1);
   const cashBalance = activeCash.length > 0 ? activeCash[0].expectedBalance : 0;
 
-  const recentTransactions = await listTransactions({
+  const recentTransactions = await listTransactions(actor, {
     verticalCode,
     limit: 6,
   });
@@ -525,11 +539,11 @@ export async function getDashboardMetrics(verticalCode?: string) {
 /**
  * Contas a Pagar
  */
-export async function listAccountsPayable(verticalCode?: string, status?: string) {
+export async function listAccountsPayable(actor: FinancialActor, verticalCode?: string, status?: string) {
   const db = await getDb();
   if (!db) return [];
 
-  const conditions = [];
+  const conditions = [eq(accountsPayable.tenantId, actor.tenantId)];
   if (verticalCode && verticalCode !== 'ALL') {
     conditions.push(eq(accountsPayable.verticalCode, verticalCode));
   }
@@ -541,9 +555,12 @@ export async function listAccountsPayable(verticalCode?: string, status?: string
   return await db.select().from(accountsPayable).where(whereClause).orderBy(desc(accountsPayable.dueDate));
 }
 
-export async function payAccountPayable(code: string) {
+export async function payAccountPayable(actor: FinancialActor, code: string) {
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
+
+  const [existing] = await db.select().from(accountsPayable).where(and(eq(accountsPayable.tenantId, actor.tenantId), eq(accountsPayable.code, code))).limit(1);
+  if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Conta não encontrada nesta clínica" });
 
   await db
     .update(accountsPayable)
@@ -551,7 +568,7 @@ export async function payAccountPayable(code: string) {
       status: "PAID",
       paidAt: new Date(),
     })
-    .where(eq(accountsPayable.code, code));
+    .where(and(eq(accountsPayable.tenantId, actor.tenantId), eq(accountsPayable.code, code)));
 
   return true;
 }
@@ -559,33 +576,33 @@ export async function payAccountPayable(code: string) {
 /**
  * Caixa
  */
-export async function getCurrentCashSession(verticalCode: string) {
+export async function getCurrentCashSession(actor: FinancialActor, verticalCode: string) {
   const db = await getDb();
   if (!db) return undefined;
 
   const sessions = await db
     .select()
     .from(cashSessions)
-    .where(and(eq(cashSessions.verticalCode, verticalCode), eq(cashSessions.status, "OPEN")))
+    .where(and(eq(cashSessions.tenantId, actor.tenantId), eq(cashSessions.verticalCode, verticalCode), eq(cashSessions.status, "OPEN")))
     .orderBy(desc(cashSessions.openedAt))
     .limit(1);
 
   return sessions[0];
 }
 
-export async function listCashSessions(verticalCode?: string) {
+export async function listCashSessions(actor: FinancialActor, verticalCode?: string) {
   const db = await getDb();
   if (!db) return [];
 
-  const whereClause = verticalCode && verticalCode !== 'ALL' ? eq(cashSessions.verticalCode, verticalCode) : undefined;
+  const whereClause = and(eq(cashSessions.tenantId, actor.tenantId), verticalCode && verticalCode !== 'ALL' ? eq(cashSessions.verticalCode, verticalCode) : undefined);
   return await db.select().from(cashSessions).where(whereClause).orderBy(desc(cashSessions.openedAt));
 }
 
-export async function closeCashSession(sessionId: number, closingBalance: number, notes?: string) {
+export async function closeCashSession(actor: FinancialActor, sessionId: number, closingBalance: number, notes?: string) {
   const db = await getDb();
   if (!db) throw new Error("Banco de dados indisponível");
 
-  const existing = await db.select().from(cashSessions).where(eq(cashSessions.id, sessionId)).limit(1);
+  const existing = await db.select().from(cashSessions).where(and(eq(cashSessions.tenantId, actor.tenantId), eq(cashSessions.id, sessionId))).limit(1);
   if (existing.length === 0) throw new Error("Sessão de caixa não encontrada");
 
   const diff = closingBalance - existing[0].expectedBalance;
@@ -599,7 +616,7 @@ export async function closeCashSession(sessionId: number, closingBalance: number
       closedAt: new Date(),
       closingNotes: notes,
     })
-    .where(eq(cashSessions.id, sessionId));
+    .where(and(eq(cashSessions.tenantId, actor.tenantId), eq(cashSessions.id, sessionId)));
 
   return true;
 }
@@ -607,11 +624,11 @@ export async function closeCashSession(sessionId: number, closingBalance: number
 /**
  * Logs de Auditoria
  */
-export async function listAuditLogs(verticalCode?: string, limit: number = 30) {
+export async function listAuditLogs(actor: FinancialActor, verticalCode?: string, limit: number = 30) {
   const db = await getDb();
   if (!db) return [];
 
-  const whereClause = verticalCode && verticalCode !== 'ALL' ? eq(financialAuditLogs.verticalCode, verticalCode) : undefined;
+  const whereClause = and(eq(financialAuditLogs.tenantId, actor.tenantId), verticalCode && verticalCode !== 'ALL' ? eq(financialAuditLogs.verticalCode, verticalCode) : undefined);
   return await db.select().from(financialAuditLogs).where(whereClause).orderBy(desc(financialAuditLogs.createdAt)).limit(limit);
 }
 
@@ -627,7 +644,8 @@ async function getMindosMembership(userId: number) {
     .select()
     .from(mindosMemberships)
     .where(and(eq(mindosMemberships.userId, userId), eq(mindosMemberships.active, true)))
-    .limit(1);
+    .limit(2);
+  if (rows.length > 1) throw new TRPCError({ code: "CONFLICT", message: "Seleção explícita de clínica necessária" });
   return rows[0];
 }
 
@@ -638,38 +656,17 @@ export async function ensureMindosTenantForUser(userId: number, userRole: string
   const membership = await getMindosMembership(userId);
   if (membership) {
     const tenantRows = await db.select().from(mindosTenants).where(eq(mindosTenants.id, membership.tenantId)).limit(1);
-    if (tenantRows[0]) return { tenant: tenantRows[0], membership };
+    if (tenantRows[0]?.status === "ACTIVE") return { tenant: tenantRows[0], membership };
+    throw new TRPCError({ code: "FORBIDDEN", message: "Clínica indisponível" });
   }
 
-  if (userRole !== "admin") {
-    throw new Error("Usuário sem associação ativa a um tenant MindOS");
-  }
-
-  const slug = `mindos-${userId}`;
-  const [tenantResult] = await db.insert(mindosTenants).values({
-    slug,
-    name: "MindOS Psicologia & Saúde Mental",
-    legalName: "MindOS Clínica de Psicologia Ltda.",
-    businessType: "PSYCHOLOGY_CLINIC",
-    primaryColor: "#4338CA",
-    accentColor: "#6366F1",
-    siteConfigJson: JSON.stringify({ title: "MindOS — Psicologia e Saúde Mental", status: "DRAFT" }),
-  });
-  const tenantId = Number((tenantResult as any).insertId);
-  const [membershipResult] = await db.insert(mindosMemberships).values({
-    tenantId,
-    userId,
-    role: "OWNER",
-    permissionsJson: JSON.stringify(["ALL"]),
-    active: true,
-  });
-  const createdTenant = await db.select().from(mindosTenants).where(eq(mindosTenants.id, tenantId)).limit(1);
-  return { tenant: createdTenant[0], membership: { ...(membershipResult as any), tenantId, userId, role: "OWNER", permissionsJson: JSON.stringify(["ALL"]) } };
+  throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem associação ativa a uma clínica" });
 }
 
 export function hasMindosPermission(membership: { role: string; permissionsJson: string }, permission: string) {
   let permissions: string[] = [];
   try { permissions = JSON.parse(membership.permissionsJson || "[]") as string[]; } catch { permissions = []; }
+  if (!Array.isArray(permissions) || !permissions.every(value => typeof value === "string")) permissions = [];
   const elevated = ["OWNER", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(membership.role);
   return elevated || permissions.includes("ALL") || permissions.includes(permission);
 }
@@ -677,7 +674,7 @@ export function hasMindosPermission(membership: { role: string; permissionsJson:
 export async function assertMindosPermission(userId: number, userRole: string, permission: string) {
   const { tenant, membership } = await ensureMindosTenantForUser(userId, userRole);
   if (!hasMindosPermission(membership, permission)) {
-    throw new Error(`Permissão insuficiente: ${permission}`);
+    throw new TRPCError({ code: "FORBIDDEN", message: `Permissão insuficiente: ${permission}` });
   }
   return { tenant, membership };
 }
@@ -835,11 +832,14 @@ export async function createMindosRecurringAppointments(userId: number, userRole
 
 
 export async function listMindosClinicalRecords(userId: number, userRole: string, patientId: number) {
-  const { tenant } = await assertMindosPermission(userId, userRole, "VIEW_CLINICAL_RECORD");
+  const { tenant, membership } = await assertMindosPermission(userId, userRole, "VIEW_CLINICAL_RECORD");
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
-  const records = await db.select().from(mindosClinicalRecords).where(and(eq(mindosClinicalRecords.tenantId, tenant.id), eq(mindosClinicalRecords.patientId, patientId))).orderBy(desc(mindosClinicalRecords.createdAt));
+  const records = await db.select().from(mindosClinicalRecords).where(and(eq(mindosClinicalRecords.tenantId, tenant.id), eq(mindosClinicalRecords.patientId, patientId), hasMindosPermission(membership, "VIEW_RESTRICTED_NOTE") ? undefined : ne(mindosClinicalRecords.recordType, "RESTRICTED_NOTE"))).orderBy(desc(mindosClinicalRecords.createdAt));
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "PATIENT", subjectId: patientId, dataLayer: "CLINICAL", action: "VIEW_CLINICAL_RECORD", reason: "Consulta clínica autorizada" });
+  if (records.some(record => record.recordType === "RESTRICTED_NOTE")) {
+    await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "PATIENT", subjectId: patientId, dataLayer: "HIGHLY_RESTRICTED_CLINICAL", action: "VIEW_RESTRICTED_NOTE", reason: "Leitura com permissão específica" });
+  }
   return records;
 }
 
@@ -849,6 +849,10 @@ export async function createMindosClinicalRecord(userId: number, userRole: strin
   if (!db) throw new Error("Banco de dados não disponível");
   const patient = await db.select().from(mindosPatients).where(and(eq(mindosPatients.id, input.patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
   if (!patient[0]) throw new Error("Paciente não pertence ao tenant atual");
+  if (input.appointmentId !== undefined) {
+    const [appointment] = await db.select().from(mindosAppointments).where(and(eq(mindosAppointments.id, input.appointmentId), eq(mindosAppointments.tenantId, tenant.id), eq(mindosAppointments.patientId, input.patientId))).limit(1);
+    if (!appointment) throw new TRPCError({ code: "BAD_REQUEST", message: "Sessão não pertence ao paciente nesta clínica" });
+  }
   const hash = createHash("sha256").update(`${tenant.id}:${input.patientId}:${input.recordType}:${input.content}:${Date.now()}`).digest("hex");
   const [result] = await db.insert(mindosClinicalRecords).values({ tenantId: tenant.id, patientId: input.patientId, appointmentId: input.appointmentId, authorUserId: userId, recordType: input.recordType, content: input.content, version: 1, integrityHash: hash, status: "DRAFT" });
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "CLINICAL_RECORD", subjectId: Number((result as any).insertId), dataLayer: input.recordType === "RESTRICTED_NOTE" ? "HIGHLY_RESTRICTED_CLINICAL" : "CLINICAL", action: "CREATE_CLINICAL_RECORD", reason: "Registro clínico criado" });
@@ -861,6 +865,9 @@ export async function finalizeMindosClinicalRecord(userId: number, userRole: str
   if (!db) throw new Error("Banco de dados não disponível");
   const record = await db.select().from(mindosClinicalRecords).where(and(eq(mindosClinicalRecords.id, recordId), eq(mindosClinicalRecords.tenantId, tenant.id))).limit(1);
   if (!record[0]) throw new Error("Registro clínico não encontrado");
+  if (record[0].recordType === "RESTRICTED_NOTE") {
+    await assertMindosPermission(userId, userRole, "EDIT_RESTRICTED_NOTE");
+  }
   if (record[0].status === "FINALIZED") return true;
   await db.update(mindosClinicalRecords).set({ status: "FINALIZED", finalizedAt: new Date(), version: record[0].version + 1 }).where(eq(mindosClinicalRecords.id, recordId));
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "CLINICAL_RECORD", subjectId: recordId, dataLayer: record[0].recordType === "RESTRICTED_NOTE" ? "HIGHLY_RESTRICTED_CLINICAL" : "CLINICAL", action: "FINALIZE_CLINICAL_RECORD", reason: "Registro finalizado sem sobrescrita" });
@@ -871,7 +878,9 @@ export async function finalizeMindosClinicalRecord(userId: number, userRole: str
 async function getMindosPublicTenant() {
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
-  const rows = await db.select().from(mindosTenants).where(eq(mindosTenants.status, "ACTIVE")).limit(1);
+  const slug = process.env.PUBLIC_TENANT_SLUG;
+  if (!slug) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Clínica pública não configurada" });
+  const rows = await db.select().from(mindosTenants).where(and(eq(mindosTenants.status, "ACTIVE"), eq(mindosTenants.slug, slug))).limit(1);
   if (!rows[0]) throw new Error("Nenhum tenant MindOS ativo encontrado");
   return { db, tenant: rows[0] };
 }
@@ -893,22 +902,30 @@ export async function listMindosBookingRequests(userId: number, userRole: string
   return db.select().from(mindosBookingRequests).where(eq(mindosBookingRequests.tenantId, tenant.id)).orderBy(desc(mindosBookingRequests.createdAt));
 }
 
-export async function listMindosPortalData(userId: number, userRole: string, patientId: number) {
-  const { tenant } = await assertMindosPermission(userId, userRole, "VIEW_ADMINISTRATIVE");
+export async function listMindosPortalData(userId: number, userRole: string) {
+  const { tenant, membership } = await ensureMindosTenantForUser(userId, userRole);
+  if (membership.role !== "PATIENT") throw new TRPCError({ code: "FORBIDDEN", message: "Portal exclusivo do paciente vinculado" });
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
-  const [patient] = await db.select().from(mindosPatients).where(and(eq(mindosPatients.id, patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
-  if (!patient) throw new Error("Paciente não pertence ao tenant atual");
+  const [patient] = await db.select().from(mindosPatients).where(and(eq(mindosPatients.portalUserId, userId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
+  if (!patient) throw new TRPCError({ code: "FORBIDDEN", message: "Usuário sem paciente vinculado" });
+  const patientId = patient.id;
   const appointments = await db.select().from(mindosAppointments).where(and(eq(mindosAppointments.tenantId, tenant.id), eq(mindosAppointments.patientId, patientId))).orderBy(desc(mindosAppointments.startsAt));
   const documents = await db.select().from(mindosPortalDocuments).where(and(eq(mindosPortalDocuments.tenantId, tenant.id), eq(mindosPortalDocuments.patientId, patientId), eq(mindosPortalDocuments.status, "AVAILABLE"))).orderBy(desc(mindosPortalDocuments.releasedAt));
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "PATIENT", subjectId: patientId, dataLayer: "ADMINISTRATIVE", action: "VIEW_PORTAL_DATA", reason: "Dados liberados para o portal" });
-  return { patient, appointments, documents };
+  return {
+    patient: { id: patient.id, fullName: patient.fullName, preferredName: patient.preferredName },
+    appointments: appointments.map(({ id, startsAt, endsAt, status, mode }) => ({ id, startsAt, endsAt, status, mode })),
+    documents: documents.map(({ id, title, documentType, version, releasedAt }) => ({ id, title, documentType, version, releasedAt })),
+  };
 }
 
 export async function createMindosReceptionEvent(userId: number, userRole: string, input: { patientId: number; eventType: "CHECK_IN" | "MESSAGE_SENT" | "CALL_LOGGED" | "PROFILE_REVIEWED"; messageTemplate?: string }) {
   const { tenant } = await assertMindosPermission(userId, userRole, "VIEW_ADMINISTRATIVE");
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
+  const [patient] = await db.select().from(mindosPatients).where(and(eq(mindosPatients.id, input.patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
+  if (!patient) throw new TRPCError({ code: "NOT_FOUND", message: "Paciente não encontrado nesta clínica" });
   const [result] = await db.insert(mindosReceptionEvents).values({ tenantId: tenant.id, createdByUserId: userId, ...input });
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "PATIENT", subjectId: input.patientId, dataLayer: "ADMINISTRATIVE", action: input.eventType, reason: "Evento operacional de recepção" });
   return Number((result as any).insertId);

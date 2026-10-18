@@ -36,6 +36,20 @@
       "when": 1788904450121,
       "tag": "0004_sour_harry_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1792287810947,
+      "tag": "0005_colossal_susan_delgado",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1792287870145,
+      "tag": "0006_sleepy_saracen",
+      "breakpoints": true
     }
   ]
 }

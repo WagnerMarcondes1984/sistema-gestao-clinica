@@ -26,8 +26,7 @@ describe("MindOS protected procedures", () => {
     expect(hasMindosPermission({ role: "RECEPTIONIST", permissionsJson: JSON.stringify(["VIEW_ADMINISTRATIVE"]) }, "VIEW_CLINICAL_RECORD")).toBe(false);
     expect(hasMindosPermission({ role: "VIEWER", permissionsJson: "invalid-json" }, "VIEW_ADMINISTRATIVE")).toBe(false);
   });
-  it("keeps authenticated dashboard reads inside the resolved tenant", async () => {
-    if (!process.env.DATABASE_URL) return;
+  it.skipIf(!process.env.DATABASE_URL)("keeps authenticated dashboard reads inside the resolved tenant", async () => {
     const caller = appRouter.createCaller(authenticatedContext('admin'));
     const dashboard = await caller.mindos.dashboard();
     expect(dashboard.tenant.businessType).toBe('PSYCHOLOGY_CLINIC');
@@ -57,7 +56,7 @@ describe("MindOS protected procedures", () => {
 
   it("blocks portal and reception mutations without a session", async () => {
     const caller = appRouter.createCaller(anonymousContext());
-    await expect(caller.mindos.portalData({ patientId: 1 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller.mindos.portalData()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller.mindos.receptionEvent({ patientId: 1, eventType: "CHECK_IN" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
