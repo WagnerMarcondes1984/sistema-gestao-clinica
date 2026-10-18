@@ -114,3 +114,15 @@ Operação, regras de duplicidade e limites em `ETAPA-3-PACIENTES.md`. Etapa 3 p
 Validação deste bloco: TypeScript aprovado; 77 testes unitários aprovados e 1 ignorado; 23 testes de integração aprovados; schema com 21 tabelas e 255 colunas; build aprovado, mantendo aviso de bundle grande. Chrome aprovou cadastro, busca, duplicidade, edição/inativação/reativação, recarregamento, seleção de paciente nas três telas e descarte confirmado de texto não salvo; regressões de equipe, portal e logout também passaram. Capturas em `previews/pacientes-desktop.png` e `previews/pacientes-mobile.png`. Dados temporários de teste removidos ao final.
 
 Checkpoint deste bloco: `codex/etapa-3-pacientes`, baseado em `codex/equipe-e-convites`, para revisão separada. Próximo item do plano: cadastro de profissionais, serviços, unidades e disponibilidade.
+
+## Etapa 3 — operação concluída para revisão (18/10/2026)
+
+Entregues os itens restantes: cadastro/edição/inativação de profissionais, unidades, serviços e disponibilidade; sessões únicas e séries; transições válidas; reagendamento de ocorrência ou próximas sessões da série; reservas concorrentes protegidas por transações e lock da clínica; triagem pública com limites persistentes; check-in por sessão e fila somente do dia; contadores reais; fuso da clínica com tratamento de horário de verão. Removidas demonstrações operacionais da agenda, recepção e painel inicial.
+
+Migrações 0009 e 0010 aplicadas preservando o legado. Endpoints antigos de gravação por nome/check-in por paciente foram desativados; leitura e histórico permanecem. Recursos de sessões legadas não foram inferidos automaticamente.
+
+Verificação: TypeScript/build aprovados, 91 testes unitários aprovados e 1 ignorado; 38 cenários de integração aprovados; schema com 26 tabelas e 303 colunas; seed original e recusa de repetição conferidos. Chrome aprovou os fluxos de ponta a ponta e as regressões anteriores. Capturas em `previews/`. Permanece aviso de bundle grande.
+
+A revisão visual usa `node scripts/open-review.mjs`: janela separada, servidor limitado ao loopback, sessão temporária e clínica fictícia exclusiva. Não altera credenciais nem cria login alternativo no produto. A conta de revisão não recebe administração global e não tem associação a clínicas reais.
+
+**Parada solicitada atendida: abrir localhost para revisão e não iniciar a etapa 4.** Guia: `ETAPA-3-OPERACAO.md`. Checkpoint: branch `codex/etapa-3-operacao`, baseada em `codex/etapa-3-pacientes`, sem merge. OAuth Manus real, associação financeira legada e homologação para produção continuam pendentes nas respectivas etapas.

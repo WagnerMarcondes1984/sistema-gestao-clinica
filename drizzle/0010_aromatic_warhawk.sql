@@ -1,0 +1,2 @@
+CREATE INDEX `mindos_appointments_tenant_starts_idx` ON `mindos_appointments` (`tenantId`,`startsAt`);--> statement-breakpoint
+CREATE INDEX `mindos_appointments_tenant_series_idx` ON `mindos_appointments` (`tenantId`,`recurrenceId`);

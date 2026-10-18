@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { createHash } from "node:crypto";
+import { clinicParts } from "../shared/scheduling";
 import { and, desc, sql, like, inArray, eq, gt, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
@@ -680,22 +681,25 @@ export async function assertMindosPermission(userId: number, userRole: string, p
 }
 
 export async function getMindosDashboardData(userId: number, userRole: string) {
-  const { tenant } = await assertMindosPermission(userId, userRole, "VIEW_PATIENT_BASIC");
+  const { tenant, membership } = await assertMindosPermission(userId, userRole, "VIEW_PATIENT_BASIC");
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
   const patients = await db.select().from(mindosPatients).where(eq(mindosPatients.tenantId, tenant.id));
   const appointments = await db.select().from(mindosAppointments).where(eq(mindosAppointments.tenantId, tenant.id)).orderBy(mindosAppointments.startsAt);
+  const authorizedAppointments = hasMindosPermission(membership,"MANAGE_APPOINTMENTS") ? appointments : [];
+  const today = clinicParts(new Date(),tenant.timezone).date;
+  const daySessions = authorizedAppointments.filter(a => clinicParts(a.startsAt,tenant.timezone).date === today);
   return {
     tenant,
     metrics: {
-      sessionsToday: appointments.filter((a) => new Date(a.startsAt).toDateString() === new Date().toDateString()).length,
-      confirmed: appointments.filter((a) => a.status === "CONFIRMED").length,
-      waiting: appointments.filter((a) => a.status === "WAITING").length,
+      sessionsToday: daySessions.filter(a=>!["CANCELLED","RESCHEDULED"].includes(a.status)).length,
+      confirmed: daySessions.filter((a) => a.status === "CONFIRMED").length,
+      waiting: daySessions.filter((a) => a.status === "WAITING").length,
       activePatients: patients.filter((p) => p.administrativeStatus === "ACTIVE").length,
       newPatients: patients.filter((p) => p.administrativeStatus === "LEAD").length,
-      futureSessions: appointments.filter((a) => new Date(a.startsAt) >= new Date()).length,
+      futureSessions: authorizedAppointments.filter((a) => new Date(a.startsAt) >= new Date() && !["CANCELLED","RESCHEDULED"].includes(a.status)).length,
     },
-    appointments,
+    appointments: authorizedAppointments,
     patients,
   };
 }
@@ -724,16 +728,11 @@ export async function createMindosAppointment(userId: number, userRole: string, 
 }) {
   const { tenant } = await assertMindosPermission(userId, userRole, "MANAGE_APPOINTMENTS");
   const db = await getDb();
-  if (!db) throw new Error("Banco de dados não disponível");
-  const patient = await db.select().from(mindosPatients).where(and(eq(mindosPatients.id, input.patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
-  if (!patient[0]) throw new Error("Paciente não pertence ao tenant atual");
-  if (["INACTIVE", "CLOSED"].includes(patient[0].administrativeStatus)) throw new TRPCError({ code: "BAD_REQUEST", message: "Reative o paciente antes de criar uma sessão" });
-  const existing = await db.select().from(mindosAppointments).where(eq(mindosAppointments.tenantId, tenant.id));
-  const overlaps = existing.some((item) => item.status !== "CANCELLED" && input.startsAt < item.endsAt && input.endsAt > item.startsAt && item.professionalName === input.professionalName);
-  if (overlaps) throw new Error("Conflito de agenda para o profissional selecionado");
-  const [result] = await db.insert(mindosAppointments).values({ ...input, tenantId: tenant.id, status: input.status || "SCHEDULED" });
-  const created = await db.select().from(mindosAppointments).where(eq(mindosAppointments.id, Number((result as any).insertId))).limit(1);
-  return created[0];
+  if (!db) throw new Error("Banco de dados indisponível");
+  const [patient] = await db.select().from(mindosPatients).where(and(eq(mindosPatients.tenantId, tenant.id),eq(mindosPatients.id,input.patientId)));
+  if (!patient) throw new TRPCError({code:"NOT_FOUND",message:"Paciente não encontrado nesta clínica"});
+  if (["INACTIVE","CLOSED"].includes(patient.administrativeStatus)) throw new TRPCError({code:"BAD_REQUEST",message:"Reative o paciente antes de agendar"});
+  throw new TRPCError({code:"PRECONDITION_FAILED",message:"Use a nova agenda com profissional, unidade e serviço cadastrados"});
 }
 
 export async function getMindosPatient360(userId: number, userRole: string, patientId: number) {
@@ -889,16 +888,6 @@ async function getMindosPublicTenant() {
   return { db, tenant: rows[0] };
 }
 
-export async function createMindosPublicBooking(input: { name: string; contactChannel: "WHATSAPP_DISCREET" | "EMAIL" | "PHONE"; contactValue: string; serviceType: string; preferredDate: Date; preferredTime: string }) {
-  const { db, tenant } = await getMindosPublicTenant();
-  if (input.preferredDate.getTime() < Date.now()) throw new Error("Escolha uma data futura");
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  const recent = await db.select().from(mindosBookingRequests).where(and(eq(mindosBookingRequests.tenantId, tenant.id), eq(mindosBookingRequests.contactValue, input.contactValue), gt(mindosBookingRequests.createdAt, tenMinutesAgo))).limit(1);
-  if (recent[0]) throw new Error("Aguarde alguns minutos antes de enviar uma nova solicitação");
-  const [result] = await db.insert(mindosBookingRequests).values({ ...input, tenantId: tenant.id });
-  return { requestId: Number((result as any).insertId), status: "NEW" as const };
-}
-
 export async function listMindosBookingRequests(userId: number, userRole: string) {
   const { tenant } = await assertMindosPermission(userId, userRole, "VIEW_ADMINISTRATIVE");
   const db = await getDb();
@@ -924,12 +913,18 @@ export async function listMindosPortalData(userId: number, userRole: string) {
   };
 }
 
-export async function createMindosReceptionEvent(userId: number, userRole: string, input: { patientId: number; eventType: "CHECK_IN" | "MESSAGE_SENT" | "CALL_LOGGED" | "PROFILE_REVIEWED"; messageTemplate?: string }) {
+export async function createMindosReceptionEvent(userId: number, userRole: string, input: { patientId: number; eventType: "CHECK_IN" | "MESSAGE_SENT" | "CALL_LOGGED" | "PROFILE_REVIEWED"; messageTemplate?: string; appointmentId?: number }) {
   const { tenant } = await assertMindosPermission(userId, userRole, "VIEW_ADMINISTRATIVE");
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
   const [patient] = await db.select().from(mindosPatients).where(and(eq(mindosPatients.id, input.patientId), eq(mindosPatients.tenantId, tenant.id))).limit(1);
   if (!patient) throw new TRPCError({ code: "NOT_FOUND", message: "Paciente não encontrado nesta clínica" });
+  if (input.eventType === "CHECK_IN") throw new TRPCError({code:"PRECONDITION_FAILED",message:"Faça check-in na sessão selecionada na nova recepção"});
+  if (input.eventType === "MESSAGE_SENT") throw new TRPCError({code:"PRECONDITION_FAILED",message:"Envio de mensagens depende de provedor na etapa 6"});
+  if (input.appointmentId) {
+    const [session] = await db.select().from(mindosAppointments).where(and(eq(mindosAppointments.tenantId,tenant.id),eq(mindosAppointments.id,input.appointmentId),eq(mindosAppointments.patientId,input.patientId)));
+    if (!session) throw new TRPCError({code:"NOT_FOUND",message:"Sessão não encontrada para este paciente"});
+  }
   const [result] = await db.insert(mindosReceptionEvents).values({ tenantId: tenant.id, createdByUserId: userId, ...input });
   await db.insert(mindosAccessAudits).values({ tenantId: tenant.id, actorUserId: userId, subjectType: "PATIENT", subjectId: input.patientId, dataLayer: "ADMINISTRATIVE", action: input.eventType, reason: "Evento operacional de recepção" });
   return Number((result as any).insertId);

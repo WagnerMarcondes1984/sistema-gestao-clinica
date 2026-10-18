@@ -87,6 +87,7 @@ export async function listPatients(
     page: input.page,
     pageSize: input.pageSize,
     tenantName: tenant.name,
+    timezone: tenant.timezone,
     canManage: hasMindosPermission(membership, "MANAGE_PATIENTS"),
     canSchedule: hasMindosPermission(membership, "MANAGE_APPOINTMENTS"),
     canViewClinical: hasMindosPermission(membership, "VIEW_CLINICAL_RECORD"),

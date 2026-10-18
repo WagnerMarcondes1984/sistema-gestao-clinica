@@ -4,14 +4,15 @@ Inventário inicial com atualização das etapas 2 e 3; a homologação visual c
 
 | Rota | Situação | Evidência e trabalho restante |
 |---|---|---|
-| `/` | Parcial | Dashboard MindOS consulta backend autenticado; apresentação sem sessão usa demonstração. Homologar indicadores e permissões. |
-| `/agenda` | Parcial | Lista sessões reais com filtro de paciente e data; removidos fallback e ações simuladas. CRUD visual, fuso e concorrência continuam pendentes. |
+| `/` | Operação implementada e testada | Painel com contadores reais e atalhos autorizados; removidos fallback, pendências e ações demonstrativas da rotina clínica. |
+| `/agenda` | Implementado e testado | Criação única/recorrente, edição de ocorrência/série, transições, filtros, fuso e conflitos transacionais. |
+| `/app/scheduling` | Implementado e testado | Profissionais, unidades, serviços, publicação de serviços, disponibilidade e fuso da clínica. |
 | `/patients` | Implementado e testado | Cadastro administrativo, busca, paginação, edição e inativação, com autorização, duplicidades e controle de edição concorrente. |
 | `/patients/view` | Implementado e testado neste bloco | Paciente selecionado por URL, dados administrativos e histórico real, links para agenda e prontuário. Módulos completos dependem das etapas seguintes. |
 | `/clinical-records` | Parcial | Consulta e criação de rascunhos para paciente selecionado; confirma descarte ao trocar de paciente. Edição, adendos e finalização visual pendentes. Permissões de notas restritas corrigidas e testadas no backend. |
-| `/reception` | Parcial | Fila e eventos conectados ao backend; indicadores fixos, cadastro e atalhos demonstrativos. Check-in precisa refletir sessão. |
+| `/reception` | Implementado e testado | Fila do dia, check-in por sessão, contadores reais, registro manual de ligação e triagem de solicitações. Não envia mensagens externas. |
 | `/portal` | Parcial | Consulta sessões e documentos do paciente derivado da conta; telas demonstrativas removidas. Download, consentimentos, financeiro e reagendamento continuam pendentes. |
-| `/book` | Parcial | Envia solicitação pública; não é reserva confirmada. Resolução da clínica pública e triagem pendentes. |
+| `/book` | Implementado e testado | Serviços publicados, dados mínimos, validação, limites persistentes e solicitação que segue para triagem. Não reserva automaticamente. |
 | `/app/team` | Implementado e testado | Gestão de vínculos, permissões, ativação e convites com isolamento por clínica. Login externo real pendente de configuração. |
 | `/invite` | Implementado e testado | Verificação e aceitação pessoal, expiração e proteção contra reutilização. Fluxo OAuth de retorno coberto por testes com mocks. |
 | `/app/admin-studio` | Parcial | Salva versões CMS e perfil; edição de blocos e várias configurações só mostram mensagens. Domínio/SSL exibidos sem verificação real. |

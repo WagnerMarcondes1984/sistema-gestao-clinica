@@ -18,7 +18,15 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 const profile = await mkdtemp(join(tmpdir(), "mindos-browser-"));
 let server, browser, socket;
-const fixture = { userId: null, tenantId: null, emails: [], patientNames: [] };
+const fixture = {
+  userId: null,
+  tenantId: null,
+  emails: [],
+  patientNames: [],
+  operationTenantId: null,
+  operationUserId: null,
+  publicSlug: `browser-public-${randomUUID()}`,
+};
 try {
   const [[owner]] = await db.query(
     "SELECT * FROM users WHERE openId = 'mindos-demo-owner'"
@@ -43,6 +51,7 @@ try {
       NODE_ENV: "production",
       VITE_APP_ID: appId,
       PORT: "3410",
+      PUBLIC_TENANT_SLUG: fixture.publicSlug,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -566,28 +575,289 @@ try {
     !(await evaluate("document.body.innerText")).includes(recordContent)
   );
   assert.equal(await evaluate("document.querySelector('textarea').value"), "");
-  const startsAt = new Date("2027-02-20T15:00:00Z");
-  await ownerClient.mindos.createAppointment.mutate({
-    patientId: newPatient.id,
-    professionalName: `Profissional teste ${suffix}`,
-    unitName: "Unidade fictícia",
-    serviceType: "Sessão fictícia",
-    mode: "ONLINE",
-    startsAt,
-    endsAt: new Date(startsAt.getTime() + 3600000),
-  });
-  await page("Page.navigate", {
-    url: `${base}/agenda?patientId=${newPatient.id}`,
-  });
-  await waitForText("Sessão fictícia");
-  assert.ok((await evaluate("document.body.innerText")).includes(patientName));
-  await fill("select", String(second.id), "select");
-  await waitForText("Nenhuma sessão cadastrada para os filtros selecionados.");
-  assert.ok(
-    !(await evaluate("document.body.innerText")).includes("Sessão fictícia")
+  const [operationTenant] = await db.execute(
+    "INSERT INTO mindos_tenants(slug,name,siteConfigJson) VALUES(?,?,'{}')",
+    [fixture.publicSlug, "Clínica fictícia de revisão operacional"]
   );
+  fixture.operationTenantId = operationTenant.insertId;
+  const operationOpenId = `browser-operation-${randomUUID()}`;
+  const [operationUser] = await db.execute(
+    "INSERT INTO users(openId,name,role) VALUES(?,?,'user')",
+    [operationOpenId, "Administrador fictício operacional"]
+  );
+  fixture.operationUserId = operationUser.insertId;
+  await db.execute(
+    "INSERT INTO mindos_memberships(tenantId,userId,role,permissionsJson) VALUES(?,?,'OWNER',?)",
+    [
+      fixture.operationTenantId,
+      fixture.operationUserId,
+      JSON.stringify(["ALL"]),
+    ]
+  );
+  const operationToken = await tokenFor({
+    openId: operationOpenId,
+    name: "Administrador fictício operacional",
+  });
+  const operation = client(operationToken);
+  const opPatient = await operation.patients.create.mutate({
+    fullName: `Paciente operacional ${suffix}`,
+    administrativeStatus: "ACTIVE",
+  });
+  const opSecond = await operation.patients.create.mutate({
+    fullName: `Outro paciente operacional ${suffix}`,
+    administrativeStatus: "ACTIVE",
+  });
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/app/scheduling` });
+  await waitForText("Novo cadastro");
+  const professionalName = `Profissional navegador ${suffix}`,
+    unitName = `Unidade navegador ${suffix}`,
+    serviceName = `Serviço navegador ${suffix}`;
+  await click("Novo cadastro");
+  await waitForText("Salvar configuração");
+  await fill("#config-name", professionalName);
+  await click("Salvar configuração");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Profissional não salvou."
+  );
+  await click("Unidades");
+  await click("Novo cadastro");
+  await waitForText("Salvar configuração");
+  await fill("#config-name", unitName);
+  await click("Salvar configuração");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Unidade não salvou."
+  );
+  await click("Serviços");
+  await click("Novo cadastro");
+  await waitForText("Salvar configuração");
+  await fill("#config-name", serviceName);
+  await fill("#config-duration", "30");
+  await evaluate("document.querySelector('#config-public').click()");
+  await click("Salvar configuração");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Serviço não salvou."
+  );
+  let config = await operation.scheduling.context.query();
+  const prof = config.professionals.find(p => p.name === professionalName),
+    unit = config.units.find(u => u.name === unitName),
+    service = config.services.find(s => s.name === serviceName);
+  assert.ok(prof && unit && service);
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: config.clinic.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const futureDate = new Date(`${today}T12:00:00Z`);
+  futureDate.setUTCDate(futureDate.getUTCDate() + 2);
+  const future = futureDate.toISOString().slice(0, 10);
+  await click("Disponibilidade");
+  for (const weekday of [
+    new Date(`${today}T12:00:00Z`).getUTCDay(),
+    futureDate.getUTCDay(),
+  ]) {
+    await click("Novo cadastro");
+    await waitForText("Salvar configuração");
+    await fill("#config-professional", String(prof.id), "select");
+    await fill("#config-unit", String(unit.id), "select");
+    await fill("#config-weekday", String(weekday), "select");
+    await fill("#config-start", "00:00");
+    await fill("#config-end", "00:00");
+    await click("Salvar configuração");
+    await waitForCondition(
+      "!document.querySelector('[role=dialog]')",
+      "Disponibilidade não salvou."
+    );
+  }
+  const takeScreenshot = async file => {
+    await waitForCondition(
+      "document.querySelectorAll('[data-sonner-toast]').length === 0",
+      "Toast não desapareceu."
+    );
+    const shot = await page("Page.captureScreenshot", {
+      format: "png",
+      captureBeyondViewport: true,
+    });
+    await writeFile(join(tmpdir(), file), Buffer.from(shot.data, "base64"));
+  };
+  await takeScreenshot("mindos-configuracao-agenda.png");
+  const fillAppointment = async (date, time, count = "1") => {
+    await fill("#schedule-professional", String(prof.id), "select");
+    await fill("#schedule-unit", String(unit.id), "select");
+    await fill("#schedule-service", String(service.id), "select");
+    await fill("#schedule-date", date);
+    await fill("#schedule-time", time);
+    if (await evaluate("!!document.querySelector('#schedule-count')"))
+      await fill("#schedule-count", count);
+  };
+  await page("Page.navigate", {
+    url: `${base}/agenda?patientId=${opPatient.id}`,
+  });
+  await waitForText("Novo agendamento");
+  await click("Novo agendamento");
+  await waitForText("Salvar agendamento");
+  await fillAppointment(future, "09:00", "3");
+  await click("Salvar agendamento");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Série não salvou."
+  );
+  await click("Todas as datas");
+  await waitForCondition(
+    "document.querySelectorAll('article[data-appointment-id]').length === 3",
+    "Série não apareceu."
+  );
+  let sessions = (
+    await operation.scheduling.list.query({ patientId: opPatient.id })
+  ).items;
+  const first = sessions[0],
+    secondSession = sessions[1];
+  const rowClick = (id, text) =>
+    evaluate(
+      `[...document.querySelector('article[data-appointment-id="${id}"]').querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}).click()`
+    );
+  await rowClick(first.id, "Reagendar");
+  await waitForText("Salvar reagendamento");
+  await fill("#schedule-time", "10:00");
+  await click("Salvar reagendamento");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Reagendamento individual não salvou."
+  );
+  await rowClick(secondSession.id, "Reagendar");
+  await waitForText("Salvar reagendamento");
+  await fill("#schedule-time", "11:00");
+  await fill("#schedule-scope", "SERIES", "select");
+  await click("Salvar reagendamento");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Reagendamento da série não salvou."
+  );
+  sessions = (
+    await operation.scheduling.list.query({ patientId: opPatient.id })
+  ).items;
+  assert.equal(sessions.filter(s => s.status === "RESCHEDULED").length, 3);
+  assert.equal(
+    sessions.filter(s => s.local.time === "11:00" && s.status === "SCHEDULED")
+      .length,
+    2
+  );
+  const moved = sessions.find(
+    s => s.local.time === "10:00" && s.status === "SCHEDULED"
+  );
+  await rowClick(moved.id, "Cancelada");
+  await click("Confirmar alteração");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Cancelamento não salvou."
+  );
+  await takeScreenshot("mindos-agenda-etapa3.png");
+  await fill("select", String(opSecond.id), "select");
+  await waitForText("Nenhuma sessão cadastrada para os filtros selecionados.");
+  await fill("select", String(opPatient.id), "select");
+  await click("Novo agendamento");
+  await waitForText("Salvar agendamento");
+  await fillAppointment(today, "00:00");
+  await click("Salvar agendamento");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Sessão de hoje não salvou."
+  );
+  const todaySession = (await operation.scheduling.list.query({ date: today }))
+    .items[0];
+  await page("Page.navigate", { url: `${base}/reception` });
+  await waitForText("Fila real do dia");
+  await waitForText("Check-in");
+  await rowClick(todaySession.id, "Check-in");
+  await waitForText("Aguardando");
+  await waitForCondition(
+    `document.querySelector('article[data-appointment-id="${todaySession.id}"]').innerText.includes('Aguardando')`,
+    "Check-in não atualizou a sessão."
+  );
+  await page("Page.navigate", {
+    url: `${base}/agenda?patientId=${opPatient.id}`,
+  });
+  await waitForText("Em atendimento");
+  await rowClick(todaySession.id, "Em atendimento");
+  await click("Confirmar alteração");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Início não salvou."
+  );
+  await rowClick(todaySession.id, "Concluída");
+  await click("Confirmar alteração");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Conclusão não salvou."
+  );
+  await page("Network.deleteCookies", { name: "app_session_id", url: base });
+  await page("Page.navigate", { url: `${base}/book` });
+  await waitForText(serviceName);
+  const publicName = `Solicitante navegador ${suffix}`;
+  await fill('input[name="name"]', publicName);
+  await fill('select[name="contactChannel"]', "EMAIL", "select");
+  await fill('input[name="contactValue"]', `public-${suffix}@example.com`);
+  await fill('select[name="serviceId"]', String(service.id), "select");
+  await fill('input[name="date"]', future);
+  await fill('input[name="time"]', "14:00");
+  await evaluate("document.querySelector('input[name=consent]').click()");
+  await click("Solicitar horário");
+  await waitForText("Solicitação recebida");
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/reception` });
+  await waitForText(publicName);
+  await click("Registrar contato realizado");
+  await click("Confirmar triagem");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Contato não salvou."
+  );
+  await click("Confirmar e agendar");
+  await waitForText("Salvar agendamento");
+  await fill('[role="dialog"] select', String(opPatient.id), "select");
+  await fillAppointment(future, "14:00");
+  await click("Salvar agendamento");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Confirmação pública não salvou."
+  );
+  const requestResult = (await operation.scheduling.requests.query())[0];
+  assert.equal(requestResult.status, "CONFIRMED");
+  assert.equal(requestResult.patientId, opPatient.id);
+  assert.ok(requestResult.appointmentId);
+  assert.equal((await operation.patients.list.query({})).total, 2);
+  await operation.publicMindos.requestBooking.mutate({
+    name: `Recusa navegador ${suffix}`,
+    contactChannel: "EMAIL",
+    contactValue: `decline-${suffix}@example.com`,
+    serviceId: service.id,
+    date: future,
+    time: "15:00",
+    consent: true,
+  });
+  await page("Page.reload");
+  await waitForText(`Recusa navegador ${suffix}`);
+  await click("Recusar");
+  await click("Confirmar triagem");
+  await waitForCondition(
+    "!document.querySelector('[role=dialog]')",
+    "Recusa não salvou."
+  );
+  await waitForText("Recusada");
+  await takeScreenshot("mindos-recepcao-etapa3.png");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await takeScreenshot("mindos-recepcao-etapa3-mobile.png");
   console.log(
-    "Chrome: criação, busca, duplicidade, edição/inativação/reativação, persistência e seleção real em 360°, prontuário e agenda aprovadas."
+    "Chrome: configurações, disponibilidade, criação de série, edição individual e da série, cancelamento, check-in, conclusão, formulário público, contato, confirmação e recusa aprovados."
   );
   assert.deepEqual(exceptions, []);
   console.log(
@@ -609,6 +879,32 @@ try {
         ),
       ]);
     }
+  }
+  if (fixture.operationTenantId) {
+    for (const table of [
+      "mindos_booking_limits",
+      "mindos_booking_requests",
+      "mindos_reception_events",
+      "mindos_access_audits",
+      "mindos_clinical_records",
+      "mindos_appointments",
+      "mindos_availability",
+      "mindos_professionals",
+      "mindos_units",
+      "mindos_services",
+      "mindos_patients",
+      "mindos_memberships",
+    ])
+      await db.execute(`DELETE FROM ${table} WHERE tenantId=?`, [
+        fixture.operationTenantId,
+      ]);
+    if (fixture.operationUserId)
+      await db.execute("DELETE FROM users WHERE id=?", [
+        fixture.operationUserId,
+      ]);
+    await db.execute("DELETE FROM mindos_tenants WHERE id=?", [
+      fixture.operationTenantId,
+    ]);
   }
   if (fixture.tenantId && fixture.patientNames.length) {
     const marks = fixture.patientNames.map(() => "?").join(",");

@@ -15,7 +15,7 @@ Este plano complementa o `todo.md`. As marcações antigas não comprovam funcio
 - [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
 - [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
 - [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
-- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 128 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 138 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
 - [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
@@ -40,24 +40,26 @@ Aceite: testes com duas clínicas comprovam isolamento; usuário anônimo não c
 
 ## 3. Concluir pacientes, equipe, agenda e recepção — prioridade alta
 
-**Em andamento desde 18/10/2026, após autorização do usuário. Primeiro bloco: cadastro administrativo e seleção real de pacientes.**
+**Implementada e validada localmente em 18/10/2026; parada para revisão visual do usuário. Operação e evidências em `docs/ETAPA-3-OPERACAO.md`. Não iniciar a etapa 4 sem novo comando.**
 
 Depende da etapa 2.
 
 - [x] Completar criação, listagem, busca, edição e inativação de pacientes, com validação e prevenção de duplicidades. Interface e servidor entregues; limites e critérios de comparação em `docs/ETAPA-3-PACIENTES.md`.
-- [ ] Concluir cadastro de profissionais, serviços, unidades e disponibilidade.
+- [x] Concluir cadastro de profissionais, serviços, unidades e disponibilidade.
 - [x] Conectar a seleção real de paciente às telas Paciente 360°, prontuário e agenda. Seleção por URL e busca, sem ID fixo; alterações de agenda seguem nos próximos itens.
-- [ ] Implementar confirmação, cancelamento, reagendamento, falta e conclusão das sessões, com transições válidas.
-- [ ] Completar criação e edição visual de recorrências, incluindo alteração de uma ocorrência ou da série.
-- [ ] Garantir que reservas simultâneas não criem dupla marcação; a verificação deve resistir à concorrência no banco.
-- [ ] Transformar solicitações públicas em fluxo de triagem, contato, confirmação ou recusa, com proteção contra abuso.
-- [ ] Fazer o check-in atualizar a sessão correta e refletir a fila real do dia.
-- [ ] Substituir contadores, dados fixos e botões de mensagem por operações persistentes.
-- [ ] Conferir datas e horários no fuso da clínica.
+- [x] Implementar confirmação, cancelamento, reagendamento, falta e conclusão das sessões, com transições válidas.
+- [x] Completar criação e edição visual de recorrências, incluindo alteração de uma ocorrência ou da série.
+- [x] Garantir que reservas simultâneas não criem dupla marcação; a verificação deve resistir à concorrência no banco.
+- [x] Transformar solicitações públicas em fluxo de triagem, contato, confirmação ou recusa, com proteção contra abuso.
+- [x] Fazer o check-in atualizar a sessão correta e refletir a fila real do dia.
+- [x] Substituir contadores, dados fixos e botões de mensagem por operações persistentes.
+- [x] Conferir datas e horários no fuso da clínica.
 
 Aceite: cadastrar paciente, agendar, receber solicitação online, confirmar, fazer check-in, concluir e reagendar funcionam de ponta a ponta; duas tentativas simultâneas não reservam o mesmo profissional no mesmo horário.
 
 ## 4. Concluir prontuário, documentos e portal — prioridade alta
+
+**Não iniciada: aguardar análise do usuário da etapa 3 e novo comando.**
 
 Depende das etapas 2 e 3.
 

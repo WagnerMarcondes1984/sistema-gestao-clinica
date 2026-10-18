@@ -43,7 +43,7 @@ O papel global de administrador da instalação é configurado no fluxo existent
 - Antes de aplicar o índice único em uma instalação existente, confira duplicidades de `(tenantId, userId)` e faça backup. A migração não remove nem combina vínculos automaticamente.
 - O envio do link é uma ação do administrador. Os testes usam dados fictícios locais e não enviam mensagens a terceiros.
 
-Os resultados de testes e o ponto de parada estão em `EXECUCAO-DO-PLANO.md`. A etapa 3 permanece sem execução até análise do usuário.
+Os resultados de testes e o ponto de parada estão em `EXECUCAO-DO-PLANO.md`. Este foi o ponto de parada da etapa 2. A etapa 3 foi autorizada e sua situação atual está no plano e em `ETAPA-3-OPERACAO.md`.
 
 ## Prévia da interface
 

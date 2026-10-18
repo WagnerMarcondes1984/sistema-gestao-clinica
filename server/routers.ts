@@ -6,6 +6,9 @@ import { publicProcedure, protectedProcedure, financialProcedure, router } from 
 import { z } from "zod";
 import { teamRouter } from "./team-router";
 import { patientsRouter } from "./patients-router";
+import { schedulingRouter } from "./scheduling-router";
+import { publicSchedule, requestPublicBooking, listSchedule } from "./scheduling";
+import { publicBookingInput } from "../shared/scheduling";
 import {
   listClinicalVerticals,
   getClinicalVerticalByCode,
@@ -35,7 +38,6 @@ import {
   listMindosClinicalRecords,
   createMindosClinicalRecord,
   finalizeMindosClinicalRecord,
-  createMindosPublicBooking,
   listMindosBookingRequests,
   listMindosPortalData,
   createMindosReceptionEvent,
@@ -48,19 +50,12 @@ import {
 export const appRouter = router({
   team: teamRouter,
   patients: patientsRouter,
+  scheduling: schedulingRouter,
   system: systemRouter,
   publicMindos: router({
     serviceAreas: publicProcedure.query(async () => listMindosServiceAreas()),
-    requestBooking: publicProcedure
-      .input(z.object({
-        name: z.string().min(2).max(160),
-        contactChannel: z.enum(["WHATSAPP_DISCREET", "EMAIL", "PHONE"]),
-        contactValue: z.string().min(5).max(200),
-        serviceType: z.string().min(2).max(160),
-        preferredDate: z.coerce.date(),
-        preferredTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-      }))
-      .mutation(async ({ input }) => createMindosPublicBooking(input)),
+    scheduling: publicProcedure.query(() => publicSchedule()),
+    requestBooking: publicProcedure.input(publicBookingInput).mutation(({ctx,input}) => requestPublicBooking(input,ctx.req.socket?.remoteAddress || "unknown")),
   }),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -353,9 +348,9 @@ export const appRouter = router({
         return await finalizeMindosClinicalRecord(ctx.user.id, ctx.user.role, input.recordId);
       }),
     bookingRequests: protectedProcedure.query(async ({ ctx }) => listMindosBookingRequests(ctx.user.id, ctx.user.role)),
-    receptionQueue: protectedProcedure.query(async ({ ctx }) => listMindosReceptionQueue(ctx.user.id, ctx.user.role)),
+    receptionQueue: protectedProcedure.query(async ({ ctx }) => listSchedule(ctx.user, undefined, undefined, true)),
     portalData: protectedProcedure.query(async ({ ctx }) => listMindosPortalData(ctx.user.id, ctx.user.role)),
-    receptionEvent: protectedProcedure.input(z.object({ patientId: z.number().int().positive(), eventType: z.enum(["CHECK_IN", "MESSAGE_SENT", "CALL_LOGGED", "PROFILE_REVIEWED"]), messageTemplate: z.string().max(160).optional() })).mutation(async ({ ctx, input }) => createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)),
+    receptionEvent: protectedProcedure.input(z.object({ patientId: z.number().int().positive(), eventType: z.enum(["CHECK_IN", "MESSAGE_SENT", "CALL_LOGGED", "PROFILE_REVIEWED"]), appointmentId: z.number().int().positive().optional(), messageTemplate: z.string().max(160).optional() })).mutation(async ({ ctx, input }) => createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)),
     institutionalProfile: protectedProcedure.query(async ({ ctx }) => getMindosInstitutionalProfile(ctx.user.id, ctx.user.role)),
     saveInstitutionalProfile: protectedProcedure.input(z.object({ title: z.string().min(2), metaDescription: z.string().min(2), city: z.string().optional(), faqJson: z.string(), llmsTxt: z.string() })).mutation(async ({ ctx, input }) => saveMindosInstitutionalProfile(ctx.user.id, ctx.user.role, input)),
   }),
