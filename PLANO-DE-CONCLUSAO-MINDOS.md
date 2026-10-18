@@ -15,7 +15,7 @@ Este plano complementa o `todo.md`. As marcações antigas não comprovam funcio
 - [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
 - [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
 - [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
-- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 105 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 117 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
 - [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
@@ -25,8 +25,8 @@ Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e ve
 Depende da etapa 1. Esta etapa bloqueia qualquer piloto com dados reais.
 
 - [x] Decisão de autenticação: manter Manus por enquanto, conforme escolha do usuário. Validação do login real depende das credenciais do ambiente; revisão de sessão/saída implementada.
-- [ ] Implementar entrada da clínica, convites, ativação/desativação de usuários e gestão de associações.
-- [x] Definir matriz explícita de permissões para administrador, psicólogo, recepção, financeiro, comercial e paciente. Modelos em `shared/permissions.ts`; gestão visual ainda pendente.
+- [x] Implementar entrada explícita da clínica, convites de uso único, ativação/desativação, reativação, papéis e permissões por associação. Interface em `/app/team` e `/invite`; validar login externo real quando configurado.
+- [x] Definir matriz explícita de permissões para administrador, psicólogo, recepção, financeiro, comercial e paciente. Modelos em `shared/permissions.ts`; gestão visual implementada nesta entrega.
 - [x] Exigir autenticação e autorização nas rotas financeiras e de auditoria.
 - [ ] Concluir associação revisada dos registros financeiros legados, quando houver base existente. Colunas de clínica e migrações já foram aplicadas e testadas; registros sem associação permanecem isolados. Não inferir clínica pela vertical.
 - [x] Aplicar o filtro da clínica autenticada em todas as leituras e alterações financeiras.
@@ -39,6 +39,8 @@ Depende da etapa 1. Esta etapa bloqueia qualquer piloto com dados reais.
 Aceite: testes com duas clínicas comprovam isolamento; usuário anônimo não consulta nem altera financeiro; recepção não acessa prontuário; paciente acessa somente os próprios dados; permissão clínica comum não libera notas restritas.
 
 ## 3. Concluir pacientes, equipe, agenda e recepção — prioridade alta
+
+**Não iniciada: aguardar análise do usuário após a entrega de equipe e convites da etapa 2.**
 
 Depende da etapa 2.
 

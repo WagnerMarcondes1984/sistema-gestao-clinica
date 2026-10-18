@@ -20,6 +20,8 @@ import ClinicalRecord from "./pages/ClinicalRecord";
 import Reception from "./pages/Reception";
 import PatientPortal from "./pages/PatientPortal";
 import OnlineBooking from "./pages/OnlineBooking";
+import Team from "./pages/Team";
+import AcceptInvite from "./pages/AcceptInvite";
 
 function Router() {
   return (
@@ -33,6 +35,8 @@ function Router() {
       <Route path="/portal" component={PatientPortal} />
       <Route path="/book" component={OnlineBooking} />
       <Route path="/app/admin-studio" component={AdminStudio} />
+      <Route path="/app/team" component={Team} />
+      <Route path="/invite" component={AcceptInvite} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/transactions" component={Transactions} />
       <Route path="/receivables" component={Receivables} />

@@ -11,6 +11,8 @@ Inventário inicial com atualização das correções da etapa 2; a homologaçã
 | `/reception` | Parcial | Fila e eventos conectados ao backend; indicadores fixos, cadastro e atalhos demonstrativos. Check-in precisa refletir sessão. |
 | `/portal` | Parcial | Consulta sessões e documentos do paciente derivado da conta; telas demonstrativas removidas. Download, consentimentos, financeiro e reagendamento continuam pendentes. |
 | `/book` | Parcial | Envia solicitação pública; não é reserva confirmada. Resolução da clínica pública e triagem pendentes. |
+| `/app/team` | Implementado e testado | Gestão de vínculos, permissões, ativação e convites com isolamento por clínica. Login externo real pendente de configuração. |
+| `/invite` | Implementado e testado | Verificação e aceitação pessoal, expiração e proteção contra reutilização. Fluxo OAuth de retorno coberto por testes com mocks. |
 | `/app/admin-studio` | Parcial | Salva versões CMS e perfil; edição de blocos e várias configurações só mostram mensagens. Domínio/SSL exibidos sem verificação real. |
 | `/finance` | Parcial | Métricas persistentes com autorização e isolamento por clínica testados. Homologação financeira completa pendente. |
 | `/checkout` | Demonstrativo com persistência | Cria cobranças; PIX, cartão, boleto e emissão fiscal simulados. Falta validação de valores no servidor e integrações reais. |
@@ -24,7 +26,7 @@ Inventário inicial com atualização das correções da etapa 2; a homologaçã
 ## Ausências transversais
 
 - Não existe login independente por e-mail/senha: autenticação usa OAuth Manus.
-- Não existe fluxo completo de gestão de equipe, convites e permissões pela interface.
+- Gestão de equipe, convites e permissões entregue na etapa 2; transferência de propriedade e múltiplas clínicas ativas ficam fora deste bloco.
 - Não existe funil comercial completo, tarefas de follow-up ou integração efetiva de mensagens.
 - Ter um registro `MESSAGE_SENT` não comprova envio de mensagem por um provedor.
 - Ter status fiscal `ISSUED` na simulação não comprova autorização fiscal.

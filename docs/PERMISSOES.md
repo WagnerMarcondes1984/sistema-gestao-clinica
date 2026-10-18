@@ -18,4 +18,6 @@ Os modelos estão em `shared/permissions.ts`. Permissões efetivas permanecem ar
 
 Associações inativas são recusadas. Enquanto não existir seleção explícita de clínica, um usuário com mais de uma associação ativa recebe erro em vez de operar na primeira clínica encontrada.
 
-Gestão visual de equipe, convites, concessões e revogações ainda deve ser concluída na etapa 2. Não edite permissões a partir de uma tela demonstrativa nem aceite o nome de um operador enviado pelo cliente como identidade auditável.
+Gestão visual em `/app/team`, com convites, concessões, desativação e reativação. O servidor aplica um limite de permissões por papel: recepção e financeiro não podem receber permissões clínicas por este fluxo. Proprietário e superadministrador são protegidos; ninguém altera o próprio acesso. Administradores comuns não gerenciam outros administradores.
+
+Convites de paciente exigem seleção de cadastro da própria clínica e conta do e-mail destinatário. Consulte `EQUIPE-E-CONVITES.md` para operação, proteção dos links e limitações da entrega.

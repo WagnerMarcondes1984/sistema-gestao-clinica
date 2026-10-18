@@ -50,6 +50,13 @@
       "when": 1792287870145,
       "tag": "0006_sleepy_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1792291492634,
+      "tag": "0007_nervous_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

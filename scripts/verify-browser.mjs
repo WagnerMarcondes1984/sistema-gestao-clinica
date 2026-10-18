@@ -1,5 +1,6 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -17,6 +18,7 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 const profile = await mkdtemp(join(tmpdir(), "mindos-browser-"));
 let server, browser, socket;
+const fixture = { userId: null, tenantId: null, emails: [] };
 try {
   const [[owner]] = await db.query(
     "SELECT * FROM users WHERE openId = 'mindos-demo-owner'"
@@ -246,6 +248,167 @@ try {
   await page("Page.reload");
   const afterReload = await waitForText("Entre com sua conta");
   assert.ok(!afterReload.includes("Marina"));
+  const suffix = randomUUID().slice(0, 8);
+  const email = `browser-team-${suffix}@example.com`;
+  const cancelEmail = `browser-cancel-${suffix}@example.com`;
+  fixture.emails = [email, cancelEmail];
+  const name = `Pessoa teste ${suffix}`;
+  const openId = `browser-team-${randomUUID()}`;
+  const [createdUser] = await db.execute(
+    "INSERT INTO users (openId, name, email, role) VALUES (?, ?, ?, ?)",
+    [openId, name, email, "user"]
+  );
+  fixture.userId = createdUser.insertId;
+  const ownerClient = client(ownerToken);
+  fixture.tenantId = (await ownerClient.team.overview.query()).clinic.id;
+  const memberToken = await tokenFor({ openId, name });
+  async function evaluate(expression) {
+    const result = await page("Runtime.evaluate", {
+      expression,
+      returnByValue: true,
+    });
+    assert.ok(
+      !result.exceptionDetails,
+      "Falha em ação de navegador: " + (result.exceptionDetails?.text ?? "")
+    );
+    return result.result.value;
+  }
+  async function waitForCondition(expression, message) {
+    const deadline = Date.now() + 45_000;
+    while (Date.now() < deadline) {
+      if (await evaluate(expression)) return;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    throw new Error(message);
+  }
+  async function fill(selector, value, tag = "input") {
+    await evaluate(
+      `(() => { const element = document.querySelector(${JSON.stringify(selector)}); const proto = ${tag === "select" ? "HTMLSelectElement" : "HTMLInputElement"}.prototype; Object.getOwnPropertyDescriptor(proto, "value").set.call(element, ${JSON.stringify(value)}); element.dispatchEvent(new Event(${JSON.stringify(tag === "select" ? "change" : "input")}, { bubbles: true })); })()`
+    );
+  }
+  const click = text =>
+    evaluate(
+      `[...document.querySelectorAll('button')].find(button => button.textContent.trim() === ${JSON.stringify(text)}).click()`
+    );
+  const setCookie = value =>
+    page("Network.setCookie", {
+      name: "app_session_id",
+      value,
+      url: base,
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+    });
+  await setCookie(ownerToken);
+  await page("Page.navigate", { url: `${base}/app/team` });
+  await waitForText("Convidar pessoa");
+  await fill('input[type="email"]', email);
+  await fill("#invite-role", "FINANCIAL", "select");
+  await click("Criar convite");
+  await waitForText("Link criado");
+  const inviteLink = await evaluate(
+    'document.querySelector("#created-invite-link").value'
+  );
+  assert.ok(inviteLink.includes("/invite#token="));
+  await setCookie(memberToken);
+  await page("Page.navigate", { url: inviteLink });
+  await waitForText("Aceitar convite");
+  await click("Aceitar convite");
+  await waitForText("Convite aceito. Seu acesso está ativo.");
+  assert.ok((await client(memberToken).transactions.list.query({})).length > 0);
+  await setCookie(ownerToken);
+  await page("Page.navigate", { url: `${base}/app/team` });
+  await waitForText(name);
+  const edit = () =>
+    evaluate(
+      `document.querySelector('[aria-label="Editar acesso de ${name}"]').click()`
+    );
+  const toggleActive = () =>
+    evaluate(
+      `[...document.querySelectorAll('[role="dialog"] label')].find(label => label.textContent.trim() === 'Acesso ativo').querySelector('input').click()`
+    );
+  const rowState = status =>
+    `(() => { const row = [...document.querySelectorAll('tbody tr')].find(row => row.textContent.includes(${JSON.stringify(name)})); return row?.querySelectorAll('td')[2].textContent.trim() === ${JSON.stringify(status)}; })()`;
+  await edit();
+  await waitForText("Salvar acesso");
+  await toggleActive();
+  await click("Salvar acesso");
+  await waitForCondition(
+    rowState("Desativado"),
+    "Desativação não apareceu na lista."
+  );
+  await assert.rejects(
+    client(memberToken).transactions.list.query({}),
+    error => error.data?.code === "FORBIDDEN"
+  );
+  await edit();
+  await waitForText("Salvar acesso");
+  await toggleActive();
+  await evaluate(
+    `[...document.querySelectorAll('[role="dialog"] label')].find(label => label.textContent.trim() === 'Alterar financeiro').querySelector('input').click()`
+  );
+  await click("Salvar acesso");
+  await waitForCondition(
+    rowState("Ativo"),
+    "Reativação não apareceu na lista."
+  );
+  assert.ok((await client(memberToken).transactions.list.query({})).length > 0);
+  await assert.rejects(
+    client(memberToken).transactions.confirm.mutate({
+      code: transactions[0].code,
+    }),
+    error => error.data?.code === "FORBIDDEN"
+  );
+  await fill('input[type="email"]', cancelEmail);
+  await click("Criar convite");
+  await waitForText(cancelEmail);
+  await evaluate(
+    `document.querySelector('[aria-label="Cancelar convite para ${cancelEmail}"]').click()`
+  );
+  await waitForCondition(
+    `[...document.querySelectorAll('li')].some(item => item.textContent.includes(${JSON.stringify(cancelEmail)}) && item.textContent.includes('Cancelado'))`,
+    "Cancelamento do convite não apareceu na lista."
+  );
+  assert.ok(
+    !(await evaluate('!!document.querySelector("#created-invite-link")'))
+  );
+  await waitForCondition(
+    "document.querySelectorAll('[data-sonner-toast]').length === 0",
+    "Mensagens temporárias não desapareceram."
+  );
+  assert.ok(
+    !(await evaluate("document.body.innerText.includes('NFS-e Conectado')"))
+  );
+  assert.ok(
+    await evaluate(
+      "document.querySelector('header').innerText.includes('Administrador de demonstração')"
+    )
+  );
+  const teamScreenshot = await page("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: true,
+  });
+  await writeFile(
+    join(tmpdir(), "mindos-equipe-verificada.png"),
+    Buffer.from(teamScreenshot.data, "base64")
+  );
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  const mobileScreenshot = await page("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: true,
+  });
+  await writeFile(
+    join(tmpdir(), "mindos-equipe-mobile.png"),
+    Buffer.from(mobileScreenshot.data, "base64")
+  );
+  console.log(
+    "Chrome: convite criado e aceito, desativação/reativação, financeiro somente leitura e cancelamento de convite aprovados."
+  );
   assert.deepEqual(exceptions, []);
   console.log(
     "Chrome: portal sem sessão, dados do paciente correto, documentos liberados e limpeza após logout aprovados."
@@ -266,6 +429,38 @@ try {
         ),
       ]);
     }
+  }
+  if (fixture.userId) {
+    const placeholders = fixture.emails.map(() => "?").join(",");
+    const [invites] = fixture.tenantId
+      ? await db.query(
+          `SELECT id FROM mindos_team_invites WHERE tenantId = ? AND email IN (${placeholders})`,
+          [fixture.tenantId, ...fixture.emails]
+        )
+      : [[]];
+    const [members] = await db.query(
+      "SELECT id, tenantId FROM mindos_memberships WHERE userId = ?",
+      [fixture.userId]
+    );
+    for (const invite of invites)
+      await db.execute(
+        "DELETE FROM mindos_access_audits WHERE tenantId = ? AND subjectType = 'TEAM_INVITE' AND subjectId = ?",
+        [fixture.tenantId, invite.id]
+      );
+    for (const member of members)
+      await db.execute(
+        "DELETE FROM mindos_access_audits WHERE tenantId = ? AND subjectType = 'MEMBERSHIP' AND subjectId = ?",
+        [member.tenantId, member.id]
+      );
+    if (fixture.tenantId)
+      await db.execute(
+        `DELETE FROM mindos_team_invites WHERE tenantId = ? AND email IN (${placeholders})`,
+        [fixture.tenantId, ...fixture.emails]
+      );
+    await db.execute("DELETE FROM mindos_memberships WHERE userId = ?", [
+      fixture.userId,
+    ]);
+    await db.execute("DELETE FROM users WHERE id = ?", [fixture.userId]);
   }
   await db.end();
   await rm(profile, {
