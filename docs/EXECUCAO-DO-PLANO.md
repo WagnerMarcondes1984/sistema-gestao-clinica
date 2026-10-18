@@ -162,3 +162,11 @@ Validação final: TypeScript aprovado; 145 testes unitários aprovados e 1 caso
 Revisão local aberta em `http://localhost:3420/finance`; busca, paginação e retorno ao resumo autenticado conferidos também na versão final. Sessões separadas da equipe e do portal usam somente a clínica fictícia de revisão. Parada para análise; nenhuma tarefa da etapa 6 iniciada.
 
 Limite do checkpoint público: a revisão automática rejeitou o reenvio de `server/seed-db.mjs` pelos dados demonstrativos plausíveis que já existiam no arquivo público. A comparação com o blob anterior confirmou alteração somente na lista de três tabelas da proteção contra seed em banco preenchido. Essa alteração permanece local; o checkpoint mantém o seed remoto anterior inalterado e publica os demais arquivos, sem capturas nem documentos privados.
+
+## Consolidação para o GitHub (18/10/2026)
+
+Usuário solicitou todas as atualizações e a árvore do projeto, com mensagem de commit exata `atulização geral do sistema de gestão`. Conferência inicial: o código de execução já corresponde ao checkpoint remoto da etapa 5; diferenças restantes eram as sete capturas e o reforço de três tabelas no guard do seed.
+
+As sete capturas foram inspecionadas visualmente e correspondem a fixtures fictícias. Após bloqueio inicial da revisão automática, o usuário autorizou especificamente sua publicação pública. Blobs aceitos e hashes conferidos. O seed integral bloqueado permanece inalterado no remoto; sua diferença fica preservada em `patches/seed-finance-guard.patch`, sem cadastros, validada por aplicação em uma cópia temporária sem executar o seed ou alterar banco.
+
+Consolidação em `codex/atualizacao-geral-sistema-gestao`, baseada na etapa 5, com árvore em `docs/ARVORE-DO-PROJETO.md`, manifesto de hashes e relatório em `docs/ATUALIZACAO-GERAL.md`. README remoto preservado; segredos, dados privados, dependências, build e sessões de navegador excluídos. Etapa 6 não iniciada; integrações pendentes da etapa 5 não foram declaradas concluídas. PR de consolidação destinado a main, sem merge automático.

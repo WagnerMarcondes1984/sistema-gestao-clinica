@@ -1,7 +1,17 @@
-# Prévias das etapas 2, 3 e 4
+# Prévias das etapas 2 a 5
 
-Capturas de equipe, pacientes, agenda, recepção, prontuário, documentos e portal em desktop e celular, verificadas no Chrome com contas e dados fictícios locais. A etapa 4 aguarda revisão visual do usuário antes da etapa 5. As capturas não homologam OAuth Manus nem produção.
+Capturas desktop e celular dos fluxos de equipe, pacientes, agenda, recepção, prontuário, documentos, consentimentos e financeiro interno. Usam contas e dados fictícios de testes locais; não comprovam autenticação OAuth Manus externa nem homologação de produção.
 
-As cinco capturas da etapa 4 permanecem somente no ambiente local; não fazem parte do checkpoint público do GitHub.
+Na consolidação de 18/10/2026, o usuário autorizou especificamente publicar as sete capturas das etapas 4 e 5 no repositório público, após inspeção visual e conferência com as fixtures de `scripts/verify-browser.mjs`.
 
-Etapa 5: `financeiro-etapa5.png` e `financeiro-etapa5-mobile.png`, somente locais, com cobranças, reversões, despesas e resumo fictícios validados no Chrome. Controle interno para revisão; integrações financeiras/fiscais ainda pendentes.
+| Captura | Conteúdo fictício |
+|---|---|
+| [prontuario-etapa4.png](prontuario-etapa4.png) | Rascunho, registro finalizado e adendo |
+| [documentos-etapa4.png](documentos-etapa4.png) | Gestão de documento de teste revogado |
+| [portal-consentimentos-etapa4.png](portal-consentimentos-etapa4.png) | Termos e histórico de decisões de teste |
+| [portal-etapa4-mobile.png](portal-etapa4-mobile.png) | Consentimentos no celular |
+| [reagendamento-portal-etapa4.png](reagendamento-portal-etapa4.png) | Triagem e reagendamento fictícios; contatos em example.com |
+| [financeiro-etapa5.png](financeiro-etapa5.png) | Baixa e reversão de cobrança de teste |
+| [financeiro-etapa5-mobile.png](financeiro-etapa5-mobile.png) | Resumo e livro financeiro de teste no celular |
+
+As capturas refletem os momentos da verificação; alguns rótulos foram refinados depois. A etapa 5 mantém pagamentos/fiscal pendentes de provedor e pacotes/repasses manuais. A etapa 6 não foi iniciada.
