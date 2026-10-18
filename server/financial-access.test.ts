@@ -9,6 +9,34 @@ const caller = appRouter.createCaller({
 } as TrpcContext);
 describe("financeiro exige sessão em todas as operações", () => {
   const operations = [
+    () => caller.transactions.context(),
+    () => caller.transactions.movements(),
+    () =>
+      caller.cash.open({
+        requestId: "123e4567-e89b-42d3-a456-426614174000",
+        verticalCode: "PSYCHOLOGY_CLINIC",
+        openingBalance: 0,
+      }),
+    () =>
+      caller.cash.move({
+        requestId: "123e4567-e89b-42d3-a456-426614174000",
+        sessionId: 1,
+        revision: 1,
+        amount: 1,
+        direction: "OUT",
+        reason: "Tentativa sem sessão",
+      }),
+    () =>
+      caller.accountsPayable.create({
+        requestId: "123e4567-e89b-42d3-a456-426614174000",
+        verticalCode: "PSYCHOLOGY_CLINIC",
+        supplierName: "Teste",
+        description: "Teste sem sessão",
+        category: "TEST",
+        amount: 100,
+        dueDate: new Date(),
+        paymentMethod: "TRANSFER",
+      }),
     () => caller.dashboard.metrics({}),
     () => caller.transactions.list({}),
     () => caller.transactions.getByCode({ code: "other-clinic" }),

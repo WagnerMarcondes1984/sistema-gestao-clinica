@@ -29,3 +29,7 @@ Na etapa 3, `MANAGE_PATIENTS` separa escrita do cadastro administrativo da consu
 Psicólogos precisam também de vínculo ativo explícito com cada paciente. Administradores supervisionam a própria clínica, mas não editam rascunhos de outro autor. Registros finalizados são imutáveis para todos; mudanças são adendos.
 
 `VIEW_DOCUMENTS` e `MANAGE_DOCUMENTS` distinguem consulta e gestão. Modelos novos de psicólogo, assistente e recepção incluem documentos administrativos; documentos clínicos continuam sujeitos ao acesso clínico. Associações existentes não recebem permissões automaticamente. Gestão de vínculos clínicos exige `MANAGE_TEAM`; liberação financeira exige `MANAGE_FINANCIAL`. Paciente consulta somente documentos liberados, decisões e receitas explicitamente vinculadas à própria conta.
+
+## Complemento da etapa 5
+
+Escritas financeiras verificam novamente associação ativa e MANAGE_FINANCIAL dentro da transação e lock da clínica. A revisão e a chave de operação não substituem autorização: reenvio também é recusado após revogação. Autoria vem da conta no banco. VIEW_FINANCIAL consulta cobranças, parcelas, relatórios e livro; a interface de consulta não mostra formulários de alteração. Registros legados sem conferência não são movimentados mesmo por administrador. Não existe endpoint público ativo de webhook bancário nesta entrega; a simulação anterior é recusada em todos os ambientes.

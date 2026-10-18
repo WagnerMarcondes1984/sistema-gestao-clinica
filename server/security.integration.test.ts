@@ -160,6 +160,12 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
     if (!db) return;
     try {
       for (const tenantId of tenants) {
+        for (const t of [
+          "financial_movements",
+          "financial_operations",
+          "financial_installments",
+        ])
+          await db.execute(`DELETE FROM ${t} WHERE tenantId=?`, [tenantId]);
         await db.execute(
           "DELETE FROM transaction_items WHERE transactionId IN (SELECT id FROM transactions WHERE tenantId = ?)",
           [tenantId]
@@ -202,7 +208,8 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
     expect(
       await ownerA.transactions.getByCode({ code: codeB })
     ).toBeUndefined();
-    expect((await ownerA.dashboard.metrics({})).totalReceived).toBe(10000);
+    expect((await ownerA.dashboard.metrics({})).totalReceived).toBe(0);
+    expect((await ownerA.dashboard.metrics({})).legacyCount).toBe(3);
     expect(
       (await ownerA.accountsPayable.list({})).map(row => row.code)
     ).toEqual([codeA]);
@@ -218,14 +225,29 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
     await expect(
       ownerA.transactions.refund({
         code: codeB,
+        requestId: randomUUID(),
+        revision: 1,
+        amount: 100,
+        reference: "teste entre clínicas",
         reason: "tentativa entre clínicas",
       })
     ).rejects.toThrow();
     await expect(
-      ownerA.cash.close({ sessionId: cashIds[1], closingBalance: 0 })
+      ownerA.cash.close({
+        sessionId: cashIds[1],
+        closingBalance: 0,
+        revision: 1,
+        requestId: randomUUID(),
+      })
     ).rejects.toThrow();
     await expect(
-      ownerA.accountsPayable.pay({ code: codeB })
+      ownerA.accountsPayable.pay({
+        code: codeB,
+        revision: 1,
+        amount: 100,
+        reference: "teste entre clínicas",
+        requestId: randomUUID(),
+      })
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
     const [[row]] = await db.query<RowDataPacket[]>(
       "SELECT status FROM accounts_payable WHERE tenantId = ?",
@@ -295,7 +317,13 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
   });
 
   it("salva autoria autenticada e ignora o nome de operador enviado no payload", async () => {
+    await db.execute(
+      "UPDATE mindos_patients SET administrativeStatus='ACTIVE' WHERE id=?",
+      [patients[0]]
+    );
     const tx = await ownerA.transactions.create({
+      requestId: randomUUID(),
+      patientId: patients[0],
       verticalCode: "PSYCHOLOGY_CLINIC",
       patientName: "Fictício",
       patientDocument: "demo",

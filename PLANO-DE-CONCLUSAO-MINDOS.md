@@ -15,7 +15,7 @@ Este plano complementa o `todo.md`. As marcações antigas não comprovam funcio
 - [x] Configurar banco exclusivo de desenvolvimento e aplicar migrações.
 - [x] Conferir se o seed cobre as tabelas necessárias e executar apenas no banco de teste.
 - [x] Executar checagem TypeScript, testes e build; registrar falhas e corrigir bloqueios. Também validados schema, seed, integração, HTTP e navegador; evidências em `docs/EXECUCAO-DO-PLANO.md`.
-- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 170 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
+- [x] Mapear rotas e ações como funcionais, parciais, demonstrativas ou pendentes de revisão. Inventário de rotas e 137 handlers em `docs/INVENTARIO-FUNCIONAL.md` e `docs/ACOES-DA-INTERFACE.md`; homologação visual integral continua na etapa 8.
 - [x] Documentar execução local e decisões pendentes: autenticação, hospedagem, pagamentos, fiscal e comunicação.
 
 Aceite: outra pessoa consegue iniciar o projeto com a documentação; build e verificações passam; limitações estão registradas sem apresentar demonstrações como operações reais.
@@ -59,7 +59,7 @@ Aceite: cadastrar paciente, agendar, receber solicitação online, confirmar, fa
 
 ## 4. Concluir prontuário, documentos e portal — prioridade alta
 
-**Implementada e validada localmente; aguardando revisão visual. Guia em `docs/ETAPA-4-PRONTUARIO-E-PORTAL.md`. Parar antes da etapa 5.**
+**Revisada pelo usuário; etapa 5 autorizada em 18/10/2026. Guia em `docs/ETAPA-4-PRONTUARIO-E-PORTAL.md`.**
 
 Depende das etapas 2 e 3.
 
@@ -76,24 +76,26 @@ Aceite: profissional autorizado registra e finaliza atendimento; alteração pos
 
 ## 5. Concluir financeiro e integrações reais — prioridade alta
 
-**Não iniciada: aguardar análise da etapa 4 e novo comando do usuário.**
+**Em andamento (18/10/2026): controle financeiro interno implementado para revisão. Provedores a definir; pacotes/repasses sem automação por escolha do usuário. Guia em `docs/ETAPA-5-FINANCEIRO-INTERNO.md`. Não iniciar etapa 6.**
 
 Depende das etapas 2 e 3. A escolha dos provedores antecede sua implementação.
 
-- [ ] Recalcular totais, descontos, parcelas e troco no servidor; rejeitar valores inconsistentes ou negativos.
-- [ ] Garantir consistência entre cobrança, itens, parcelas, contas e caixa com transações de banco.
-- [ ] Vincular cobrança a paciente, clínica e atendimento; conectar sessões, pacotes e repasses às regras financeiras.
+- [x] Recalcular totais, descontos, parcelas e troco no servidor; rejeitar valores inconsistentes ou negativos.
+- [x] Garantir consistência entre cobrança, itens, parcelas, contas e caixa com transações de banco. Operações internas com idempotência, revisão, autorização e auditoria atômicas.
+- [x] Vincular nova cobrança a paciente, clínica e atendimento opcional, com referências validadas. Pacotes e repasses permanecem manuais por decisão explícita do usuário; nenhuma regra demonstrativa é aplicada automaticamente.
 - [ ] Integrar os meios de pagamento contratados; desativar simulação no ambiente de produção.
 - [ ] Validar autenticidade de webhooks e impedir processamento duplicado, inclusive em reenvios e eventos fora de ordem.
 - [ ] Implementar estorno real e conciliação com o provedor, com trilha de auditoria.
 - [ ] Integrar emissão fiscal com o serviço escolhido, incluindo rejeição, cancelamento e consulta de situação.
-- [ ] Separar recibo interno de documento fiscal autorizado e remover indicações falsas de emissão.
-- [ ] Completar contas a pagar/receber, baixas, abertura e fechamento de caixa com saldos verificáveis.
+- [x] Separar registro interno de documento fiscal autorizado e remover indicações falsas de emissão. Sem nota fiscal ou dados bancários inventados.
+- [x] Completar o controle interno de contas a pagar/receber, baixas, abertura e fechamento de caixa com saldos verificáveis. Conciliação bancária e migração financeira legada continuam pendentes.
 - [ ] Validar relatórios financeiros contra lançamentos e retornos dos provedores.
 
 Aceite: pagamento em ambiente de testes do provedor atualiza uma única cobrança; webhook duplicado não duplica receita; estorno corresponde ao retorno externo; nota só aparece como emitida após autorização; caixa e relatórios fecham com os lançamentos.
 
 ## 6. Concluir CRM administrativo e comunicação — prioridade alta
+
+**Não iniciada. Aguardar encerramento/revisão da etapa 5 e novo comando.**
 
 Depende da etapa 3 e das permissões da etapa 2.
 

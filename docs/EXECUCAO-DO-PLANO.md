@@ -142,3 +142,23 @@ Guia em `ETAPA-4-PRONTUARIO-E-PORTAL.md`. Revisão: `node scripts/open-review.mj
 Checkpoint previsto: `codex/etapa-4-prontuario-e-portal`, baseado em `codex/etapa-3-operacao`, para revisão sem merge. **Parar antes da etapa 5, aguardando análise e novo comando.** Financeiro bancário/fiscal, assinatura certificada e homologação de produção não foram declarados entregues.
 
 Conferência final: 31 tabelas e 373 colunas correspondem ao código; seed original preservado e repetição recusada. Revisão aberta com sucesso em `http://localhost:3420/clinical-records?patientId=84` e `http://localhost:3420/portal`, com contextos separados. As cinco capturas da etapa 4 ficam somente no ambiente local após bloqueio da revisão automática para envio ao repositório público; código e documentação seguem no checkpoint, sem arquivos privados.
+
+## Etapa 5 — controle financeiro interno (18/10/2026)
+
+Usuário revisou a etapa 4 e autorizou iniciar a etapa 5 com atenção à segurança. Provedores de pagamento/fiscal: a definir. Pacotes e repasses: sem automação por decisão expressa, mantendo lançamentos manuais auditados. Etapa 5 permanece em andamento; não iniciar etapa 6.
+
+Entregue cálculo no servidor em centavos, validação de limites, parcelas exatas e datas mensais, paciente/sessão da clínica, nova cobrança sempre pendente, recebimentos parciais, reversões parciais/integrais, despesas e pagamentos manuais, caixa com abertura única, dinheiro/troco, suprimentos/sangrias, conferência e fechamento. Toda escrita usa transação, lock da clínica, revisão, revalidação de autorização e chave idempotente. Erro de auditoria reverte as demais gravações; erros internos não expõem SQL nem parâmetros ao cliente.
+
+Removidas as confirmações e informações bancárias/fiscais fictícias e indicadores sem evidência. Simulação recusada em todos os ambientes. Legado preservado, identificado e bloqueado para movimentar até migração revisada, fora dos novos relatórios. Resumo usa leitura transacional e confere livro, itens, parcelas e saldos. Portal mostra recebido líquido e identifica legado; não integra meios de pagamento. Busca literal/paginação e filtro de saldos em aberto incluídos.
+
+Migração 0013 aplicada. Schema conferido com 34 tabelas e 412 colunas; seed original e recusa de repetição preservados. Chrome validou os fluxos financeiros completos (cobrança/parcelas/baixa/reversão/histórico/dinheiro/troco/despesa/caixa/diferença/relatório/consulta restrita), desktop/celular e regressões anteriores, sem exceções de execução. Capturas somente locais em `previews/financeiro-etapa5*.png`.
+
+Os testes encontraram conflito de nome no cálculo do relatório, corrigido antes da homologação. A injeção de falha de auditoria foi feita por proxy apenas no teste, dentro de transação real, sem exigir SUPER nem afrouxar a configuração MySQL. Reversão sobre recebimento parcial não exige receber ficticiamente o restante; o saldo original não recebido continua disponível, sem recobrar automaticamente o valor devolvido. Guia e limites em `ETAPA-5-FINANCEIRO-INTERNO.md`.
+
+Revisão preparada por `node scripts/open-review.mjs --finance`, com contas e dados fictícios em contextos separados, sessão de duas horas, sem alterar Manus. Checkpoint previsto: `codex/etapa-5-financeiro-interno`, baseado em `codex/etapa-4-prontuario-e-portal`, sem merge. Integração, webhook assinado, conciliação e estorno externos, fiscal real e homologação com provedores permanecem pendentes.
+
+Validação final: TypeScript aprovado; 145 testes unitários aprovados e 1 caso antigo dependente de banco ignorado nessa suíte; 82 testes de integração MySQL aprovados, incluindo 28 financeiros. Build aprovado, mantendo aviso de tamanho do bundle. O JavaScript principal caiu de aproximadamente 1,77 MB para 1,12 MB após remover telas e simulações antigas; a otimização restante continua na preparação de produção. Inventário atualizado com 137 handlers estáticos. Nenhum segredo ou documento privado será incluído no checkpoint público.
+
+Revisão local aberta em `http://localhost:3420/finance`; busca, paginação e retorno ao resumo autenticado conferidos também na versão final. Sessões separadas da equipe e do portal usam somente a clínica fictícia de revisão. Parada para análise; nenhuma tarefa da etapa 6 iniciada.
+
+Limite do checkpoint público: a revisão automática rejeitou o reenvio de `server/seed-db.mjs` pelos dados demonstrativos plausíveis que já existiam no arquivo público. A comparação com o blob anterior confirmou alteração somente na lista de três tabelas da proteção contra seed em banco preenchido. Essa alteração permanece local; o checkpoint mantém o seed remoto anterior inalterado e publica os demais arquivos, sem capturas nem documentos privados.

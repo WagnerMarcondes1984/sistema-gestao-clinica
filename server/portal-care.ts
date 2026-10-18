@@ -405,6 +405,8 @@ export async function portalData(user: User) {
         title: transactions.title,
         totalAmount: transactions.totalAmount,
         paidAmount: transactions.paidAmount,
+        refundedAmount: transactions.refundedAmount,
+        ledgerVersion: transactions.ledgerVersion,
         dueDate: transactions.dueDate,
         status: transactions.status,
       })

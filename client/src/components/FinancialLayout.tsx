@@ -42,7 +42,7 @@ interface FinancialLayoutProps {
   showFiscalBanner?: boolean;
 }
 
-export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, contextLabel, showFiscalBanner = true }: FinancialLayoutProps) {
+export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, contextLabel, showFiscalBanner = false }: FinancialLayoutProps) {
   const { currentVertical, verticalCode, setVerticalCode, allPresets } = useVertical();
   const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
@@ -252,26 +252,6 @@ export function FinancialLayout({ children, onOpenQuickCheckout, operatorName, c
       </header>
 
       {/* Info Ribbon for Institutional & Fiscal Transparency */}
-      {showFiscalBanner && <div className="bg-slate-100/80 dark:bg-zinc-900/40 border-b border-slate-200/60 dark:border-zinc-800/60 py-1.5 px-4 text-[11px] text-slate-500 dark:text-zinc-400">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-semibold text-slate-700 dark:text-zinc-300">
-              CNPJ: {currentVertical.cnpj}
-            </span>
-            <span>•</span>
-            <span>Inscrição Municipal: {currentVertical.municipalReg}</span>
-            <span>•</span>
-            <span>Conselho: {currentVertical.council}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              Ambiente de Produção Fiscal NFS-e Conectado
-            </span>
-          </div>
-        </div>
-      </div>}
-
       {/* Page Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {children}

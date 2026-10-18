@@ -1,6 +1,7 @@
 // Sessão de demonstração exclusivamente local. Não registra uma rota de login.
 import "dotenv/config";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -21,7 +22,8 @@ const slug = "mindos-revisao-local",
   clinicName = "Clínica fictícia — revisão local",
   openId = "mindos-local-review-owner";
 const appId = "mindos-local-review";
-const careReview = process.argv.includes("--care");
+const financeReview = process.argv.includes("--finance");
+const careReview = process.argv.includes("--care") || financeReview;
 let reviewPatientId = 0;
 let patientToken = null;
 const db = await mysql.createConnection(process.env.DATABASE_URL);
@@ -535,6 +537,54 @@ try {
       }
     }
   }
+  if (financeReview) {
+    const charges = await api.transactions.list.query({ limit: 500 });
+    if (!charges.some(r => r.ledgerVersion === 1)) {
+      const charge = await api.transactions.create.mutate({
+        requestId: randomUUID(),
+        patientId: reviewPatientId,
+        verticalCode: "PSYCHOLOGY_CLINIC",
+        title: "Exemplo fictício — pacote de sessões",
+        category: "DEMO",
+        paymentMethod: "TRANSFER",
+        dueDate: new Date(),
+        installments: 3,
+        discount: 0,
+        addition: 0,
+        items: [{ name: "Sessão fictícia", quantity: 3, unitPrice: 5000 }],
+      });
+      await api.transactions.confirm.mutate({
+        requestId: randomUUID(),
+        code: charge.code,
+        revision: charge.revision,
+        amount: 5000,
+        reference: "Exemplo fictício de baixa manual para revisão",
+      });
+      await api.care.financialAccess.mutate({
+        patientId: reviewPatientId,
+        code: charge.code,
+        visible: true,
+      });
+    }
+    const bills = await api.accountsPayable.list.query({});
+    if (!bills.some(r => r.ledgerVersion === 1))
+      await api.accountsPayable.create.mutate({
+        requestId: randomUUID(),
+        verticalCode: "PSYCHOLOGY_CLINIC",
+        supplierName: "Fornecedor fictício — revisão",
+        description: "Material de demonstração, sem compra real",
+        category: "DEMO",
+        amount: 2500,
+        dueDate: new Date(),
+        paymentMethod: "TRANSFER",
+      });
+    if (!(await api.cash.current.query({ verticalCode: "PSYCHOLOGY_CLINIC" })))
+      await api.cash.open.mutate({
+        requestId: randomUUID(),
+        verticalCode: "PSYCHOLOGY_CLINIC",
+        openingBalance: 10000,
+      });
+  }
   profile = await mkdtemp(join(tmpdir(), "mindos-review-"));
   browser = spawn(
     "google-chrome",
@@ -622,9 +672,11 @@ try {
     },
     sessionId
   );
-  const reviewPath = careReview
-    ? `/clinical-records?patientId=${reviewPatientId}`
-    : "/agenda";
+  const reviewPath = financeReview
+    ? "/finance"
+    : careReview
+      ? `/clinical-records?patientId=${reviewPatientId}`
+      : "/agenda";
   await cdp("Page.navigate", { url: `${base}${reviewPath}` }, sessionId);
   await cdp("Page.bringToFront", {}, sessionId);
   const deadline = Date.now() + 30000;
@@ -637,7 +689,11 @@ try {
     );
     if (
       result.result.value?.includes(
-        careReview ? "Prontuário psicológico" : "Novo agendamento"
+        financeReview
+          ? "Resumo financeiro"
+          : careReview
+            ? "Prontuário psicológico"
+            : "Novo agendamento"
       ) &&
       result.result.value.includes("Administrador fictício")
     ) {
@@ -647,6 +703,18 @@ try {
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   assert.ok(ready, "A sessão local não abriu a agenda autenticada.");
+  if(financeReview){
+    const waitExpression=async(expression,message)=>{const end=Date.now()+45000;while(Date.now()<end){const r=await cdp("Runtime.evaluate",{expression,returnByValue:true},sessionId);if(r.result.value)return;await new Promise(resolve=>setTimeout(resolve,250));}throw new Error(message);};
+    await cdp("Page.navigate",{url:`${base}/transactions`},sessionId);
+    await waitExpression("document.body.innerText.includes('Página 1') && document.body.innerText.includes('Exemplo fictício')","Listagem financeira de revisão não abriu");
+    await cdp("Runtime.evaluate",{expression:"(()=>{const e=document.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'busca-inexistente-ficticia-983732');e.dispatchEvent(new Event('input',{bubbles:true}));})()"},sessionId);
+    await waitExpression("document.body.innerText.includes('Nenhuma cobrança encontrada.')","Busca financeira não filtrou os registros");
+    await cdp("Runtime.evaluate",{expression:"(()=>{const e=document.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'');e.dispatchEvent(new Event('input',{bubbles:true}));})()"},sessionId);
+    await waitExpression("document.body.innerText.includes('Exemplo fictício') && document.body.innerText.includes('Página anterior')","Paginação financeira não recuperou a lista");
+    await cdp("Page.navigate",{url:`${base}/finance`},sessionId);
+    await waitExpression("document.body.innerText.includes('Resumo financeiro') && document.body.innerText.includes('Livro de movimentos')","Resumo não abriu para revisão");
+    console.log("Revisão financeira: busca, paginação e resumo autenticados conferidos.");
+  }
   console.log(`MindOS aberto para revisão: ${base}${reviewPath}`);
   console.log(
     "Clínica e contas fictícias separadas. Sessão temporária de 2 horas; dados de revisão preservados. Nenhuma credencial Manus alterada."

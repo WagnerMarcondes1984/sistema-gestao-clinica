@@ -2,7 +2,7 @@
 
 Levantamento estático atualizado após o primeiro bloco da etapa 3. Gere novamente com `node scripts/inventory-actions.mjs`. Rotas em `INVENTARIO-FUNCIONAL.md`; evidências efetivas em `EXECUCAO-DO-PLANO.md`.
 
-Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **170 handlers**.
+Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **137 handlers**.
 
 | Local | Evento | Situação estática | Handler (até 240 caracteres) |
 |---|---|---|---|
@@ -26,24 +26,6 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/Agenda.tsx:276 | onClick | Revisar fluxo chamado | `() => openEditor(a)` |
 | client/src/pages/Agenda.tsx:325 | onSubmit | Chama persistência — conferir evidência do módulo | `(data, scope) => { if (editor.session) move.mutate({ appointmentId: editor.session.id, revision: editor.session.revision, scope, data, }); else create.mutate(data); }` |
 | client/src/pages/Agenda.tsx:363 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (action) transition.mutate({ appointmentId: action.session.id, revision: action.session.revision, status: action.status, }); }` |
-| client/src/pages/CashManagement.tsx:92 | onClick | Ação local — conferir fluxo completo | `() => setShowCloseModal(true)` |
-| client/src/pages/CashManagement.tsx:251 | onSubmit | Revisar fluxo chamado | `handleCloseSession` |
-| client/src/pages/CashManagement.tsx:305 | onClick | Ação local — conferir fluxo completo | `() => setShowCloseModal(false)` |
-| client/src/pages/Checkout.tsx:422 | onClick | Revisar fluxo chamado | `() => handleUpdateItemQuantity(idx, item.quantity - 1)` |
-| client/src/pages/Checkout.tsx:432 | onClick | Revisar fluxo chamado | `() => handleUpdateItemQuantity(idx, item.quantity + 1)` |
-| client/src/pages/Checkout.tsx:445 | onClick | Revisar fluxo chamado | `() => handleRemoveItem(idx)` |
-| client/src/pages/Checkout.tsx:467 | onClick | Revisar fluxo chamado | `() => handleAddItemFromCatalog(catItem)` |
-| client/src/pages/Checkout.tsx:502 | onClick | Ação local — conferir fluxo completo | `() => setPaymentMethod(m.id as PaymentMethod)` |
-| client/src/pages/Checkout.tsx:544 | onClick | Ação local — conferir fluxo completo | `() => setInstallments(parc)` |
-| client/src/pages/Checkout.tsx:669 | onClick | Revisar fluxo chamado | `handleProceedToPayment` |
-| client/src/pages/Checkout.tsx:780 | onClick | Revisar fluxo chamado | `() => { navigator.clipboard.writeText(createdTx.pixCopiaECola &#124;&#124; ''); toast.success('Código Pix copiado para a área de transferência!'); }` |
-| client/src/pages/Checkout.tsx:805 | onClick | Revisar fluxo chamado | `handleSimulatePaymentApproval` |
-| client/src/pages/Checkout.tsx:844 | onClick | Revisar fluxo chamado | `handleSimulatePaymentApproval` |
-| client/src/pages/Checkout.tsx:877 | onClick | Revisar fluxo chamado | `handleSimulatePaymentApproval` |
-| client/src/pages/Checkout.tsx:894 | onClick | Ação local — conferir fluxo completo | `() => setStep(1)` |
-| client/src/pages/Checkout.tsx:954 | onClick | Ação local — conferir fluxo completo | `() => setShowReceipt(true)` |
-| client/src/pages/Checkout.tsx:963 | onClick | Ação local — conferir fluxo completo | `() => setShowInvoice(true)` |
-| client/src/pages/Checkout.tsx:975 | onClick | Revisar fluxo chamado | `handleResetCheckout` |
 | client/src/pages/ClinicalRecord.tsx:125 | onSubmit | Chama persistência — conferir evidência do módulo | `e => { e.preventDefault(); if (editing) update.mutate({ recordId: editing.id, revision: editing.revision, content: content.trim(), finalize: false, }); else if (parent) addendum.mutate({ patientId, recordType, parentRecordId: parent.id, app` |
 | client/src/pages/ClinicalRecord.tsx:232 | onClick | Revisar fluxo chamado | `clear` |
 | client/src/pages/ClinicalRecord.tsx:293 | onClick | Ação local — conferir fluxo completo | `() => { create.reset(); update.reset(); setEditing(record); setParent(null); setRecordType(record.recordType); setContent(record.content); onDirtyChange(true); }` |
@@ -74,15 +56,25 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/ConsentTemplates.tsx:150 | onClick | Ação local — conferir fluxo completo | `() => { publish.reset(); setAction({ ...t, retire: true }); }` |
 | client/src/pages/ConsentTemplates.tsx:179 | onSubmit | Chama persistência — conferir evidência do módulo | `e => { e.preventDefault(); save.mutate(editing); }` |
 | client/src/pages/ConsentTemplates.tsx:265 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (action) publish.mutate({ id: action.id, revision: action.revision, retire: action.retire, }); }` |
-| client/src/pages/Dashboard.tsx:214 | onClick | Ação local — conferir fluxo completo | `() => setPeriod('today')` |
-| client/src/pages/Dashboard.tsx:224 | onClick | Ação local — conferir fluxo completo | `() => setPeriod('month')` |
-| client/src/pages/Dashboard.tsx:234 | onClick | Ação local — conferir fluxo completo | `() => setPeriod('year')` |
-| client/src/pages/Dashboard.tsx:662 | onClick | Ação local — conferir fluxo completo | `() => setSelectedReceiptTx(tx)` |
-| client/src/pages/Dashboard.tsx:670 | onClick | Ação local — conferir fluxo completo | `() => setSelectedInvoiceTx(tx)` |
-| client/src/pages/Dashboard.tsx:678 | onClick | Ação local — conferir fluxo completo | `() => setRefundTargetTx(tx)` |
-| client/src/pages/Dashboard.tsx:691 | onClick | Revisar fluxo chamado | `() => handleSimulateWebhook(tx.code)` |
-| client/src/pages/Dashboard.tsx:727 | onSubmit | Revisar fluxo chamado | `handleRefundSubmit` |
-| client/src/pages/Dashboard.tsx:752 | onClick | Ação local — conferir fluxo completo | `() => setRefundTargetTx(null)` |
+| client/src/pages/FinancialWorkspace.tsx:151 | onClick | Revisar fluxo chamado | `onConfirm` |
+| client/src/pages/FinancialWorkspace.tsx:158 | onClick | Revisar fluxo chamado | `onClose` |
+| client/src/pages/FinancialWorkspace.tsx:232 | onSubmit | Revisar fluxo chamado | `submit` |
+| client/src/pages/FinancialWorkspace.tsx:336 | onClick | Ação local — conferir fluxo completo | `() => setItems(items.filter((_, n) => n !== index))` |
+| client/src/pages/FinancialWorkspace.tsx:347 | onClick | Ação local — conferir fluxo completo | `() => setItems([...items, { name: "", quantity: 1, value: "" }])` |
+| client/src/pages/FinancialWorkspace.tsx:527 | onClick | Ação local — conferir fluxo completo | `() => setReview(false)` |
+| client/src/pages/FinancialWorkspace.tsx:606 | onSubmit | Ação local — conferir fluxo completo | `e => { e.preventDefault(); try { if (!reaisToCents(amount)) throw new Error("Informe um valor positivo"); setError(""); setReview(true); } catch (e) { setError((e as Error).message); } }` |
+| client/src/pages/FinancialWorkspace.tsx:764 | onClick | Revisar fluxo chamado | `() => start("in")` |
+| client/src/pages/FinancialWorkspace.tsx:767 | onClick | Revisar fluxo chamado | `() => start("out")` |
+| client/src/pages/FinancialWorkspace.tsx:770 | onClick | Revisar fluxo chamado | `() => start("close")` |
+| client/src/pages/FinancialWorkspace.tsx:777 | onClick | Revisar fluxo chamado | `() => start("open")` |
+| client/src/pages/FinancialWorkspace.tsx:827 | onClick | Ação local — conferir fluxo completo | `() => setReview(false)` |
+| client/src/pages/FinancialWorkspace.tsx:988 | onClick | Ação local — conferir fluxo completo | `() => setPage(p => p - 1)` |
+| client/src/pages/FinancialWorkspace.tsx:1000 | onClick | Ação local — conferir fluxo completo | `() => setPage(p => p + 1)` |
+| client/src/pages/FinancialWorkspace.tsx:1037 | onClick | Ação local — conferir fluxo completo | `() => setDetail(r.code)` |
+| client/src/pages/FinancialWorkspace.tsx:1049 | onClick | Ação local — conferir fluxo completo | `() => setAction({ kind: "receipt", target: { ...r, remaining: r.remainingAmount }, })` |
+| client/src/pages/FinancialWorkspace.tsx:1070 | onClick | Ação local — conferir fluxo completo | `() => setAction({ kind: "reversal", target: { ...r, remaining: r.netReceived }, })` |
+| client/src/pages/FinancialWorkspace.tsx:1116 | onClick | Ação local — conferir fluxo completo | `() => setAction({ kind: "payable", target: { ...r, remaining: r.remainingAmount }, })` |
+| client/src/pages/FinancialWorkspace.tsx:1217 | onClick | Ação local — conferir fluxo completo | `() => setDetail("")` |
 | client/src/pages/NotFound.tsx:41 | onClick | Revisar fluxo chamado | `handleGoHome` |
 | client/src/pages/OnlineBooking.tsx:57 | onSubmit | Revisar fluxo chamado | `submit` |
 | client/src/pages/PatientCare.tsx:82 | onSubmit | Revisar fluxo chamado | `upload` |
@@ -102,8 +94,8 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/PatientPortal.tsx:314 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "DECLINED", }); }` |
 | client/src/pages/PatientPortal.tsx:332 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: t.id, title: t.title, body: t.body, hash: t.bodyHash, decision: "WITHDRAWN", }); }` |
 | client/src/pages/PatientPortal.tsx:380 | onClick | Ação local — conferir fluxo completo | `() => { decide.reset(); setAcknowledged(false); setConsent({ id: d.templateId, title: snapshot.title, body: snapshot.body, hash: d.bodyHash, decision: "WITHDRAWN", }); }` |
-| client/src/pages/PatientPortal.tsx:455 | onSubmit | Chama persistência — conferir evidência do módulo | `e => { e.preventDefault(); request.mutate({ appointmentId: reschedule.id, date: reschedule.date, time: reschedule.time, }); }` |
-| client/src/pages/PatientPortal.tsx:541 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (consent) decide.mutate({ templateId: consent.id, bodyHash: consent.hash, decision: consent.decision, acknowledged, }); }` |
+| client/src/pages/PatientPortal.tsx:459 | onSubmit | Chama persistência — conferir evidência do módulo | `e => { e.preventDefault(); request.mutate({ appointmentId: reschedule.id, date: reschedule.date, time: reschedule.time, }); }` |
+| client/src/pages/PatientPortal.tsx:545 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (consent) decide.mutate({ templateId: consent.id, bodyHash: consent.hash, decision: consent.decision, acknowledged, }); }` |
 | client/src/pages/Patients.tsx:88 | onSubmit | Revisar fluxo chamado | `submit` |
 | client/src/pages/Patients.tsx:245 | onClick | Ação local — conferir fluxo completo | `() => setEditor({ patient: null })` |
 | client/src/pages/Patients.tsx:256 | onSubmit | Ação local — conferir fluxo completo | `e => { e.preventDefault(); setSearch(text.trim()); setPage(1); }` |
@@ -111,15 +103,6 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/Patients.tsx:348 | onClick | Ação local — conferir fluxo completo | `() => setEditor({ patient: p })` |
 | client/src/pages/Patients.tsx:370 | onClick | Ação local — conferir fluxo completo | `() => setPage(p => p - 1)` |
 | client/src/pages/Patients.tsx:383 | onClick | Ação local — conferir fluxo completo | `() => setPage(p => p + 1)` |
-| client/src/pages/Payables.tsx:93 | onClick | Ação local — conferir fluxo completo | `() => setStatusFilter('ALL')` |
-| client/src/pages/Payables.tsx:103 | onClick | Ação local — conferir fluxo completo | `() => setStatusFilter('PENDING')` |
-| client/src/pages/Payables.tsx:113 | onClick | Ação local — conferir fluxo completo | `() => setStatusFilter('PAID')` |
-| client/src/pages/Payables.tsx:182 | onClick | Chama persistência — conferir evidência do módulo | `() => payMutation.mutate({ code: p.code })` |
-| client/src/pages/Receivables.tsx:120 | onClick | Ação local — conferir fluxo completo | `() => setFilter('ALL')` |
-| client/src/pages/Receivables.tsx:130 | onClick | Ação local — conferir fluxo completo | `() => setFilter('PENDING')` |
-| client/src/pages/Receivables.tsx:140 | onClick | Ação local — conferir fluxo completo | `() => setFilter('OVERDUE')` |
-| client/src/pages/Receivables.tsx:211 | onClick | Revisar fluxo chamado | `() => { navigator.clipboard.writeText( 'Olá ${tx.patientName}, segue seu link para liquidação da consulta na ${currentVertical.name}: https://fluxa.med.br/pay/${tx.code}' ); toast.success('Mensagem de cobrança copiada para envio ao paciente` |
-| client/src/pages/Receivables.tsx:225 | onClick | Chama persistência — conferir evidência do módulo | `() => confirmMutation.mutate({ code: tx.code })` |
 | client/src/pages/Reception.tsx:165 | onClick | Chama persistência — conferir evidência do módulo | `() => checkin.mutate({ appointmentId: a.id, revision: a.revision, status: "WAITING", })` |
 | client/src/pages/Reception.tsx:185 | onClick | Chama persistência — conferir evidência do módulo | `() => event.mutate({ patientId: a.patientId, appointmentId: a.id, eventType: "CALL_LOGGED", })` |
 | client/src/pages/Reception.tsx:262 | onClick | Ação local — conferir fluxo completo | `() => { process.reset(); setPending({ request: r, status: "CONTACTED" }); }` |
@@ -141,13 +124,6 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/Team.tsx:380 | onClick | Revisar fluxo chamado | `async () => { try { await navigator.clipboard.writeText(inviteLink); toast.success("Link copiado."); } catch { toast.error("Selecione o link e copie manualmente."); } }` |
 | client/src/pages/Team.tsx:428 | onClick | Chama persistência — conferir evidência do módulo | `() => revoke.mutate({ inviteId: invite.id })` |
 | client/src/pages/Team.tsx:466 | onSubmit | Revisar fluxo chamado | `submitEdit` |
-| client/src/pages/Transactions.tsx:303 | onClick | Ação local — conferir fluxo completo | `() => setSelectedInvoiceTx(tx)` |
-| client/src/pages/Transactions.tsx:319 | onClick | Ação local — conferir fluxo completo | `() => setSelectedReceiptTx(tx)` |
-| client/src/pages/Transactions.tsx:327 | onClick | Ação local — conferir fluxo completo | `() => setSelectedInvoiceTx(tx)` |
-| client/src/pages/Transactions.tsx:335 | onClick | Ação local — conferir fluxo completo | `() => setRefundTargetTx(tx)` |
-| client/src/pages/Transactions.tsx:347 | onClick | Chama persistência — conferir evidência do módulo | `() => webhookMutation.mutate({ code: tx.code })` |
-| client/src/pages/Transactions.tsx:401 | onClick | Ação local — conferir fluxo completo | `() => setRefundTargetTx(null)` |
-| client/src/pages/Transactions.tsx:409 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (!refundReason.trim()) { toast.error('Informe a justificativa do estorno.'); return; } refundMutation.mutate({ code: refundTargetTx.code, reason: refundReason, }); }` |
 | client/src/components/AIChatBox.tsx:214 | onClick | Revisar fluxo chamado | `() => onSendMessage(prompt)` |
 | client/src/components/AIChatBox.tsx:308 | onSubmit | Revisar fluxo chamado | `handleSubmit` |
 | client/src/components/AppointmentForm.tsx:69 | onSubmit | Revisar fluxo chamado | `submit` |
@@ -160,10 +136,6 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/components/FinancialLayout.tsx:129 | onClick | Ação local — conferir fluxo completo | `() => setVerticalMenuOpen(false)` |
 | client/src/components/FinancialLayout.tsx:143 | onClick | Ação local — conferir fluxo completo | `() => { setVerticalCode(preset.code); setVerticalMenuOpen(false); }` |
 | client/src/components/FinancialLayout.tsx:198 | onClick | Revisar fluxo chamado | `toggleTheme` |
-| client/src/components/InvoiceModal.tsx:64 | onClick | Revisar fluxo chamado | `() => window.print()` |
-| client/src/components/InvoiceModal.tsx:70 | onClick | Revisar fluxo chamado | `onClose` |
-| client/src/components/InvoiceModal.tsx:195 | onClick | Revisar fluxo chamado | `onClose` |
-| client/src/components/InvoiceModal.tsx:201 | onClick | Revisar fluxo chamado | `() => { navigator.clipboard.writeText(invoiceKey); toast.success('Chave de acesso da NFS-e copiada com sucesso!'); }` |
 | client/src/components/ManusDialog.tsx:80 | onClick | Revisar fluxo chamado | `onLogin` |
 | client/src/components/patients/PatientSelector.tsx:40 | onClick | Revisar fluxo chamado | `() => startLogin()` |
 | client/src/components/patients/PatientSelector.tsx:92 | onClick | Ação local — conferir fluxo completo | `() => setSearch(text.trim())` |
@@ -171,8 +143,3 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/components/PortalRescheduleInbox.tsx:95 | onClick | Ação local — conferir fluxo completo | `() => { resolve.reset(); setSelected({ request: r, approve: false }); }` |
 | client/src/components/PortalRescheduleInbox.tsx:147 | onSubmit | Chama persistência — conferir evidência do módulo | `appointment => resolve.mutate({ id: selected.request.id, revision: selected.request.revision, approve: true, appointment, })` |
 | client/src/components/PortalRescheduleInbox.tsx:162 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (selected) resolve.mutate({ id: selected.request.id, revision: selected.request.revision, approve: false, }); }` |
-| client/src/components/ReceiptModal.tsx:63 | onClick | Revisar fluxo chamado | `handlePrint` |
-| client/src/components/ReceiptModal.tsx:70 | onClick | Revisar fluxo chamado | `onClose` |
-| client/src/components/ReceiptModal.tsx:190 | onClick | Revisar fluxo chamado | `handleCopyCode` |
-| client/src/components/ReceiptModal.tsx:202 | onClick | Revisar fluxo chamado | `onClose` |
-| client/src/components/ReceiptModal.tsx:208 | onClick | Revisar fluxo chamado | `handlePrint` |
