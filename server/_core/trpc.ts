@@ -6,6 +6,17 @@ import { assertMindosPermission } from "../db";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    const { stack, ...data } = shape.data;
+    return {
+      ...shape,
+      message:
+        error.code === "INTERNAL_SERVER_ERROR"
+          ? "Não foi possível concluir a operação. Confira os dados e tente novamente."
+          : shape.message,
+      data,
+    };
+  },
 });
 
 export const router = t.router;

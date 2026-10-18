@@ -27,6 +27,7 @@ import OnlineBooking from "./pages/OnlineBooking";
 import CRM from "./pages/CRM";
 import Team from "./pages/Team";
 import AcceptInvite from "./pages/AcceptInvite";
+import Readiness from "./pages/Readiness";
 
 function Router() {
   return (
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/book" component={OnlineBooking} />
       <Route path="/app/admin-studio" component={AdminStudio} />
       <Route path="/app/team" component={Team} />
+      <Route path="/app/readiness" component={Readiness} />
       <Route path="/invite" component={AcceptInvite} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/transactions" component={Transactions} />

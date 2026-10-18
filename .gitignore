@@ -118,3 +118,7 @@ client/public/__manus__/version.json
 
 # Arquivos privados criptografados, fora do controle de versão
 .mindos-private/
+
+# Configuração operacional local (somente exemplos são públicos)
+deployment/*.env
+*.mindos.enc

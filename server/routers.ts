@@ -1,3 +1,4 @@
+import { operationsRouter } from "./operations-router";
 import { publicSiteRouter } from "./public-site-router";
 import { brandForStaff } from "./public-site";
 import { siteSlug } from "../shared/public-site";
@@ -67,6 +68,7 @@ import {
 } from "./db";
 
 export const appRouter = router({
+  operations: operationsRouter,
   team: teamRouter,
   patients: patientsRouter,
   care: careRouter,
@@ -81,7 +83,10 @@ export const appRouter = router({
     requestBooking: publicProcedure
       .input(publicBookingInput)
       .mutation(({ ctx, input }) =>
-        requestPublicBooking(input, ctx.req.socket?.remoteAddress || "unknown")
+        requestPublicBooking(
+          input,
+          ctx.req.ip || ctx.req.socket?.remoteAddress || "unknown"
+        )
       ),
   }),
   auth: router({

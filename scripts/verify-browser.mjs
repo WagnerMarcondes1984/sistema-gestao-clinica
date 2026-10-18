@@ -50,6 +50,8 @@ try {
     env: {
       ...process.env,
       NODE_ENV: "production",
+      APP_ENV: "local",
+      HOST: "127.0.0.1",
       VITE_APP_ID: appId,
       PORT: "3410",
       PUBLIC_TENANT_SLUG: fixture.publicSlug,
@@ -1892,6 +1894,56 @@ try {
   await waitForText("Permissão insuficiente");
   console.log(
     "Chrome: edição persistente de marca/blocos/SEO, rascunho separado do público, prévia privada entre clínicas, aprovação, publicação, restauração exata, marca no portal, metadados/llms.txt, agendamento por slug e consulta restrita aprovados."
+  );
+
+  const live = await fetch(`${base}/health/live`);
+  assert.equal(live.status, 200);
+  assert.deepEqual(await live.json(), { status: "alive" });
+  const readiness = await fetch(`${base}/health/ready`);
+  assert.equal(readiness.status, 200);
+  assert.deepEqual(await readiness.json(), { status: "ready" });
+  await assert.rejects(
+    client(portalAccount.token).operations.status.query(),
+    error => error.data?.code === "FORBIDDEN"
+  );
+  await setCookie(operationToken);
+  await page("Page.navigate", { url: `${base}/app/readiness` });
+  await waitForText("Restauração local de backup");
+  await waitForText("Etapa 8 em andamento");
+  await click("Atualizar verificação");
+  await waitForText("Migrações do sistema");
+  assert.ok(
+    (await evaluate("document.body.innerText")).includes(
+      "Contratar o destino externo"
+    )
+  );
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  assert.equal(
+    await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),
+    true
+  );
+  await page("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Tab",
+    code: "Tab",
+  });
+  await page("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: "Tab",
+    code: "Tab",
+  });
+  assert.equal(await evaluate("document.activeElement.tagName!=='BODY'"), true);
+  await page("Emulation.clearDeviceMetricsOverride");
+  await setCookie(portalAccount.token);
+  await page("Page.navigate", { url: `${base}/app/readiness` });
+  await waitForText("Permissão insuficiente");
+  console.log(
+    "Chrome: preparação operacional desktop/celular, teclado, atualização, acesso restrito e health checks reais aprovados. Nenhuma aprovação de produção exibida."
   );
 
   assert.deepEqual(exceptions, []);

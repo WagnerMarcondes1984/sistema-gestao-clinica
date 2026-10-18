@@ -1,0 +1,89 @@
+name: mindos-production
+services:
+  mysql:
+    image: mysql:8.0.46-debian
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: mindos
+      MYSQL_USER: mindos_migrator
+      MYSQL_PASSWORD: ${PROD_MIGRATION_PASSWORD:?Defina PROD_MIGRATION_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${PROD_DB_ROOT_PASSWORD:?Defina PROD_DB_ROOT_PASSWORD}
+      MYSQL_RUNTIME_PASSWORD: ${PROD_DB_PASSWORD:?Defina PROD_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:${PROD_DB_PORT:-3308}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deployment/mysql-init/10-runtime-user.sh:/docker-entrypoint-initdb.d/10-runtime-user.sh:ro
+    networks: [private]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u mindos_migrator mindos -e 'SELECT 1' >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 30
+  migrate:
+    image: ${MINDOS_IMAGE:-mindos:stage8-review}
+    profiles: [tools]
+    command: ["node", "scripts/migrate.mjs"]
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DATABASE_URL: ${PROD_MIGRATION_DATABASE_URL:?Defina a URL exclusiva para migrações}
+    networks: [private]
+  app:
+    image: ${MINDOS_IMAGE:-mindos:stage8-review}
+    build:
+      context: .
+      args:
+        VITE_APP_ID: ${VITE_APP_ID:?Configure o aplicativo Manus}
+        VITE_OAUTH_PORTAL_URL: ${VITE_OAUTH_PORTAL_URL:?Configure o portal Manus}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 75s
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      APP_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: ${PROD_DATABASE_URL:?Defina a URL interna com senha codificada}
+      APP_ORIGIN: ${APP_ORIGIN:?Defina a origem HTTPS real}
+      TRUST_PROXY_CIDRS: ${TRUST_PROXY_CIDRS:-172.30.77.1/32}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-8}
+      JWT_SECRET: ${JWT_SECRET:?Gere um segredo próprio}
+      CLINICAL_INTEGRITY_SECRET: ${CLINICAL_INTEGRITY_SECRET:?Gere um segredo próprio}
+      DOCUMENT_ENCRYPTION_SECRET: ${DOCUMENT_ENCRYPTION_SECRET:?Gere um segredo próprio}
+      RECOVERY_RECEIPT_PUBLIC_KEY: ${RECOVERY_RECEIPT_PUBLIC_KEY:?Configure somente a chave pública da evidência}
+      PRIVATE_DOCUMENT_ROOT: /var/lib/mindos/documents
+      VITE_APP_ID: ${VITE_APP_ID}
+      OWNER_OPEN_ID: ${OWNER_OPEN_ID:?Defina a identidade Manus do responsável pela instalação}
+      OAUTH_SERVER_URL: ${OAUTH_SERVER_URL:?Configure o servidor Manus}
+      VITE_OAUTH_PORTAL_URL: ${VITE_OAUTH_PORTAL_URL}
+      PUBLIC_TENANT_SLUG: ${PUBLIC_TENANT_SLUG:?Defina a clínica publicada}
+      ALLOW_DEMO_SEED: "false"
+      ENABLE_MANUS_DEBUG: "false"
+    ports: ["127.0.0.1:${PROD_APP_PORT:-3000}:3000"]
+    volumes:
+      - ${MINDOS_DATA_ROOT:-/srv/mindos/private}:/var/lib/mindos
+    networks: [private]
+volumes:
+  mysql_data:
+    name: ${PROD_DB_VOLUME:-mindos-production-mysql}
+networks:
+  private:
+    ipam:
+      config:
+        - subnet: ${MINDOS_DOCKER_SUBNET:-172.30.77.0/24}
+          gateway: ${MINDOS_DOCKER_GATEWAY:-172.30.77.1}

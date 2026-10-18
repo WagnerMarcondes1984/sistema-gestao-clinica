@@ -3,7 +3,7 @@ import "dotenv/config";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import mysql from "mysql2/promise";
@@ -22,6 +22,7 @@ const slug = "mindos-revisao-local",
   clinicName = "Clínica fictícia — revisão local",
   openId = "mindos-local-review-owner";
 const appId = "mindos-local-review";
+const opsReview = process.argv.includes("--ops");
 const studioReview = process.argv.includes("--studio");
 const crmReview = process.argv.includes("--crm");
 const financeReview = process.argv.includes("--finance");
@@ -43,6 +44,19 @@ async function stop() {
       retryDelay: 250,
     });
 }
+let stopping = false;
+const shutdown = async () => {
+  if (stopping) return;
+  stopping = true;
+  try {
+    await stop();
+    await db.end().catch(() => {});
+  } finally {
+    process.exit(0);
+  }
+};
+process.once("SIGTERM", () => void shutdown());
+process.once("SIGINT", () => void shutdown());
 try {
   const [[lock]] = await db.query(
     "SELECT GET_LOCK('mindos_local_review_setup', 0) AS acquired"
@@ -133,6 +147,7 @@ try {
     env: {
       ...process.env,
       NODE_ENV: "production",
+      APP_ENV: "local",
       HOST: "127.0.0.1",
       PORT: "3420",
       VITE_APP_ID: appId,
@@ -142,8 +157,8 @@ try {
   });
   const base = await new Promise((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error("Servidor local não iniciou.")),
-      45000
+      () => reject(new Error("Servidor local não iniciou em 120 segundos.")),
+      120000
     );
     let output = "";
     server.stdout.on("data", chunk => {
@@ -154,10 +169,14 @@ try {
         resolve(`http://localhost:${match[1]}`);
       }
     });
-    server.once("error", reject);
-    server.once("exit", () =>
-      reject(new Error("Servidor de revisão encerrou."))
-    );
+    server.once("error", error => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    server.once("exit", () => {
+      clearTimeout(timer);
+      reject(new Error("Servidor de revisão encerrou."));
+    });
   });
   const token = await new SignJWT({
     openId,
@@ -746,7 +765,7 @@ try {
       const timer = setTimeout(() => {
         requests.delete(id);
         reject(new Error(`Chrome não respondeu: ${method}`));
-      }, 15000);
+      }, 90000);
       requests.set(id, { resolve, reject, timer });
       socket.send(
         JSON.stringify({
@@ -777,15 +796,17 @@ try {
     },
     sessionId
   );
-  const reviewPath = studioReview
-    ? "/app/admin-studio"
-    : crmReview
-      ? "/crm"
-      : financeReview
-        ? "/finance"
-        : careReview
-          ? `/clinical-records?patientId=${reviewPatientId}`
-          : "/agenda";
+  const reviewPath = opsReview
+    ? "/app/readiness"
+    : studioReview
+      ? "/app/admin-studio"
+      : crmReview
+        ? "/crm"
+        : financeReview
+          ? "/finance"
+          : careReview
+            ? `/clinical-records?patientId=${reviewPatientId}`
+            : "/agenda";
   await cdp("Page.navigate", { url: `${base}${reviewPath}` }, sessionId);
   await cdp("Page.bringToFront", {}, sessionId);
   const deadline = Date.now() + 30000;
@@ -798,15 +819,17 @@ try {
     );
     if (
       result.result.value?.includes(
-        studioReview
-          ? "Admin Studio"
-          : crmReview
-            ? "CRM administrativo"
-            : financeReview
-              ? "Resumo financeiro"
-              : careReview
-                ? "Prontuário psicológico"
-                : "Novo agendamento"
+        opsReview
+          ? "Restauração local de backup"
+          : studioReview
+            ? "Admin Studio"
+            : crmReview
+              ? "CRM administrativo"
+              : financeReview
+                ? "Resumo financeiro"
+                : careReview
+                  ? "Prontuário psicológico"
+                  : "Novo agendamento"
       ) &&
       result.result.value.includes("Administrador fictício")
     ) {
@@ -868,6 +891,41 @@ try {
       "Revisão financeira: busca, paginação e resumo autenticados conferidos."
     );
   }
+  if (opsReview) {
+    const state = await cdp(
+      "Runtime.evaluate",
+      { expression: "document.body.innerText", returnByValue: true },
+      sessionId
+    );
+    assert.ok(
+      state.result.value.includes("Ensaio local autenticado em"),
+      "A evidência de recuperação não foi autenticada pela chave pública."
+    );
+    const shot = await cdp(
+      "Page.captureScreenshot",
+      { format: "png", captureBeyondViewport: true },
+      sessionId
+    );
+    await writeFile(
+      join(tmpdir(), "mindos-readiness-etapa8.png"),
+      Buffer.from(shot.data, "base64")
+    );
+    await cdp(
+      "Emulation.setDeviceMetricsOverride",
+      { width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
+      sessionId
+    );
+    const mobile = await cdp(
+      "Page.captureScreenshot",
+      { format: "png", captureBeyondViewport: true },
+      sessionId
+    );
+    await writeFile(
+      join(tmpdir(), "mindos-readiness-etapa8-mobile.png"),
+      Buffer.from(mobile.data, "base64")
+    );
+    await cdp("Emulation.clearDeviceMetricsOverride", {}, sessionId);
+  }
   if (studioReview) {
     await cdp("Target.createTarget", { url: `${base}/site/${slug}` });
     console.log(
@@ -926,8 +984,6 @@ try {
   }
   socket.close();
   socket = null;
-  process.once("SIGTERM", () => stop());
-  process.once("SIGINT", () => stop());
   await new Promise(resolve => browser.once("exit", resolve));
   await stop();
 } catch (error) {
