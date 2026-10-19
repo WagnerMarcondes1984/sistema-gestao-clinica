@@ -83,6 +83,7 @@ export function FinancialLayout({
       icon: CalendarDays,
     },
     { href: "/app/team", label: "Equipe", icon: UsersRound },
+    { href: "/app/readiness", label: "Preparação", icon: ShieldCheck },
   ];
 
   return (

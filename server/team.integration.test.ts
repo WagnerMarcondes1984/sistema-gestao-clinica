@@ -110,6 +110,21 @@ describe("gestão de equipe, convites e associações", () => {
     }
   });
 
+  it("restringe preparação operacional aos gestores e preserva o contexto da clínica", async () => {
+    const a = await ownerA.caller.operations.status();
+    const b = await ownerB.caller.operations.status();
+    expect(a.clinic.name).toBe("Equipe fictícia A");
+    expect(b.clinic.name).toBe("Equipe fictícia B");
+    expect(a.productionApproved).toBe(false);
+    expect(a.checks.database).toBe(true);
+    expect(a.checks.migrations).toBe(true);
+    expect(JSON.stringify(a)).not.toMatch(
+      /DATABASE_URL|clinicalSecret|documentSecret|rowsVerified|BACKUP_ENCRYPTION_KEY|mindos_dev/
+    );
+    await expect(viewer.caller.operations.status()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
   it("limita listagens à própria clínica e oculta equipe de não administradores", async () => {
     const overview = await ownerA.caller.team.overview();
     expect(overview.members.map(member => member.userId).sort()).toEqual(

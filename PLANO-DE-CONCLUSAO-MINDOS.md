@@ -111,7 +111,7 @@ Aceite: um lead entra, recebe responsável e tarefa, tem contato registrado e vi
 
 ## 7. Concluir administração e conteúdo público — prioridade média
 
-**Implementada e validada para revisão do usuário. Abrir localhost e parar antes da etapa 8. Domínio externo e integrações indisponíveis são identificados sem confirmação fictícia. Guia em `docs/ETAPA-7-ADMINISTRACAO-E-SITE-PUBLICO.md`.**
+**Revisada pelo usuário; início da etapa 8 autorizado. Domínio externo e integrações indisponíveis são identificados sem confirmação fictícia. Guia em `docs/ETAPA-7-ADMINISTRACAO-E-SITE-PUBLICO.md`.**
 
 Depende da etapa 2 e da definição das funcionalidades do lançamento.
 
@@ -126,16 +126,21 @@ Aceite: salvar rascunho não altera o site publicado; publicação aprovada alte
 
 ## 8. Validar operação e preparar produção — prioridade crítica para lançamento
 
+**Em andamento: primeiro bloco técnico local. Hospedagem escolhida: servidor/VPS com Docker; backup externo a definir. Não há aprovação de produção nem início da etapa 9. Guia em `docs/ETAPA-8-OPERACAO-E-PRODUCAO.md`.**
+
 Depende das etapas incluídas no escopo do lançamento.
 
 - [ ] Criar testes de integração dos fluxos principais com banco de teste e testes de autorização entre clínicas, pacientes e papéis.
 - [ ] Testar concorrência de agenda, consistência financeira e reenvio de webhooks.
 - [ ] Verificar fluxos completos no navegador em desktop e celular, incluindo teclado, erros e estados vazios.
 - [ ] Definir retenção, exportação e exclusão de dados, privacidade e consentimentos com os responsáveis pelo produto.
-- [ ] Configurar segredos, HTTPS, armazenamento privado e limites contra abuso.
-- [ ] Configurar backup e executar uma restauração de teste.
+- [x] Implementar validação de segredos/configuração, confiança explícita no proxy, limites HTTP e health checks locais.
+- [ ] Configurar e homologar HTTPS, segredos e armazenamento privado no VPS real.
+- [x] Implementar backup manual offline criptografado e comprovar restauração local isolada, incluindo banco, documentos e versões clínicas.
+- [ ] Contratar destino externo, definir frequência/retenção, configurar a cópia e ensaiar recuperação externa.
 - [ ] Configurar monitoramento e alertas sem registrar conteúdo clínico ou segredos em logs.
-- [ ] Preparar implantação, migrações, reversão, suporte e resposta a incidentes.
+- [x] Preparar Dockerfile/Compose, migração sem seed e runbooks de implantação, reversão e incidentes.
+- [ ] Homologar imagem/infraestrutura no VPS, definir responsáveis e validar recuperação/retomada operacional.
 - [ ] Fazer homologação com administrador, recepção, psicólogo, financeiro e paciente.
 - [ ] Realizar piloto controlado e corrigir problemas antes de ampliar o uso.
 

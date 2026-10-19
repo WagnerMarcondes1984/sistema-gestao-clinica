@@ -1,6 +1,6 @@
 # Inventário funcional — base de 17/10/2026
 
-Inventário inicial com atualização das etapas 2 a 7; a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
+Inventário inicial com atualização das etapas 2 a 8 (primeiro bloco técnico); a homologação visual completa continua pendente. “Parcial” indica que existe implementação persistente, mas a jornada tem lacunas; não equivale a funcionalidade aprovada para produção.
 
 | Rota | Situação | Evidência e trabalho restante |
 |---|---|---|
@@ -17,6 +17,7 @@ Inventário inicial com atualização das etapas 2 a 7; a homologação visual c
 | `/app/consents` | Implementado e testado | Rascunho, publicação e aposentadoria de versões; preservação das decisões. |
 | `/book` | Implementado e testado | Serviços publicados, dados mínimos, validação, limites persistentes e solicitação que segue para triagem. Não reserva automaticamente. |
 | `/app/team` | Implementado e testado | Gestão de vínculos, permissões, ativação e convites com isolamento por clínica. Login externo real pendente de configuração. |
+| `/app/readiness` | Preparação operacional local | Gestores consultam banco, migrações, armazenamento privado e recibo autenticado de ensaio local. Sem aprovação de produção ou restauração pela interface. |
 | `/invite` | Implementado e testado | Verificação e aceitação pessoal, expiração e proteção contra reutilização. Fluxo OAuth de retorno coberto por testes com mocks. |
 | `/app/admin-studio` | Implementado e testado | Marca, blocos ordenáveis, SEO, prévia privada, aprovação, publicação e restauração com revisão e auditoria atômica. DNS/TLS indicados como não verificados. |
 | `/site/<slug>` e `/site` | Site público implementado e testado | HTML/metadados no servidor apenas da versão publicada; llms.txt, isolamento por slug e agendamento na clínica explícita. Domínio externo não provisionado. |

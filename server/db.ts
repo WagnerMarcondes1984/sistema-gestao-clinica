@@ -37,7 +37,7 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.warn("[Database] Conexão não inicializada");
       _db = null;
     }
   }
@@ -98,7 +98,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    console.error("[Database] Identidade não atualizada");
     throw error;
   }
 }
@@ -852,7 +852,11 @@ export async function saveMindosInstitutionalProfile(
   );
   const db = await getDb();
   if (!db) throw new Error("Banco de dados não disponível");
-  throw new TRPCError({code:"PRECONDITION_FAILED",message:"Use o rascunho versionado no Admin Studio; alterações públicas exigem aprovação e publicação."});
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message:
+      "Use o rascunho versionado no Admin Studio; alterações públicas exigem aprovação e publicação.",
+  });
 }
 
 export async function listMindosServiceAreas() {

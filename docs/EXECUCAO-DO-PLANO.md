@@ -67,17 +67,17 @@ Ainda pendente nesta etapa:
 
 ## Verificações do checkpoint anterior
 
-| Verificação | Resultado |
-|---|---|
-| TypeScript | Aprovado |
-| Suíte unitária completa | 47 aprovados e 1 ignorado por ausência de banco na suíte unitária |
-| Logout após ajuste de cookie HTTP | 2 testes aprovados, incluindo o caso novo |
-| Integração em MySQL local | 7 testes aprovados; registros fictícios temporários removidos ao final |
-| Schema | 20 tabelas e 241 colunas correspondentes ao código |
-| Seed e repetição | Inserção concluída; repetição recusada sem alterar contagens |
-| Build | Aprovado; permanece aviso de bundle grande |
-| HTTP real | Acesso anônimo negado, sessão válida aceita, app incorreto negado, portal vinculado e simulação de produção negada |
-| Chrome headless | Portal anônimo/autenticado, documentos e logout com recarregamento aprovados |
+| Verificação                       | Resultado                                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| TypeScript                        | Aprovado                                                                                                           |
+| Suíte unitária completa           | 47 aprovados e 1 ignorado por ausência de banco na suíte unitária                                                  |
+| Logout após ajuste de cookie HTTP | 2 testes aprovados, incluindo o caso novo                                                                          |
+| Integração em MySQL local         | 7 testes aprovados; registros fictícios temporários removidos ao final                                             |
+| Schema                            | 20 tabelas e 241 colunas correspondentes ao código                                                                 |
+| Seed e repetição                  | Inserção concluída; repetição recusada sem alterar contagens                                                       |
+| Build                             | Aprovado; permanece aviso de bundle grande                                                                         |
+| HTTP real                         | Acesso anônimo negado, sessão válida aceita, app incorreto negado, portal vinculado e simulação de produção negada |
+| Chrome headless                   | Portal anônimo/autenticado, documentos e logout com recarregamento aprovados                                       |
 
 A suíte unitária ignorou o teste antigo dependente de banco; os testes próprios de integração foram executados separadamente com conexão real. As sessões usadas no teste HTTP/Chrome são locais e fictícias e não comprovam o fluxo externo de login Manus.
 
@@ -208,3 +208,47 @@ Resultado final de banco: 117 testes de integração aprovados em oito arquivos,
 Chrome final aprovado sem exceções de execução: regressões de equipe, pacientes, agenda, recepção, prontuário, documentos, consentimentos, portal, financeiro e CRM; novo fluxo de marca/blocos/SEO, persistência, prévia privada (403 anônimo, 404 de outra clínica, 200 autorizado), rascunho/aprovação sem alterar público, publicação, aplicação da marca no portal e restauração com HTML idêntico ao anterior. HTTP público, metadados e llms.txt conferidos; agendamento com slug explícito e consulta sem ações de publicação validados. Capturas desktop/celular inspecionadas, sem transbordamento na página pública móvel, mantidas somente locais em `previews/admin-etapa7.png`, `previews/site-etapa7.png` e `previews/site-etapa7-mobile.png`. Sessões do harness ampliadas para 20 minutos somente nas fixtures locais, sem mudar autenticação do produto; dados temporários removidos na saída.
 
 Inventário atualizado com 157 handlers; texto do gerador corrigido para não atribuir o levantamento atual apenas à etapa 3. TypeScript e build finais aprovados após os últimos limites de entrada/quebra de texto. Nenhum provedor foi contratado ou simulado; nenhum domínio foi conectado; nenhuma mensagem externa enviada. Etapa 7 pronta para revisão no localhost. Não iniciar etapa 8 sem novo comando.
+
+## Etapa 8 — preparação operacional, primeiro bloco (18/10/2026)
+
+Início autorizado após revisão da etapa 7. Usuário escolheu servidor/VPS com Docker; destino externo de backups continua a definir. Etapa 8 em andamento, sem aprovação de produção e sem iniciar a etapa 9.
+
+Implementadas validação de configuração/segredos e build Manus na inicialização, proxy confiável explícito, cookies protegidos, validade de sessão configurável (8 horas por padrão), limites HTTP, recusa de operações de origem cruzada, headers de proteção e erros sem stack/SQL no cliente. Logs HTTP mínimos não incluem conteúdo clínico, URL/query, IP ou segredos. Proxy legado de armazenamento sem autorização desativado; fluxo atual de documentos privados preservado. Health de processo e readiness real de banco/migrações/armazenamento privado. IP do agendamento público vem do Express com proxy validado, evitando agrupar todos os visitantes no gateway e recusando cabeçalho falso de origem não confiável.
+
+Backup manual offline AES-256-GCM, manifesto completo e chaves clínicas/documentais cifradas dentro do payload, com chave de backup independente e externa. Recusa aplicativo ativo, origem Docker diferente da URL, documento referenciado ausente, mudança de manifesto durante a cópia, objetos SQL não suportados, links e travessia de arquivo. Sem sobrescrita de pasta de extração existente. Cópias e evidências permanecem em `.mindos-private`, fora de Git/build/contexto Docker; a chave nunca foi exibida.
+
+Primeiras tentativas de recuperação não aprovaram dados: MySQL isolado ficou inicializando arquivos além do prazo sob forte contenção de disco do host. A construção local da imagem foi interrompida para priorizar o ensaio; nenhum serviço de outro projeto foi parado. Para o banco descartável, adotado datadir temporário em memória de 512 MiB e limite de contêiner de 768 MiB, sem alterar durabilidade do banco original. Outra tentativa revelou diferença de interpretação de datas no verificador direto mysql2 (fuso local versus UTC do Drizzle). Corrigida a conexão do verificador para UTC; nenhuma data original foi regravada.
+
+Ensaio final aprovado em 49.038 ms, finalizado às 21:52:03 UTC: **40 tabelas, 541 linhas, 1 arquivo privado, 1 documento aberto/autenticado e 4 versões clínicas com cadeia HMAC, cabeçalho e snapshot final conferidos**. Inclui histórico de migração, além das 39 tabelas da aplicação. Destino removido e recibo autenticado gravado atomicamente. Mede recuperação lógica local, não RTO de disco/VPS ou cópia externa. Registros legados não receberam integridade retroativa.
+
+Tela `/app/readiness` consulta essas verificações e o recibo local com permissão `MANAGE_TEAM`; não revela chaves, caminhos, contagens globais ou dados de outras clínicas. Mantém indicação explícita de produção pendente, sem botão de restauração/exclusão. Teste MySQL confirma gestores no contexto correto e recusa a consulta sem permissão.
+
+Preparados Dockerfile com execução sem root e dependências de produção, Compose com volumes persistentes/portas em loopback/raiz somente leitura/capacidades removidas, usuário MySQL do app com DML somente e credencial de migração separada, proxy HTTPS de exemplo, migrações serializadas sem seed e runbooks de atualização, reversão, backup e incidentes. O script de inicialização de privilégios atende base nova; volume existente exige migração assistida de usuários, sem apagar dados. Implantação real não executada.
+
+Validação: TypeScript aprovado; build aprovado com aviso de bundle principal grande (~1,18 MB); 183 testes unitários aprovados e um caso antigo ignorado; 118 integrações MySQL aprovadas nos oito arquivos. Testes adicionais de backup autenticado repetidos após os ajustes do CLI: cinco aprovados. Logs do OAuth nos testes indicam configuração externa ausente, conforme a dependência Manus mantida; não são evidência de login real homologado.
+
+Pendentes: provedor/destino externo, frequência/retenção, recuperação externa e RPO/RTO, DNS/HTTPS/login real no VPS, análise de imagens/vulnerabilidades na implantação, alertas/destinatário, retenção/exportação/exclusão com os responsáveis, homologação humana por papel e piloto. Integrações de pagamento/fiscal/e-mail/WhatsApp seguem sem provedor e sem entrega externa simulada. Guias em `ETAPA-8-OPERACAO-E-PRODUCAO.md`, `BACKUP-E-RECUPERACAO.md` e `VPS-DOCKER-E-INCIDENTES.md`.
+
+Checkpoint previsto: `codex/etapa-8-preparacao-operacional`, baseado em `codex/etapa-7-administracao-site`, em PR rascunho, sem merge. Seed integral remoto preservado; patch anterior mantém o guard local. Nenhuma captura nova, backup, recibo, ambiente real ou documento privado será publicado. Ao terminar este bloco técnico, abrir localhost para análise e parar antes da etapa 9.
+
+Chrome final aprovado sem exceções de execução: regressões completas de equipe, pacientes, agenda, prontuário, documentos/consentimentos/portal, financeiro, CRM e CMS; preparação operacional em desktop/celular sem transbordamento, navegação por Tab, atualização real, recusa ao paciente e health checks reais com 200. Nenhuma indicação de produção aprovada. Seis testes HTTP de proxy/origem/erros repetidos após o ajuste do IP confiável: aprovados. Verificação adicional em diretório temporário confirmou aceitação de 0700 e recusa de 0755; nenhuma permissão da origem foi alterada. Compose final validado sem iniciar serviços.
+
+Conferência pós-limpeza: 39 tabelas e 490 colunas correspondem ao schema; API, demonstração original e recusa de reexecução do seed aprovadas, com contagens preservadas. Nenhuma migração nova de dados foi necessária nesta etapa. Capturas de revisão da etapa 8 são somente locais, sem autorização presumida para publicação.
+
+Revisão da custódia: removida a chave de descriptografia do ambiente da aplicação de produção. O host operacional assina a evidência com Ed25519 e o app recebe somente `RECOVERY_RECEIPT_PUBLIC_KEY`; nem a chave de abertura nem a chave privada de assinatura são passadas ao contêiner do app. Script `recovery-public-key.mjs` imprime somente a chave pública. Configuração operacional de backup tem exemplo separado. Os 21 testes dos componentes de backup, configuração e evidência foram repetidos e aprovados após o ajuste; TypeScript e bundle do servidor aprovados.
+
+Novo ensaio completo com assinatura final Ed25519 aprovado: **40 tabelas, 543 linhas, 1 arquivo, 1 documento autenticado, 4 versões clínicas**, finalizado às 22:22:34 UTC; fase de recuperação em 92.694 ms sob a contenção do host. Limpeza do contêiner confirmada e recibo assinado escrito apenas depois dela. As duas linhas a mais foram observadas após as ações de revisão fictícia; cada ensaio foi comparado ao seu próprio manifesto, sem alteração do protocolo de conferência. Não houve mudança de chaves de documentos, prontuários ou backups existentes. A interrupção durante a preparação da revisão foi ajustada para encerrar seu servidor filho desde o início, evitando servidor órfão ao cancelar antes de abrir o navegador.
+
+Importação de recuperação reforçada com `--binary-mode=1 --local-infile=0`. A versão instalada do cliente MySQL reconhece a opção; no destino descartável, uma tentativa inofensiva de comando local do cliente foi recusada antes de importar o SQL. Ensaio completo final aprovado às 22:55:47 UTC: 40 tabelas/543 linhas, 1 documento privado e 4 versões clínicas, destino removido e recibo Ed25519 autenticado. Nenhuma importação foi feita no banco original.
+
+A compilação dentro do Docker passou. Sob a contenção de disco do host, a montagem com alteração recursiva de proprietário ficou sem concluir; interrompida somente a construção deste projeto. A configuração final mantém código/dependências pertencentes ao root e escrita apenas em diretórios privados do usuário do app. Contexto de build exclui também documentação e ferramentas operacionais, para não invalidar a compilação por alterações nesses arquivos. Nova montagem e ensaio de imagem em validação; não há comprovação de implantação em VPS. A preparação da janela de revisão sofreu timeout de inicialização/CDP enquanto o Docker ocupava o disco; prazos somente do script local foram ajustados (servidor 120 s, protocolo do Chrome 90 s), sem mudar limites da aplicação ou a autenticação.
+
+Imagem local `mindos:stage8-review` construída e exportada com sucesso, com parâmetros públicos fictícios `.test`. Manifesto local: `sha256:f21ba9892dff36ee6dcc9b227631a326c8f10f3b45890e350bc8f1f5198fd09c`. Compilação de produção na imagem: JS principal ~765 kB, mantendo aviso acima de 500 kB. Dependências de desenvolvimento removidas; scripts de instalação ignorados pelo pnpm não impediram o build. Aviso de proveniência Git decorre do checkout sem metadados Git utilizáveis; fonte preservada no PR rascunho #10, commit `2ea52598b394c5e7c2ec8f901ee761485a0fbdcf`. Ensaio técnico da imagem em banco descartável iniciado; não é implantação no VPS nem autenticação Manus real.
+
+Ensaio final da imagem **aprovado**: execução sem root, código sem permissão de escrita pelo app, duas migrações sem duplicação e sem seed, usuário de execução com operações DML e sem DDL, chave de backup ausente do ambiente do app, readiness real, recusa HTTP sem HTTPS e acesso anônimo, API autenticada com a clínica fictícia correta, encerramento normal e remoção dos destinos descartáveis. A primeira tentativa excedeu 60 segundos de inicialização sob contenção de disco; o verificador ganhou diagnóstico restrito e prazo de 180 segundos, e a repetição passou. Contêineres de sondagem usam `--no-healthcheck` para evitar que uma verificação herdada na porta 3000 consulte outro serviço quando o teste usa porta aleatória na rede do host. Não houve redução das proteções da aplicação.
+
+Checkpoint publicado em [PR rascunho #10](https://github.com/WagnerMarcondes1984/sistema-gestao-clinica/pull/10), baseado na etapa 7, sem merge: commit inicial `2ea52598b394c5e7c2ec8f901ee761485a0fbdcf`, árvore `82d1df7430be4dfde13341fceeb123ba11e2b85c`, 52 arquivos alterados e 304 arquivos preservados na árvore completa, com hashes conferidos. O complemento registra a aprovação do ensaio e os ajustes das ferramentas de verificação. Seed integral, imagens novas, segredos e arquivos privados permanecem excluídos.
+
+Retomada da revisão local: prazo de inicialização do script ampliado de 120 para 300 segundos após os timeouts de disco; protocolo do Chrome mantém 90 segundos. Esses prazos afetam somente a ferramenta de revisão local. A etapa 8 continua em andamento pelas pendências externas e de homologação humana; etapa 9 não iniciada.
+
+Revisão retomada e aberta no Chrome em `http://localhost:3420/app/readiness`, com sessão fictícia temporária. A ferramenta confirmou a evidência Ed25519 na tela; capturas desktop/celular conferidas visualmente, mantidas somente em `/tmp`. Banco, migrações, armazenamento privado e restauração aparecem verificados, junto do aviso explícito de produção pendente. Navegador e servidor local permaneceram abertos para análise do usuário.

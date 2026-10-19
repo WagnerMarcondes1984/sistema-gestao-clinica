@@ -1,0 +1,30 @@
+# Modelo para Nginx no host. Requer domínio e certificados reais já provisionados.
+# Certificados, DNS, firewall e logs do proxy ainda precisam de homologação.
+server {
+    listen 80;
+    server_name clinica.example.com;
+    return 308 https://clinica.example.com$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name clinica.example.com;
+    ssl_certificate /etc/letsencrypt/live/clinica.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/clinica.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 9m;
+    # Não registrar query strings, tokens, IPs ou conteúdo de pacientes.
+    access_log off;
+    # Erros do Nginx podem conter URLs: enviar somente a destino privado e
+    # estabelecer retenção/redação antes de habilitar observabilidade externa.
+    error_log /var/log/nginx/mindos-error.log crit;
+    location /health/ { deny all; }
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host clinica.example.com;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Host clinica.example.com;
+        proxy_read_timeout 65s;
+    }
+}

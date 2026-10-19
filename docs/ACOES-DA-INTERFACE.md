@@ -2,7 +2,7 @@
 
 Levantamento estático das ações atuais da interface. Gere novamente com `node scripts/inventory-actions.mjs`. Rotas em `INVENTARIO-FUNCIONAL.md`; evidências efetivas em `EXECUCAO-DO-PLANO.md`.
 
-Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **157 handlers**.
+Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **159 handlers**.
 
 | Local | Evento | Situação estática | Handler (até 240 caracteres) |
 |---|---|---|---|
@@ -124,6 +124,8 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/Patients.tsx:348 | onClick | Ação local — conferir fluxo completo | `() => setEditor({ patient: p })` |
 | client/src/pages/Patients.tsx:370 | onClick | Ação local — conferir fluxo completo | `() => setPage(p => p - 1)` |
 | client/src/pages/Patients.tsx:383 | onClick | Ação local — conferir fluxo completo | `() => setPage(p => p + 1)` |
+| client/src/pages/Readiness.tsx:65 | onClick | Revisar fluxo chamado | `() => void query.refetch()` |
+| client/src/pages/Readiness.tsx:81 | onClick | Revisar fluxo chamado | `() => startLogin()` |
 | client/src/pages/Reception.tsx:165 | onClick | Chama persistência — conferir evidência do módulo | `() => checkin.mutate({ appointmentId: a.id, revision: a.revision, status: "WAITING", })` |
 | client/src/pages/Reception.tsx:185 | onClick | Chama persistência — conferir evidência do módulo | `() => event.mutate({ patientId: a.patientId, appointmentId: a.id, eventType: "CALL_LOGGED", })` |
 | client/src/pages/Reception.tsx:262 | onClick | Ação local — conferir fluxo completo | `() => { process.reset(); setPending({ request: r, status: "CONTACTED" }); }` |
@@ -155,7 +157,7 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/components/DashboardLayout.tsx:187 | onClick | Ação local — conferir fluxo completo | `() => setLocation(item.path)` |
 | client/src/components/DashboardLayout.tsx:223 | onClick | Revisar fluxo chamado | `logout` |
 | client/src/components/ErrorBoundary.tsx:43 | onClick | Revisar fluxo chamado | `() => window.location.reload()` |
-| client/src/components/FinancialLayout.tsx:135 | onClick | Revisar fluxo chamado | `toggleTheme` |
+| client/src/components/FinancialLayout.tsx:136 | onClick | Revisar fluxo chamado | `toggleTheme` |
 | client/src/components/ManusDialog.tsx:80 | onClick | Revisar fluxo chamado | `onLogin` |
 | client/src/components/patients/PatientSelector.tsx:40 | onClick | Revisar fluxo chamado | `() => startLogin()` |
 | client/src/components/patients/PatientSelector.tsx:92 | onClick | Ação local — conferir fluxo completo | `() => setSearch(text.trim())` |
