@@ -51,7 +51,7 @@ export const shaFile = async p => {
 export async function command(
   cmd,
   args,
-  { env = process.env, input, output } = {}
+  { env = process.env, input, output, captureStderr = false } = {}
 ) {
   const child = spawn(cmd, args, { env, stdio: ["pipe", "pipe", "pipe"] });
   let stdout = "",
@@ -90,7 +90,7 @@ export async function command(
     });
   try {
     await Promise.all([exit, ...pipes]);
-    return stdout;
+    return captureStderr ? stdout + stderr : stdout;
   } catch (e) {
     child.kill("SIGTERM");
     throw e;

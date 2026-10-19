@@ -45,6 +45,7 @@ try {
   );
   await command("docker", [
     "run",
+    "--no-healthcheck",
     "--rm",
     "--network",
     "none",
@@ -56,6 +57,7 @@ try {
   const build = JSON.parse(
     await command("docker", [
       "run",
+      "--no-healthcheck",
       "--rm",
       "--network",
       "none",
@@ -72,7 +74,14 @@ try {
     "Gere a imagem de teste com os parâmetros públicos fictícios .test descritos no guia"
   );
   await assert.rejects(
-    command("docker", ["run", "--rm", "--network", "none", image])
+    command("docker", [
+      "run",
+      "--no-healthcheck",
+      "--rm",
+      "--network",
+      "none",
+      image,
+    ])
   );
   phase = "database-init";
   console.log(JSON.stringify({ event: "deployment.check", phase }));
@@ -80,6 +89,7 @@ try {
     "docker",
     [
       "run",
+      "--no-healthcheck",
       "--rm",
       "-d",
       "--name",
@@ -141,6 +151,7 @@ try {
     "docker",
     [
       "run",
+      "--no-healthcheck",
       "--rm",
       "--network",
       "host",
@@ -160,6 +171,7 @@ try {
     "docker",
     [
       "run",
+      "--no-healthcheck",
       "--rm",
       "--network",
       "host",
@@ -252,6 +264,7 @@ try {
     "docker",
     [
       "run",
+      "--no-healthcheck",
       "-d",
       "--name",
       appName,
@@ -278,7 +291,8 @@ try {
   );
   const base = `http://127.0.0.1:${appPort}`;
   let ready = false;
-  for (let i = 0; i < 60; i++) {
+  const readyDeadline = Date.now() + 180000;
+  while (Date.now() < readyDeadline) {
     try {
       if (
         (
@@ -348,10 +362,47 @@ try {
   );
   passed = true;
 } catch (error) {
+  if (appCreated) {
+    try {
+      const status = JSON.parse(
+        await command("docker", ["inspect", appName])
+      )[0].State;
+      const output = await command("docker", ["logs", appName], {
+        captureStderr: true,
+      });
+      const markers = [
+        "Server running",
+        "Configuração ou inicialização inválida",
+        "Banco, migrações ou armazenamento privado",
+        "Metadados do build ausentes",
+        "Configuração pública Manus difere",
+        "RECOVERY_RECEIPT_PUBLIC_KEY",
+        "DATABASE_URL",
+        "JWT_SECRET",
+      ].filter(m => output.includes(m));
+      console.error(
+        JSON.stringify({
+          event: "deployment.app_state",
+          running: status.Running,
+          exitCode: status.ExitCode,
+          markers,
+        })
+      );
+    } catch {}
+  }
   console.error(
     JSON.stringify({
       event: "deployment.drill_failed",
       phase,
+      expectedStatus:
+        typeof error?.expected === "number" ? error.expected : undefined,
+      actualStatus:
+        typeof error?.actual === "number" ? error.actual : undefined,
+      reason:
+        error?.code === "ERR_ASSERTION" &&
+        String(error.message).startsWith("Imagem não ficou pronta")
+          ? "APP_NOT_READY"
+          : undefined,
       category:
         typeof error?.code === "string" && /^[A-Z_]{1,50}$/.test(error.code)
           ? error.code

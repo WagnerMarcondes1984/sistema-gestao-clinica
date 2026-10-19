@@ -67,17 +67,17 @@ Ainda pendente nesta etapa:
 
 ## Verificações do checkpoint anterior
 
-| Verificação | Resultado |
-|---|---|
-| TypeScript | Aprovado |
-| Suíte unitária completa | 47 aprovados e 1 ignorado por ausência de banco na suíte unitária |
-| Logout após ajuste de cookie HTTP | 2 testes aprovados, incluindo o caso novo |
-| Integração em MySQL local | 7 testes aprovados; registros fictícios temporários removidos ao final |
-| Schema | 20 tabelas e 241 colunas correspondentes ao código |
-| Seed e repetição | Inserção concluída; repetição recusada sem alterar contagens |
-| Build | Aprovado; permanece aviso de bundle grande |
-| HTTP real | Acesso anônimo negado, sessão válida aceita, app incorreto negado, portal vinculado e simulação de produção negada |
-| Chrome headless | Portal anônimo/autenticado, documentos e logout com recarregamento aprovados |
+| Verificação                       | Resultado                                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| TypeScript                        | Aprovado                                                                                                           |
+| Suíte unitária completa           | 47 aprovados e 1 ignorado por ausência de banco na suíte unitária                                                  |
+| Logout após ajuste de cookie HTTP | 2 testes aprovados, incluindo o caso novo                                                                          |
+| Integração em MySQL local         | 7 testes aprovados; registros fictícios temporários removidos ao final                                             |
+| Schema                            | 20 tabelas e 241 colunas correspondentes ao código                                                                 |
+| Seed e repetição                  | Inserção concluída; repetição recusada sem alterar contagens                                                       |
+| Build                             | Aprovado; permanece aviso de bundle grande                                                                         |
+| HTTP real                         | Acesso anônimo negado, sessão válida aceita, app incorreto negado, portal vinculado e simulação de produção negada |
+| Chrome headless                   | Portal anônimo/autenticado, documentos e logout com recarregamento aprovados                                       |
 
 A suíte unitária ignorou o teste antigo dependente de banco; os testes próprios de integração foram executados separadamente com conexão real. As sessões usadas no teste HTTP/Chrome são locais e fictícias e não comprovam o fluxo externo de login Manus.
 
@@ -242,3 +242,13 @@ Novo ensaio completo com assinatura final Ed25519 aprovado: **40 tabelas, 543 li
 Importação de recuperação reforçada com `--binary-mode=1 --local-infile=0`. A versão instalada do cliente MySQL reconhece a opção; no destino descartável, uma tentativa inofensiva de comando local do cliente foi recusada antes de importar o SQL. Ensaio completo final aprovado às 22:55:47 UTC: 40 tabelas/543 linhas, 1 documento privado e 4 versões clínicas, destino removido e recibo Ed25519 autenticado. Nenhuma importação foi feita no banco original.
 
 A compilação dentro do Docker passou. Sob a contenção de disco do host, a montagem com alteração recursiva de proprietário ficou sem concluir; interrompida somente a construção deste projeto. A configuração final mantém código/dependências pertencentes ao root e escrita apenas em diretórios privados do usuário do app. Contexto de build exclui também documentação e ferramentas operacionais, para não invalidar a compilação por alterações nesses arquivos. Nova montagem e ensaio de imagem em validação; não há comprovação de implantação em VPS. A preparação da janela de revisão sofreu timeout de inicialização/CDP enquanto o Docker ocupava o disco; prazos somente do script local foram ajustados (servidor 120 s, protocolo do Chrome 90 s), sem mudar limites da aplicação ou a autenticação.
+
+Imagem local `mindos:stage8-review` construída e exportada com sucesso, com parâmetros públicos fictícios `.test`. Manifesto local: `sha256:f21ba9892dff36ee6dcc9b227631a326c8f10f3b45890e350bc8f1f5198fd09c`. Compilação de produção na imagem: JS principal ~765 kB, mantendo aviso acima de 500 kB. Dependências de desenvolvimento removidas; scripts de instalação ignorados pelo pnpm não impediram o build. Aviso de proveniência Git decorre do checkout sem metadados Git utilizáveis; fonte preservada no PR rascunho #10, commit `2ea52598b394c5e7c2ec8f901ee761485a0fbdcf`. Ensaio técnico da imagem em banco descartável iniciado; não é implantação no VPS nem autenticação Manus real.
+
+Ensaio final da imagem **aprovado**: execução sem root, código sem permissão de escrita pelo app, duas migrações sem duplicação e sem seed, usuário de execução com operações DML e sem DDL, chave de backup ausente do ambiente do app, readiness real, recusa HTTP sem HTTPS e acesso anônimo, API autenticada com a clínica fictícia correta, encerramento normal e remoção dos destinos descartáveis. A primeira tentativa excedeu 60 segundos de inicialização sob contenção de disco; o verificador ganhou diagnóstico restrito e prazo de 180 segundos, e a repetição passou. Contêineres de sondagem usam `--no-healthcheck` para evitar que uma verificação herdada na porta 3000 consulte outro serviço quando o teste usa porta aleatória na rede do host. Não houve redução das proteções da aplicação.
+
+Checkpoint publicado em [PR rascunho #10](https://github.com/WagnerMarcondes1984/sistema-gestao-clinica/pull/10), baseado na etapa 7, sem merge: commit inicial `2ea52598b394c5e7c2ec8f901ee761485a0fbdcf`, árvore `82d1df7430be4dfde13341fceeb123ba11e2b85c`, 52 arquivos alterados e 304 arquivos preservados na árvore completa, com hashes conferidos. O complemento registra a aprovação do ensaio e os ajustes das ferramentas de verificação. Seed integral, imagens novas, segredos e arquivos privados permanecem excluídos.
+
+Retomada da revisão local: prazo de inicialização do script ampliado de 120 para 300 segundos após os timeouts de disco; protocolo do Chrome mantém 90 segundos. Esses prazos afetam somente a ferramenta de revisão local. A etapa 8 continua em andamento pelas pendências externas e de homologação humana; etapa 9 não iniciada.
+
+Revisão retomada e aberta no Chrome em `http://localhost:3420/app/readiness`, com sessão fictícia temporária. A ferramenta confirmou a evidência Ed25519 na tela; capturas desktop/celular conferidas visualmente, mantidas somente em `/tmp`. Banco, migrações, armazenamento privado e restauração aparecem verificados, junto do aviso explícito de produção pendente. Navegador e servidor local permaneceram abertos para análise do usuário.

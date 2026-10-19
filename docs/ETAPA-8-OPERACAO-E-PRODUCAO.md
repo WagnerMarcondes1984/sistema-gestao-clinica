@@ -35,18 +35,20 @@ As suítes com contagens globais, as integrações, o ensaio offline e o navegad
 
 ## Pendências para liberação
 
-| Item | Situação |
-|---|---|
-| VPS, domínio, HTTPS e proxy no endereço real | Preparação local; implantação e teste externo pendentes |
-| Login Manus no domínio final | Credenciais/redirects e homologação real pendentes |
-| Destino externo, frequência, retenção e guarda separada da chave | A definir; nenhuma transferência externa foi feita |
-| Restauração a partir de cópia externa e medição de RPO/RTO | Pendente; ensaio local não substitui esse aceite |
-| Alertas de indisponibilidade, espaço, falha/idade de backup | Health/logs preparados; destinatário, integração e ensaio de alerta pendentes |
-| Imagens, versões e vulnerabilidades na data da implantação | Revisar, fixar digest e analisar antes de liberar |
-| Retenção, exportação, exclusão, privacidade e consentimentos | Decisão dos responsáveis; nenhum prazo legal inventado ou descarte automático |
-| Pagamentos, fiscal, e-mail e WhatsApp | Provedores a definir; webhooks e entrega externos não homologados |
-| Revisão de acessibilidade completa, carga, dispositivos e condições reais | Verificações técnicas locais parciais; complementar na homologação |
-| Administrador, recepção, profissional, financeiro e paciente | Homologação humana e piloto controlado pendentes |
+O bloco técnico local passou por TypeScript, 183 testes unitários (um caso antigo ignorado), 118 integrações MySQL, regressão no Chrome e ensaio final de restauração com recibo Ed25519. A imagem Docker também foi construída e testada: execução sem root, código protegido contra escrita, usuário do app sem DDL, migrações repetíveis sem seed, ausência da chave de backup no app, API autenticada, proteção de HTTPS e encerramento normal. Esses resultados não homologam OAuth/TLS reais nem substituem o piloto. A imagem de revisão usa identificadores públicos fictícios e deve ser reconstruída com a configuração final antes da implantação.
+
+| Item                                                                      | Situação                                                                      |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| VPS, domínio, HTTPS e proxy no endereço real                              | Preparação local; implantação e teste externo pendentes                       |
+| Login Manus no domínio final                                              | Credenciais/redirects e homologação real pendentes                            |
+| Destino externo, frequência, retenção e guarda separada da chave          | A definir; nenhuma transferência externa foi feita                            |
+| Restauração a partir de cópia externa e medição de RPO/RTO                | Pendente; ensaio local não substitui esse aceite                              |
+| Alertas de indisponibilidade, espaço, falha/idade de backup               | Health/logs preparados; destinatário, integração e ensaio de alerta pendentes |
+| Imagens, versões e vulnerabilidades na data da implantação                | Revisar, fixar digest e analisar antes de liberar                             |
+| Retenção, exportação, exclusão, privacidade e consentimentos              | Decisão dos responsáveis; nenhum prazo legal inventado ou descarte automático |
+| Pagamentos, fiscal, e-mail e WhatsApp                                     | Provedores a definir; webhooks e entrega externos não homologados             |
+| Revisão de acessibilidade completa, carga, dispositivos e condições reais | Verificações técnicas locais parciais; complementar na homologação            |
+| Administrador, recepção, profissional, financeiro e paciente              | Homologação humana e piloto controlado pendentes                              |
 
 O bundle principal ainda gera aviso de tamanho no build. A divisão em módulos e a avaliação de desempenho no ambiente de homologação permanecem pendentes. Não se afirma ausência absoluta de falhas nem aprovação de produção com base apenas nas suítes locais.
 

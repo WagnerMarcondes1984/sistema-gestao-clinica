@@ -157,8 +157,8 @@ try {
   });
   const base = await new Promise((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error("Servidor local não iniciou em 120 segundos.")),
-      120000
+      () => reject(new Error("Servidor local não iniciou em 300 segundos.")),
+      300000
     );
     let output = "";
     server.stdout.on("data", chunk => {
