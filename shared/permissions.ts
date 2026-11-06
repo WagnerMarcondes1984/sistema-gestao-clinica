@@ -6,6 +6,8 @@ export const PERMISSIONS = [
   "MANAGE_DOCUMENTS",
   "VIEW_CRM",
   "MANAGE_CRM",
+  "VIEW_COMMERCIAL",
+  "MANAGE_COMMERCIAL",
   "VIEW_ADMINISTRATIVE",
   "MANAGE_APPOINTMENTS",
   "VIEW_CLINICAL_RECORD",
@@ -59,6 +61,8 @@ export const ROLE_PERMISSION_TEMPLATES = {
   ],
   FINANCIAL: ["VIEW_PATIENT_BASIC", "VIEW_FINANCIAL", "MANAGE_FINANCIAL"],
   SALES: [
+    "VIEW_COMMERCIAL",
+    "MANAGE_COMMERCIAL",
     "VIEW_PATIENT_BASIC",
     "VIEW_ADMINISTRATIVE",
     "VIEW_CRM",
@@ -97,6 +101,10 @@ export const ROLE_LABELS: Record<ClinicRole, string> = {
   PATIENT: "Paciente",
 };
 export const PERMISSION_LABELS: Record<Permission, string> = {
+  VIEW_COMMERCIAL:
+    "Consultar oportunidades, propostas, metas e relatórios comerciais",
+  MANAGE_COMMERCIAL:
+    "Gerenciar oportunidades, propostas, metas e retornos comerciais",
   VIEW_CRM: "Consultar leads, tarefas e comunicação administrativa",
   MANAGE_CRM: "Gerenciar leads, tarefas e preferências administrativas",
   ALL: "Acesso administrativo total",

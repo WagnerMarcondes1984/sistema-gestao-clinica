@@ -224,6 +224,24 @@ describe("pacientes com MySQL e duas clínicas", () => {
       tenants[1]
     );
   });
+  it("recusa nome com traço sem espaços e mesmo e-mail sem criar outro paciente", async () => {
+    const original = await owner.patients.create({
+      ...demo("Bruno Fictício — demonstração"),
+      email: "bruno.revisao@example.com",
+    });
+    const before = await owner.patients.list({ search: original.email! });
+    await expect(
+      owner.patients.create(
+        patientInput.parse({
+          fullName: "Bruno Fictício-demonstração",
+          email: original.email,
+        })
+      )
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    const after = await owner.patients.list({ search: original.email! });
+    expect(after.total).toBe(before.total);
+    expect(after.items.map(p => p.id)).toEqual(before.items.map(p => p.id));
+  });
   it("não sobrescreve edição concorrente ou cria duplicidade por edição", async () => {
     const original = await owner.patients.create(
       demo("Pessoa edição concorrente")

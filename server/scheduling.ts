@@ -1034,11 +1034,28 @@ export async function listBookingRequests(user: User) {
     "VIEW_ADMINISTRATIVE"
   );
   const db = await database();
-  return db
-    .select()
+  const requests = await db
+    .select({
+      request: mindosBookingRequests,
+      appointmentStartsAt: mindosAppointments.startsAt,
+    })
     .from(mindosBookingRequests)
+    .leftJoin(
+      mindosAppointments,
+      and(
+        eq(mindosAppointments.id, mindosBookingRequests.appointmentId),
+        eq(mindosAppointments.tenantId, mindosBookingRequests.tenantId),
+        eq(mindosAppointments.patientId, mindosBookingRequests.patientId)
+      )
+    )
     .where(eq(mindosBookingRequests.tenantId, tenant.id))
     .orderBy(desc(mindosBookingRequests.createdAt));
+  return requests.map(({ request, appointmentStartsAt }) => ({
+    ...request,
+    appointmentDate: appointmentStartsAt
+      ? clinicParts(appointmentStartsAt, tenant.timezone).date
+      : null,
+  }));
 }
 export async function processBookingRequest(
   user: User,

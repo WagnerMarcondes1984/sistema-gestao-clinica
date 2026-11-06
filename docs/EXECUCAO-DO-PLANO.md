@@ -252,3 +252,98 @@ Checkpoint publicado em [PR rascunho #10](https://github.com/WagnerMarcondes1984
 Retomada da revisão local: prazo de inicialização do script ampliado de 120 para 300 segundos após os timeouts de disco; protocolo do Chrome mantém 90 segundos. Esses prazos afetam somente a ferramenta de revisão local. A etapa 8 continua em andamento pelas pendências externas e de homologação humana; etapa 9 não iniciada.
 
 Revisão retomada e aberta no Chrome em `http://localhost:3420/app/readiness`, com sessão fictícia temporária. A ferramenta confirmou a evidência Ed25519 na tela; capturas desktop/celular conferidas visualmente, mantidas somente em `/tmp`. Banco, migrações, armazenamento privado e restauração aparecem verificados, junto do aviso explícito de produção pendente. Navegador e servidor local permaneceram abertos para análise do usuário.
+
+## Revisão complementar de segurança interna — 19/10/2026
+
+Usuário autorizou concluir as pendências internas antes de expandir o CRM. Etapa 9 não iniciada. Escopo e fronteiras em `REVISAO-SEGURANCA-INTERNA.md`.
+
+Corrigida a política do SDK: padrão de oito horas, configuração de 1 a 24 horas compartilhada com o callback, emissão e expiração obrigatórias, recusa de validade original excessiva ou emissão futura inválida. Sessões antigas sem as garantias exigem nova entrada Manus. Scripts de revisão e ensaios receberam `iat`, sem criar uma rota de login alternativa.
+
+Registro antigo de ligação/perfil agora exige gestão da agenda, revalida a associação sob lock e salva evento/auditoria em uma transação. Payload estrito e campos persistidos enumerados impedem substituir clínica ou autoria. Interface desabilita registro de ligação para consulta administrativa. Dashboard e lista antigos deixam de devolver a identidade da conta do portal.
+
+Na rodada anterior à interrupção, os novos testes de recepção passaram; a execução completa terminou sem evidência persistida. Após retomar, os logs temporários não estavam disponíveis e o MySQL estava parado. Reiniciado somente o contêiner de desenvolvimento existente, sem recriar volume, executar seed ou migrar dados reais.
+
+Nova evidência: TypeScript e build local aprovados; **187 testes unitários/HTTP aprovados e um caso antigo ignorado**, em 19 arquivos. Build mantém o aviso conhecido de bundle principal (~1,18 MB). Ferramenta `node scripts/verify-internal-data.mjs` usa snapshot somente de leitura em banco local e revelou zero incompatibilidades nos nove grupos de referências e zero registros sem clínica nos três grupos financeiros. Não altera nem associa legado automaticamente.
+
+Integrações MySQL completas e revisão no navegador continuam em validação nesta retomada. Marcar no plano somente os critérios efetivamente comprovados. Infraestrutura, provedores, políticas dos responsáveis, homologação humana e piloto continuam pendentes.
+
+Regressão MySQL concluída nesta retomada: **125 testes aprovados nos oito arquivos**, incluindo os sete casos adicionais de isolamento, autoria, revogação, rollback e referências. Plano atualizado para registrar as entregas internas e separar a conferência dos relatórios e a idempotência interna das integrações/webhooks externos ainda indisponíveis. Navegador e imagem atualizada seguem em validação.
+
+Usuário solicitou seguir sem a montagem Docker por lentidão. Interrompida somente a construção `mindos:security-review`; banco e serviços existentes preservados. O build dentro da fase de compilação havia passado, mas a montagem não foi concluída e o ensaio da nova imagem não foi executado. **Construção e validação da imagem com as correções desta revisão permanecem pendentes.** A aprovação do contêiner da etapa 8 anterior não é apresentada como comprovação desta nova revisão. Prosseguir com a validação local e abrir localhost, sem iniciar a etapa 9.
+
+Primeira execução do Chrome passou pelos fluxos anteriores até o CMS, mas um novo identificador de usuário fictício de consulta administrativa excedeu o limite de 64 caracteres de `users.openId`. Encurtado somente o prefixo da fixture; restrição do banco e regras do produto preservadas. Repetição do navegador em andamento. Conferido que não restou cliente de montagem desta imagem em execução.
+
+Repetição completa do Chrome **aprovada**, sem exceções de execução: jornadas anteriores de equipe, pacientes, agenda/recepção, cuidado/documentos/portal/consentimentos, financeiro, CRM e CMS; sessão sem `iat`/`exp` ou excessiva recusada por HTTP; ligação salva com autoria e auditoria; consulta administrativa com botão desabilitado e escrita recusada na API; preparação operacional desktop/celular, teclado, atualização, acesso restrito e health checks reais. Capturas novas continuam somente locais. Verificador de revisão também respeita prazo configurado menor que duas horas. Montagem Docker permanece em aberto por solicitação do usuário; etapa 9 não iniciada.
+
+Conferência final após a limpeza do Chrome: as 12 contagens de referências/financeiro sem clínica continuam em zero. Formatação dos arquivos alterados aprovada; varredura de sete segredos privados no código revisado e build não encontrou ocorrência. Verificação adicional do demonstrativo confirmou endpoints antigos e recusa de reexecução do seed com todas as contagens preservadas.
+
+MindOS aberto novamente no Chrome em `http://localhost:3420/app/readiness`; tela desktop/celular inspecionada e recibo de recuperação Ed25519 autenticado. Navegador e servidor permanecem abertos com clínica fictícia e sessão temporária para análise do usuário. Alterações e relatório registrados no projeto local; nenhum envio ao GitHub foi executado nesta revisão. Etapa 8 segue com Docker adiado, infraestrutura/serviços/políticas/homologação pendentes; etapa 9 não iniciada.
+
+## Etapa 9 — CRM comercial — 21/10/2026
+
+Início autorizado pelo usuário, preservando as pendências operacionais da etapa 8. Montagem Docker continua adiada. Desenvolvimento local entregue em `/crm/commercial`: funil com valores/etapas/motivos de perda, propostas versionadas com cálculo do servidor e evidência manual de decisão, metas mensais, conversão por origem/responsável, segmentos administrativos por autorização e regras de tarefas internas. Guia em `ETAPA-9-CRM-COMERCIAL.md`.
+
+Novas permissões `VIEW_COMMERCIAL` e `MANAGE_COMMERCIAL` isolam o módulo das concessões antigas de CRM. Vínculos existentes não recebem novas permissões automaticamente; administrador concede em Equipe. Modelo de novos vínculos Comercial atualizado, mantendo clínica e financeiro separados. Responsável por retornos também precisa de gestão de CRM. Autorização comercial é independente de lembretes; bloqueios gerais no CRM e preferências do paciente prevalecem. A retirada cancela tarefas automáticas abertas; não há envio externo.
+
+Migração aditiva 0016 aplicada somente ao desenvolvimento, sem seed: sete tabelas novas; schema conferido em 46 tabelas e 569 colunas da aplicação. Valores negociados/aceitos não criam recebimento, cobrança, paciente, documento fiscal ou assinatura do destinatário. Versões e histórico administrativos preservados; auditoria atômica e controle de revisão cobertos por testes.
+
+Validação da versão final: **194 testes unitários/HTTP aprovados, um caso antigo ignorado; 146 integrações MySQL aprovadas nos nove módulos**, incluindo 21 comerciais. TypeScript, formatação e build local aprovados. Aviso conhecido de bundle principal (~1,19 MB) permanece; módulo comercial carrega separadamente (~81,5 kB). Um ensaio adicional de virada de mês revelou que a fixture mysql2 direta serializava `Date` no fuso do host; corrigida somente a fixture para timestamps UTC explícitos, preservando a gravação UTC e o fuso da clínica da aplicação.
+
+Primeira jornada integral no Chrome aprovada para os módulos anteriores e o novo comercial, com capturas desktop/celular conferidas. Após separar as permissões comerciais, a regressão integral da compilação final também foi aprovada, sem exceções de execução. Capturas permanecem apenas em `/tmp`; nenhum envio ao GitHub nesta etapa. Não considerar produção, nova imagem, recuperação da nova versão ou homologação humana concluídas por esses resultados locais.
+
+Conferência após limpar as fixtures: 16 grupos de referências, incluindo os sete comerciais, com zero incompatibilidades; três grupos financeiros com zero registros sem clínica. Schema final novamente conferido em 46 tabelas/569 colunas. Varredura de cinco valores privados em 21 arquivos revisados/build/documentação: zero ocorrências.
+
+Ponto de retomada: entrega interna da etapa 9 validada e abertura de `node scripts/open-review.mjs --commercial` para análise de Wagner. Não avançar às pendências externas ou à implantação sem o próximo comando do usuário.
+
+MindOS aberto e conferido no Chrome em `http://localhost:3420/crm/commercial`, com administrador de revisão autenticado, três oportunidades fictícias e duas propostas demonstrativas. Servidor e janela permanecem abertos; a sessão temporária dura até duas horas. Nova etapa encerrada para análise do usuário, sem iniciar implantação ou resolver provedores. Logs de validação preservados localmente em `.mindos-private/validacoes/etapa9-2026-10-21/`.
+
+## Preparação da revisão humana — 21/10/2026
+
+Usuário autorizou o próximo passo proposto: revisar a etapa 9 e organizar a validação com a equipe, mantendo Docker adiado. Preparado `docs/homologacao/ROTEIRO-DE-HOMOLOGACAO.md`, com **35 casos**, sendo nove comerciais C01–C09. Há ação, resultado esperado e perfil por caso, além de regras para registrar falhas, repetir correções e concluir a revisão. Todos os resultados humanos começam Não executado.
+
+Modelo CSV vazio, HTML de impressão e roteiro PDF acompanham o material. A planilha de preenchimento e o documento de decisões do piloto ficam em `.mindos-private/homologacao/`, separados dos modelos. Participantes, responsáveis, decisões de conservação/exportação/exclusão e início do piloto permanecem A definir; nenhuma política ou contratação foi presumida.
+
+Etapa 8 corrigida para refletir a entrega da etapa 9 e apontar o roteiro atual; checkbox de homologação humana permanece pendente. Não houve mudança de regras do aplicativo, nova montagem Docker, implantação, publicação no GitHub ou contato com terceiros. Os testes da entrega anterior são evidência técnica, não aprovação humana. Não executar novamente suítes pesadas apenas por criar estes materiais.
+
+Conferência desta preparação: PDF de 13 páginas com todos os 35 códigos presentes, CSV com 35 identificadores únicos e nenhum resultado humano aprovado, e roteiro consistente com a planilha. Primeira página do PDF inspecionada visualmente. Nenhuma regra do aplicativo foi alterada; não foi necessário repetir as suítes da entrega anterior.
+
+Reutilizada a janela Chrome existente: a tela de preparação que estava em uso foi preservada, o CRM comercial foi aberto em uma nova aba e o roteiro em outra. Disponibilidade local retornou 200/ready; sessão autenticada e três oportunidades fictícias carregadas foram conferidas. Evidência de disponibilidade em `.mindos-private/homologacao/verificacao-de-abertura.json`, sem cookies ou dados pessoais. O endereço da revisão continua `http://localhost:3420/crm/commercial`.
+
+Próximo passo humano: executar C01–C09 na demonstração e registrar Aprovado/Reprovado/Não executado na cópia privada da planilha. Depois corrigir os problemas encontrados e seguir os demais perfis. Participantes, contas específicas ainda não preparadas, decisões do piloto e homologação permanecem pendentes. Não iniciar Docker, implantação ou contratação nesta rodada.
+
+
+## Acesso aos arquivos da revisão — 21/10/2026
+
+Usuário não conseguiu abrir os links do PDF e CSV. Os arquivos originais foram conferidos: PDF íntegro de 13 páginas; CSV com 35 casos e 12 colunas. Criada também planilha `.xlsx` com abas Comece aqui e Resultados, filtros, cabeçalhos fixos, campos de preenchimento amarelos e opções de resultado. Abertura do XLSX validada por conversão local no LibreOffice, com duas abas e dados preservados; nenhuma aprovação humana adicionada.
+
+Cópias visíveis verificadas por hash em `/home/wagner/Downloads/Revisao-MindOS/`: `Roteiro-de-Revisao-MindOS.pdf`, `Resultados-da-Revisao-MindOS.xlsx` e CSV auxiliar. Programas locais de PDF e Calc acionados junto com a pasta; arquivos existentes diferentes não são sobrescritos. Registro dos caminhos em `.mindos-private/homologacao/arquivos-visiveis.json`.
+
+Ao receber resultados do usuário, conferir primeiro a cópia XLSX visível e suas edições; não substituí-la pelo CSV/modelo vazio. As cópias não se sincronizam automaticamente. Homologação humana permanece pendente até execução e registro dos casos.
+
+
+## Revisão acompanhada — link da recepção para a Agenda — 30/10/2026
+
+Corrigida navegação que abria a Agenda de hoje ao clicar em sessão de outra data numa solicitação. A consulta administrativa retorna a data efetiva do atendimento no fuso da clínica, com vínculo limitado à mesma clínica e paciente; o link passa essa data e a Agenda valida o parâmetro antes de iniciar o filtro. Links da fila também informam a data local. Sem alteração das sessões ou das regras financeiras.
+
+TypeScript, formatação, builds cliente/servidor e 15 testes de integração da agenda aprovados. No Chrome, conta fictícia de recepção: pedido #233 abre sessão #522 em 29/10 às 16:00; recarregar preserva o filtro, Hoje continua funcionando e data inválida usa o filtro normal. Reteste humano da correção ainda pendente. Confirmações humanas e ressalvas dos 35 casos permanecem no diário e na consolidação privados, preservando planilhas originais. Docker continua adiado; nenhuma implantação ou publicação no GitHub nesta revisão.
+
+
+### Reteste da navegação e recuperação local atual — 30/10/2026
+
+Wagner confirmou que o link corrigido abriu a data/sessão esperadas, completando o reteste humano da correção. Renovado também o ensaio de recuperação da versão atual com o procedimento existente: aplicação parada para consistência, backup cifrado restaurado em destino MySQL temporário vazio e isolado, usando imagem instalada com --pull=never. Resultado PASS em 26,72 s; 47 tabelas, 1.291 registros, 2 documentos e 9 versões clínicas verificados; destino temporário removido. Sem build ou download Docker e sem substituir o banco em uso. Montagem da aplicação continua adiada.
+
+MindOS reaberto em /app/readiness; recibo autenticado reconhecido, stale=false, verificações locais atuais aprovadas e produção continua pendente. Apresentação atualizada aguarda conferência humana. Recuperação externa/produção, ambiente de implantação e decisões do piloto continuam sem aprovação por este ensaio local.
+
+
+### Recuperação — estado recente confirmado por Wagner — 30/10/2026
+
+Após renovar a sessão temporária expirada, Wagner confirmou a tela de preparação com restauração local e demais verificações Verificado, data 30/10/2026 e aviso de produção pendente preservado. Completa a conferência visual do ensaio local renovado. Backup externo, recuperação em produção, implantação e montagem Docker continuam pendentes; demais limites individuais permanecem na consolidação privada de 35 casos.
+
+
+## Preparação da publicação de atualizações — 05/11/2026
+
+Usuário autorizou enviar as atualizações ao GitHub com mensagem `atualização de sistema `. Acesso administrativo confirmado no repositório existente. A pasta local não possui histórico Git utilizável; comparação e preparação feitas em checkout isolado a partir de `06e227f0535c6b677a278b3c2faa91c366b061dd`, último checkpoint da etapa 8, preservando os commits e o README remoto. Branch de publicação: `codex/atualizacao-sistema-2026-11-05`, para revisão sem merge automático.
+
+Consolidação inclui etapa 9, correções internas e do reteste humano, roteiro/modelos/PDF, resumo público de cobertura e árvore atualizada. Capturas novas das etapas 6/7 permanecem locais; antigas autorizadas preservadas. Seed integral remoto preservado por restrição anterior; patch atualizado com as tabelas comerciais e aplicação conferida contra o seed local. Nenhum segredo, banco, documento privado, backup, recibo ou sessão foi selecionado para envio.
+
+Verificações atuais: TypeScript, 197 testes unitários (um ignorado), 59 integrações selecionadas (comercial, segurança, pacientes e agenda), builds cliente/servidor aprovados; aviso conhecido do bundle permanece. Falhas iniciais de ambiente foram resolvidas liberando portas locais e iniciando somente o MySQL existente. Nenhum build Docker ou implantação executado. Detalhes em `ATUALIZACAO-SISTEMA-2026-11-05.md`; resultados detalhados da homologação ficam privados.

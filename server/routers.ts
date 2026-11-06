@@ -25,6 +25,7 @@ import {
 } from "../shared/finance";
 import { teamRouter } from "./team-router";
 import { crmRouter } from "./crm-router";
+import { commercialRouter } from "./commercial-router";
 import { careRouter } from "./care-router";
 import { patientsRouter } from "./patients-router";
 import { schedulingRouter } from "./scheduling-router";
@@ -73,6 +74,7 @@ export const appRouter = router({
   patients: patientsRouter,
   care: careRouter,
   crm: crmRouter,
+  commercial: commercialRouter,
   scheduling: schedulingRouter,
   system: systemRouter,
   publicMindos: router({
@@ -366,17 +368,19 @@ export const appRouter = router({
     ),
     receptionEvent: protectedProcedure
       .input(
-        z.object({
-          patientId: z.number().int().positive(),
-          eventType: z.enum([
-            "CHECK_IN",
-            "MESSAGE_SENT",
-            "CALL_LOGGED",
-            "PROFILE_REVIEWED",
-          ]),
-          appointmentId: z.number().int().positive().optional(),
-          messageTemplate: z.string().max(160).optional(),
-        })
+        z
+          .object({
+            patientId: z.number().int().positive(),
+            eventType: z.enum([
+              "CHECK_IN",
+              "MESSAGE_SENT",
+              "CALL_LOGGED",
+              "PROFILE_REVIEWED",
+            ]),
+            appointmentId: z.number().int().positive().optional(),
+            messageTemplate: z.string().max(160).optional(),
+          })
+          .strict()
       )
       .mutation(async ({ ctx, input }) =>
         createMindosReceptionEvent(ctx.user.id, ctx.user.role, input)

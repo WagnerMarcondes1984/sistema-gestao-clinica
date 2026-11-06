@@ -1062,3 +1062,171 @@ export const crmReminders = mysqlTable(
     index("crm_reminders_tenant").on(t.tenantId),
   ]
 );
+
+// CRM comercial: somente dados administrativos, sem registros de atendimento.
+export const salesOpportunities = mysqlTable(
+  "mindos_sales_opportunities",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    leadId: int("leadId").notNull(),
+    title: varchar("title", { length: 160 }).notNull(),
+    amount: int("amount").notNull(),
+    stage: mysqlEnum("stage", [
+      "QUALIFICATION",
+      "PROPOSAL",
+      "NEGOTIATION",
+      "WON",
+      "LOST",
+    ])
+      .default("QUALIFICATION")
+      .notNull(),
+    source: varchar("source", { length: 32 }).notNull(),
+    ownerUserId: int("ownerUserId").notNull(),
+    expectedCloseDate: varchar("expectedCloseDate", { length: 10 }).notNull(),
+    lostReason: varchar("lostReason", { length: 500 }),
+    revision: int("revision").default(1).notNull(),
+    stageVersion: int("stageVersion").default(1).notNull(),
+    creationKey: varchar("creationKey", { length: 36 }).notNull(),
+    creationHash: varchar("creationHash", { length: 64 }).notNull(),
+    createdByUserId: int("createdByUserId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    stageEnteredAt: timestamp("stageEnteredAt").defaultNow().notNull(),
+    closedAt: timestamp("closedAt"),
+  },
+  t => [
+    uniqueIndex("sales_op_creation").on(t.tenantId, t.creationKey),
+    index("sales_op_stage").on(t.tenantId, t.stage),
+    index("sales_op_owner").on(t.tenantId, t.ownerUserId),
+  ]
+);
+export const salesProposals = mysqlTable(
+  "mindos_sales_proposals",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    opportunityId: int("opportunityId").notNull(),
+    version: int("version").notNull(),
+    revision: int("revision").default(1).notNull(),
+    title: varchar("title", { length: 160 }).notNull(),
+    quantity: int("quantity").notNull(),
+    unitPrice: int("unitPrice").notNull(),
+    discount: int("discount").notNull(),
+    total: int("total").notNull(),
+    validUntil: varchar("validUntil", { length: 10 }).notNull(),
+    terms: text("terms").notNull(),
+    status: mysqlEnum("status", [
+      "DRAFT",
+      "PRESENTED",
+      "ACCEPTED",
+      "DECLINED",
+      "CANCELLED",
+    ])
+      .default("DRAFT")
+      .notNull(),
+    evidence: varchar("evidence", { length: 500 }),
+    decidedByUserId: int("decidedByUserId"),
+    decidedAt: timestamp("decidedAt"),
+    creationKey: varchar("creationKey", { length: 36 }).notNull(),
+    creationHash: varchar("creationHash", { length: 64 }).notNull(),
+    createdByUserId: int("createdByUserId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => [
+    uniqueIndex("sales_proposal_creation").on(t.tenantId, t.creationKey),
+    uniqueIndex("sales_proposal_version").on(
+      t.tenantId,
+      t.opportunityId,
+      t.version
+    ),
+  ]
+);
+export const salesGoals = mysqlTable(
+  "mindos_sales_goals",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    month: varchar("month", { length: 7 }).notNull(),
+    ownerUserId: int("ownerUserId").notNull(),
+    targetAmount: int("targetAmount").notNull(),
+    revision: int("revision").default(1).notNull(),
+    recordedByUserId: int("recordedByUserId").notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  t => [
+    uniqueIndex("sales_goal_month_owner").on(
+      t.tenantId,
+      t.month,
+      t.ownerUserId
+    ),
+  ]
+);
+export const salesPreferences = mysqlTable(
+  "mindos_sales_preferences",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    leadId: int("leadId").notNull(),
+    emailAllowed: boolean("emailAllowed").default(false).notNull(),
+    whatsappAllowed: boolean("whatsappAllowed").default(false).notNull(),
+    reason: varchar("reason", { length: 500 }).notNull(),
+    revision: int("revision").default(1).notNull(),
+    recordedByUserId: int("recordedByUserId").notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  t => [uniqueIndex("sales_preference_lead").on(t.tenantId, t.leadId)]
+);
+export const salesRules = mysqlTable(
+  "mindos_sales_rules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    stage: mysqlEnum("stage", [
+      "QUALIFICATION",
+      "PROPOSAL",
+      "NEGOTIATION",
+    ]).notNull(),
+    channel: mysqlEnum("channel", ["EMAIL", "WHATSAPP_DISCREET"]).notNull(),
+    delayDays: int("delayDays").notNull(),
+    enabled: boolean("enabled").notNull(),
+    revision: int("revision").default(1).notNull(),
+    recordedByUserId: int("recordedByUserId").notNull(),
+  },
+  t => [index("sales_rules_tenant").on(t.tenantId)]
+);
+export const salesRuns = mysqlTable(
+  "mindos_sales_runs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    opportunityId: int("opportunityId").notNull(),
+    ruleId: int("ruleId").notNull(),
+    stageVersion: int("stageVersion").notNull(),
+    ruleRevision: int("ruleRevision").notNull(),
+    taskId: int("taskId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => [
+    uniqueIndex("sales_run_once").on(
+      t.tenantId,
+      t.opportunityId,
+      t.ruleId,
+      t.stageVersion,
+      t.ruleRevision
+    ),
+  ]
+);
+export const salesEvents = mysqlTable(
+  "mindos_sales_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tenantId: int("tenantId").notNull(),
+    opportunityId: int("opportunityId").notNull(),
+    actorUserId: int("actorUserId").notNull(),
+    action: varchar("action", { length: 64 }).notNull(),
+    summary: varchar("summary", { length: 1000 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => [index("sales_events_opportunity").on(t.tenantId, t.opportunityId)]
+);

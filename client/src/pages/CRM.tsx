@@ -336,7 +336,14 @@ export default function CRM() {
       contextLabel="CRM administrativo"
     >
       <div className="space-y-5">
-        <h1 className="font-bold text-2xl">CRM administrativo</h1>
+        <div className="flex flex-wrap justify-between gap-3 items-center">
+          <h1 className="font-bold text-2xl">CRM administrativo</h1>
+          {data?.canViewCommercial && (
+            <Link href="/crm/commercial" className={buttonClass}>
+              Abrir CRM comercial
+            </Link>
+          )}
+        </div>
         <SessionNotice
           loading={auth.loading}
           authenticated={auth.isAuthenticated}

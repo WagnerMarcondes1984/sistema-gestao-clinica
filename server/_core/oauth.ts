@@ -8,6 +8,7 @@ import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { sessionTtlMs } from "../session-policy";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -58,15 +59,16 @@ export function registerOAuthRoutes(app: Express) {
         lastSignedIn: new Date(),
       });
 
+      const ttl = sessionTtlMs();
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",
-        expiresInMs: Number(process.env.SESSION_TTL_HOURS || 8) * 3600000,
+        expiresInMs: ttl,
       });
 
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, {
         ...cookieOptions,
-        maxAge: Number(process.env.SESSION_TTL_HOURS || 8) * 3600000,
+        maxAge: ttl,
       });
 
       res.redirect(302, returnTo === "/invite" ? "/invite" : "/");

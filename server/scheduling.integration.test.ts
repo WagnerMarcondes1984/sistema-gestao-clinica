@@ -551,6 +551,7 @@ describe("operação clínica, concorrência, recorrência e triagem", () => {
   });
   it("triagem contata, confirma e vincula sem duplicar a sessão ou paciente", async () => {
     const request = (await owner.scheduling.requests())[0];
+    expect(request.appointmentDate).toBeNull();
     const countBefore = (await owner.patients.list({})).total;
     await expect(
       owner.scheduling.processRequest({
@@ -573,6 +574,13 @@ describe("operação clínica, concorrência, recorrência e triagem", () => {
     });
     expect(confirmed.patientId).toBe(patient);
     expect((await session(confirmed.appointmentId!)).status).toBe("CONFIRMED");
+    const linked = (await owner.scheduling.requests()).find(
+      r => r.id === request.id
+    )!;
+    expect(linked.appointmentDate).toBe(day(5));
+    expect(
+      (await other.scheduling.requests()).some(r => r.id === request.id)
+    ).toBe(false);
     expect((await owner.patients.list({})).total).toBe(countBefore);
     await expect(
       owner.scheduling.processRequest({

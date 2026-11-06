@@ -437,7 +437,7 @@ export async function getMindosDashboardData(userId: number, userRole: string) {
       ).length,
     },
     appointments: authorizedAppointments,
-    patients,
+    patients: patients.map(({ portalUserId, ...patient }) => patient),
   };
 }
 
@@ -469,7 +469,9 @@ export async function listMindosAppointments(userId: number, userRole: string) {
             )
           )
       : [];
-  const patientMap = new Map(patients.map(patient => [patient.id, patient]));
+  const patientMap = new Map(
+    patients.map(({ portalUserId, ...patient }) => [patient.id, patient])
+  );
   return appointments.map(appointment => ({
     ...appointment,
     patient: patientMap.get(appointment.patientId) || null,
@@ -752,68 +754,72 @@ export async function createMindosReceptionEvent(
     appointmentId?: number;
   }
 ) {
-  const { tenant } = await assertMindosPermission(
-    userId,
-    userRole,
-    "VIEW_ADMINISTRATIVE"
-  );
-  const db = await getDb();
-  if (!db) throw new Error("Banco de dados não disponível");
-  const [patient] = await db
-    .select()
-    .from(mindosPatients)
-    .where(
-      and(
-        eq(mindosPatients.id, input.patientId),
-        eq(mindosPatients.tenantId, tenant.id)
-      )
-    )
-    .limit(1);
-  if (!patient)
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Paciente não encontrado nesta clínica",
-    });
-  if (input.eventType === "CHECK_IN")
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Faça check-in na sessão selecionada na nova recepção",
-    });
-  if (input.eventType === "MESSAGE_SENT")
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Envio de mensagens depende de provedor na etapa 6",
-    });
-  if (input.appointmentId) {
-    const [session] = await db
-      .select()
-      .from(mindosAppointments)
-      .where(
-        and(
-          eq(mindosAppointments.tenantId, tenant.id),
-          eq(mindosAppointments.id, input.appointmentId),
-          eq(mindosAppointments.patientId, input.patientId)
-        )
-      );
-    if (!session)
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Sessão não encontrada para este paciente",
+  const { withClinic } = await import("./scheduling");
+  return withClinic(
+    await careUser(userId),
+    "MANAGE_APPOINTMENTS",
+    async (tx, tenant) => {
+      const [patient] = await tx
+        .select({ id: mindosPatients.id })
+        .from(mindosPatients)
+        .where(
+          and(
+            eq(mindosPatients.id, input.patientId),
+            eq(mindosPatients.tenantId, tenant.id)
+          )
+        );
+      if (!patient)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Paciente não encontrado nesta clínica",
+        });
+      if (input.eventType === "CHECK_IN")
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Faça check-in na sessão selecionada na nova recepção",
+        });
+      if (input.eventType === "MESSAGE_SENT")
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Envio de mensagens depende de provedor na etapa 6",
+        });
+      if (input.appointmentId !== undefined) {
+        const [session] = await tx
+          .select({ id: mindosAppointments.id })
+          .from(mindosAppointments)
+          .where(
+            and(
+              eq(mindosAppointments.tenantId, tenant.id),
+              eq(mindosAppointments.id, input.appointmentId),
+              eq(mindosAppointments.patientId, input.patientId)
+            )
+          );
+        if (!session)
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Sessão não encontrada para este paciente",
+          });
+      }
+      const [result] = await tx.insert(mindosReceptionEvents).values({
+        tenantId: tenant.id,
+        createdByUserId: userId,
+        patientId: input.patientId,
+        appointmentId: input.appointmentId,
+        eventType: input.eventType,
+        messageTemplate: input.messageTemplate,
       });
-  }
-  const [result] = await db
-    .insert(mindosReceptionEvents)
-    .values({ tenantId: tenant.id, createdByUserId: userId, ...input });
-  await db.insert(mindosAccessAudits).values({
-    tenantId: tenant.id,
-    actorUserId: userId,
-    subjectType: "PATIENT",
-    subjectId: input.patientId,
-    dataLayer: "ADMINISTRATIVE",
-    action: input.eventType,
-    reason: "Evento operacional de recepção",
-  });
-  return Number((result as any).insertId);
+      await tx.insert(mindosAccessAudits).values({
+        tenantId: tenant.id,
+        actorUserId: userId,
+        subjectType: "PATIENT",
+        subjectId: input.patientId,
+        dataLayer: "ADMINISTRATIVE",
+        action: input.eventType,
+        reason: "Evento operacional de recepção",
+      });
+      return result.insertId;
+    }
+  );
 }
 
 export async function getMindosInstitutionalProfile(

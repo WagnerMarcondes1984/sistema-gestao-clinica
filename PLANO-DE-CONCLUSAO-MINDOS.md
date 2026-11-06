@@ -28,13 +28,13 @@ Depende da etapa 1. Esta etapa bloqueia qualquer piloto com dados reais.
 - [x] Implementar entrada explícita da clínica, convites de uso único, ativação/desativação, reativação, papéis e permissões por associação. Interface em `/app/team` e `/invite`; validar login externo real quando configurado.
 - [x] Definir matriz explícita de permissões para administrador, psicólogo, recepção, financeiro, comercial e paciente. Modelos em `shared/permissions.ts`; gestão visual implementada nesta entrega.
 - [x] Exigir autenticação e autorização nas rotas financeiras e de auditoria.
-- [ ] Concluir associação revisada dos registros financeiros legados, quando houver base existente. Colunas de clínica e migrações já foram aplicadas e testadas; registros sem associação permanecem isolados. Não inferir clínica pela vertical.
+- [ ] Concluir associação revisada dos registros financeiros legados, quando houver base existente. Conferência local de 19/10 encontrou zero cobranças, despesas ou caixas sem clínica; importação de uma base externa depende da identificação de origem pelos responsáveis. Registros sem associação permanecem isolados. Não inferir clínica pela vertical.
 - [x] Aplicar o filtro da clínica autenticada em todas as leituras e alterações financeiras.
 - [x] Vincular o usuário do portal ao seu paciente e remover o `patientId` fixo; impedir consulta a outro paciente pelo servidor.
 - [x] Separar leitura e finalização de notas restritas das permissões gerais de prontuário.
-- [ ] Validar referências a pacientes, profissionais, documentos e sessões dentro da clínica correta em todas as alterações.
+- [x] Validar referências a pacientes, profissionais, documentos e sessões dentro da clínica correta nos fluxos entregues. Revisão complementar inclui sessão do mesmo paciente no prontuário/financeiro, responsáveis e referências do CRM, além das rotas antigas. Evidências em `docs/REVISAO-SEGURANCA-INTERNA.md`.
 - [x] Resolver a clínica pública por domínio ou identificador validado, substituindo a seleção da primeira clínica ativa.
-- [ ] Registrar autor autenticado nas operações e impedir que um nome enviado pelo cliente substitua sua identidade na auditoria.
+- [x] Registrar autor autenticado nas operações e impedir que um nome enviado pelo cliente substitua sua identidade na auditoria. Recepção antiga corrigida para salvar evento e auditoria atomicamente, com permissão de alteração e vínculo revalidado. Campos extras recusados; financeiro busca a identidade no banco.
 
 Aceite: testes com duas clínicas comprovam isolamento; usuário anônimo não consulta nem altera financeiro; recepção não acessa prontuário; paciente acessa somente os próprios dados; permissão clínica comum não libera notas restritas.
 
@@ -89,7 +89,8 @@ Depende das etapas 2 e 3. A escolha dos provedores antecede sua implementação.
 - [ ] Integrar emissão fiscal com o serviço escolhido, incluindo rejeição, cancelamento e consulta de situação.
 - [x] Separar registro interno de documento fiscal autorizado e remover indicações falsas de emissão. Sem nota fiscal ou dados bancários inventados.
 - [x] Completar o controle interno de contas a pagar/receber, baixas, abertura e fechamento de caixa com saldos verificáveis. Conciliação bancária e migração financeira legada continuam pendentes.
-- [ ] Validar relatórios financeiros contra lançamentos e retornos dos provedores.
+- [x] Validar relatórios financeiros internos contra lançamentos, parcelas, despesas, reversões e caixa; divergências bloqueiam o relatório. Integrações MySQL aprovadas.
+- [ ] Validar relatórios e conciliação contra retornos dos provedores, após contratação e integração reais.
 
 Aceite: pagamento em ambiente de testes do provedor atualiza uma única cobrança; webhook duplicado não duplica receita; estorno corresponde ao retorno externo; nota só aparece como emitida após autorização; caixa e relatórios fecham com os lançamentos.
 
@@ -126,13 +127,14 @@ Aceite: salvar rascunho não altera o site publicado; publicação aprovada alte
 
 ## 8. Validar operação e preparar produção — prioridade crítica para lançamento
 
-**Em andamento: primeiro bloco técnico local. Hospedagem escolhida: servidor/VPS com Docker; backup externo a definir. Não há aprovação de produção nem início da etapa 9. Guia em `docs/ETAPA-8-OPERACAO-E-PRODUCAO.md`.**
+**Em andamento: primeiro bloco técnico local. Hospedagem escolhida: servidor/VPS com Docker; backup externo a definir. Não há aprovação de produção. Desenvolvimento da etapa 9 autorizado em 21/10, preservando as pendências desta etapa. Guia em `docs/ETAPA-8-OPERACAO-E-PRODUCAO.md`.**
 
 Depende das etapas incluídas no escopo do lançamento.
 
-- [ ] Criar testes de integração dos fluxos principais com banco de teste e testes de autorização entre clínicas, pacientes e papéis.
-- [ ] Testar concorrência de agenda, consistência financeira e reenvio de webhooks.
-- [ ] Verificar fluxos completos no navegador em desktop e celular, incluindo teclado, erros e estados vazios.
+- [x] Criar testes de integração dos fluxos principais com banco de teste e testes de autorização entre clínicas, pacientes e papéis. Revisão de 19/10: 125 testes MySQL aprovados nos oito módulos.
+- [x] Testar concorrência de agenda, consistência financeira, reenvio interno idempotente e rollback quando falha a auditoria.
+- [ ] Testar reenvio e autenticidade de webhooks reais após a escolha dos provedores. Simulação financeira permanece desativada.
+- [x] Executar regressão dos fluxos internos no navegador, com casos desktop/celular, teclado, erros e estados vazios. Inclui sessão inválida, autoria/auditoria da ligação e consulta administrativa sem escrita. Homologação humana, acessibilidade integral, carga e dispositivos reais continuam pendentes.
 - [ ] Definir retenção, exportação e exclusão de dados, privacidade e consentimentos com os responsáveis pelo produto.
 - [x] Implementar validação de segredos/configuração, confiança explícita no proxy, limites HTTP e health checks locais.
 - [ ] Configurar e homologar HTTPS, segredos e armazenamento privado no VPS real.
@@ -140,18 +142,21 @@ Depende das etapas incluídas no escopo do lançamento.
 - [ ] Contratar destino externo, definir frequência/retenção, configurar a cópia e ensaiar recuperação externa.
 - [ ] Configurar monitoramento e alertas sem registrar conteúdo clínico ou segredos em logs.
 - [x] Preparar Dockerfile/Compose, migração sem seed e runbooks de implantação, reversão e incidentes.
+- [ ] Concluir a construção e o ensaio local da imagem com as correções da revisão interna de segurança. Montagem interrompida por lentidão e adiada a pedido do usuário em 19/10; a imagem anterior não valida esta nova revisão.
 - [ ] Homologar imagem/infraestrutura no VPS, definir responsáveis e validar recuperação/retomada operacional.
-- [ ] Fazer homologação com administrador, recepção, psicólogo, financeiro e paciente.
+- [ ] Fazer homologação com administrador, recepção, psicólogo, financeiro e paciente. Roteiro humano preparado em 21/10: 35 casos, incluindo nove comerciais; execução e aceite da equipe pendentes. Materiais em `docs/homologacao/ROTEIRO-DE-HOMOLOGACAO.md`.
 - [ ] Realizar piloto controlado e corrigir problemas antes de ampliar o uso.
 
 Aceite: fluxos homologados, verificações automatizadas aprovadas, restauração comprovada e nenhuma falha crítica conhecida de acesso, isolamento ou consistência de dados. Publicação em produção é uma ação separada da preparação técnica.
 
-## 9. Evolução para CRM comercial avançado — após a operação clínica estável
+## 9. Evolução para CRM comercial avançado — desenvolvimento autorizado em 21/10/2026
 
-- [ ] Criar oportunidades e funil visual com valores, etapas e motivos de perda.
-- [ ] Adicionar propostas, metas e acompanhamento de conversão por origem e responsável.
-- [ ] Implementar segmentações e automações comerciais de acordo com preferências de comunicação.
-- [ ] Criar relatórios comerciais sem expor dados clínicos.
+**Entrega interna validada em 21/10/2026, aguardando análise visual do usuário. Provedores e demais pendências da etapa 8 permanecem em aberto; esta entrega não libera produção. Guia em `docs/ETAPA-9-CRM-COMERCIAL.md`.**
+
+- [x] Criar oportunidades e funil visual com valores, etapas e motivos de perda. Permissões comerciais específicas, revisão concorrente e histórico auditado.
+- [x] Adicionar propostas, metas e acompanhamento de conversão por origem e responsável. Propostas versionadas e decisões manuais com evidência; valores comerciais não representam recebimentos ou assinatura digital.
+- [x] Implementar segmentações e automações comerciais de acordo com preferências de comunicação. Segmentos administrativos e tarefas internas por regra/etapa, sem duplicação, com autorização comercial independente e cancelamento na revogação. Disparos externos continuam pendentes nas etapas 5/6.
+- [x] Criar relatórios comerciais sem expor dados clínicos. Metas mensais e conversão no fuso da clínica, com filtros por origem/responsável, sem consulta a prontuário.
 
 Aceite: acompanhar a jornada comercial da captação à contratação, com tarefas e indicadores baseados em dados reais.
 

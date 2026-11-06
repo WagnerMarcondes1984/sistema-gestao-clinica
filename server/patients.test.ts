@@ -64,4 +64,47 @@ describe("cadastro de pacientes", () => {
     );
     expect(isDuplicatePatient({ ...row, birthDate: null }, data)).toBe(true);
   });
+  it.each([
+    "Bruno Fictício-demonstração",
+    "Bruno Fictício—demonstração",
+    " BRUNO FICTICIO – demonstração ",
+  ])(
+    "detecta o mesmo nome e contato apesar da grafia do traço: %s",
+    fullName => {
+      const row = {
+        fullName: "Bruno Fictício — demonstração",
+        email: "bruno.revisao@example.com",
+        phone: "11900000002",
+        birthDate: new Date("1990-05-20T12:00:00Z"),
+      };
+      expect(
+        isDuplicatePatient(
+          row,
+          patientInput.parse({
+            fullName,
+            email: row.email,
+          })
+        )
+      ).toBe(true);
+      expect(
+        isDuplicatePatient(
+          row,
+          patientInput.parse({
+            fullName: "Outra pessoa — demonstração",
+            email: row.email,
+          })
+        )
+      ).toBe(false);
+      expect(
+        isDuplicatePatient(
+          row,
+          patientInput.parse({
+            fullName,
+            email: row.email,
+            birthDate: "1991-05-20",
+          })
+        )
+      ).toBe(false);
+    }
+  );
 });

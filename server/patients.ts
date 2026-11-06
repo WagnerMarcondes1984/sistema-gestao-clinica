@@ -118,13 +118,21 @@ export async function getPatient(user: User, patientId: number) {
   if (!patient) throw missing();
   return patientView(patient);
 }
+// Treat typographic dashes as word boundaries only for patient identity checks.
+// Keep names as entered and leave scheduling resource keys unchanged.
+const patientIdentityName = (name: string) =>
+  normalizePatientName(name)
+    .replace(/[-\u2010-\u2015\u2212]/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
 export function isDuplicatePatient(
   existing: Pick<MindosPatient, "fullName" | "birthDate" | "email" | "phone">,
   input: PatientInput
 ) {
   if (
-    normalizePatientName(existing.fullName) !==
-    normalizePatientName(input.fullName)
+    patientIdentityName(existing.fullName) !==
+    patientIdentityName(input.fullName)
   )
     return false;
   const birth = existing.birthDate?.toISOString().slice(0, 10) || "";

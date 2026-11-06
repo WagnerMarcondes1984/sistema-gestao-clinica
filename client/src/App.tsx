@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -29,6 +30,8 @@ import Team from "./pages/Team";
 import AcceptInvite from "./pages/AcceptInvite";
 import Readiness from "./pages/Readiness";
 
+const Commercial = lazy(() => import("./pages/Commercial"));
+
 function Router() {
   return (
     <Switch>
@@ -37,6 +40,17 @@ function Router() {
       <Route path="/agenda" component={Agenda} />
       <Route path="/app/scheduling" component={SchedulingSettings} />
       <Route path="/crm" component={CRM} />
+      <Route path="/crm/commercial">
+        <Suspense
+          fallback={
+            <p role="status" className="p-6">
+              Carregando CRM comercial…
+            </p>
+          }
+        >
+          <Commercial />
+        </Suspense>
+      </Route>
       <Route path="/patients" component={Patients} />
       <Route path="/patients/view" component={Patient360} />
       <Route path="/clinical-records" component={ClinicalRecord} />

@@ -66,6 +66,7 @@ export function FinancialLayout({
     { href: "/reception", label: "Recepção", icon: UserRoundCheck },
     { href: "/patients", label: "Pacientes", icon: UsersRound },
     { href: "/crm", label: "CRM", icon: UsersRound },
+    { href: "/crm/commercial", label: "Comercial", icon: TrendingUp },
     { href: "/patient-care", label: "Documentos e portal", icon: FileText },
     { href: "/app/consents", label: "Consentimentos", icon: FileHeart },
     { href: "/clinical-records", label: "Prontuário", icon: FileHeart },
