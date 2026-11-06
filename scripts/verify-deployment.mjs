@@ -331,6 +331,7 @@ try {
     name: "Administrador fictício da imagem",
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuedAt()
     .setExpirationTime("5m")
     .sign(new TextEncoder().encode(environment.JWT_SECRET));
   const authorized = await fetch(base + "/api/trpc/operations.status", {

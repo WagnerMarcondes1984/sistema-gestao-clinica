@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { revokeCommercialTasks } from "./commercial";
 import { TRPCError } from "@trpc/server";
 import { and, eq, desc, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -170,6 +171,7 @@ export async function overview(user: User) {
       clinicName: clinic.name,
       timezone: clinic.timezone,
       canManage: hasMindosPermission(member, "MANAGE_CRM"),
+      canViewCommercial: hasMindosPermission(member, "VIEW_COMMERCIAL"),
       canConvert:
         hasMindosPermission(member, "MANAGE_CRM") &&
         hasMindosPermission(member, "MANAGE_PATIENTS"),
@@ -296,6 +298,7 @@ export async function updateLead(
       `update:${l.id}:${l.revision + 1}`,
       `Etapa ${l.stage} → ${input.stage}; responsável e próximo contato conferidos.${input.reason ? " Motivo: " + input.reason : ""}`
     );
+    await revokeCommercialTasks(tx, c.id, user.id, { leadId: l.id });
     await careAudit(tx, c.id, user.id, "CRM_LEAD", l.id, "UPDATE_LEAD");
     return { id: l.id };
   });
@@ -791,6 +794,7 @@ async function savePref(
     await tx
       .insert(contactPreferences)
       .values({ ...values, tenantId, patientId });
+  await revokeCommercialTasks(tx, tenantId, userId, { patientId });
   await tx
     .update(crmReminders)
     .set({

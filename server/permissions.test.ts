@@ -38,4 +38,29 @@ describe("matriz de permissões", () => {
       ).toBe(false);
     }
   );
+  it("CRM administrativo legado não recebe acesso comercial automaticamente", () => {
+    const member = {
+      role: "SALES",
+      permissionsJson: JSON.stringify(["VIEW_CRM", "MANAGE_CRM"]),
+    };
+    expect(hasMindosPermission(member, "VIEW_COMMERCIAL")).toBe(false);
+    expect(hasMindosPermission(member, "MANAGE_COMMERCIAL")).toBe(false);
+    expect(permissionsForRole("SALES")).toContain("MANAGE_COMMERCIAL");
+  });
+  it("modelos de recepção, financeiro e clínico não liberam CRM comercial", () => {
+    for (const role of [
+      "RECEPTIONIST",
+      "ASSISTANT",
+      "FINANCIAL",
+      "PSYCHOLOGIST",
+      "PATIENT",
+    ] as const) {
+      const member = {
+        role,
+        permissionsJson: JSON.stringify(permissionsForRole(role)),
+      };
+      expect(hasMindosPermission(member, "VIEW_COMMERCIAL")).toBe(false);
+      expect(hasMindosPermission(member, "MANAGE_COMMERCIAL")).toBe(false);
+    }
+  });
 });

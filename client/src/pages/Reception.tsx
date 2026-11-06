@@ -174,14 +174,14 @@ export default function Reception() {
                               </button>
                             )}
                           <Link
-                            href={`/agenda?patientId=${a.patientId}`}
+                            href={`/agenda?patientId=${a.patientId}&date=${a.local.date}`}
                             className="border rounded-xl px-3 py-2"
                           >
                             Abrir agenda
                           </Link>
                           <button
                             className="border rounded-xl px-3 py-2"
-                            disabled={event.isPending}
+                            disabled={!data.canSchedule || event.isPending}
                             onClick={() =>
                               event.mutate({
                                 patientId: a.patientId,
@@ -302,7 +302,7 @@ export default function Reception() {
                       )}
                       {r.appointmentId && (
                         <Link
-                          href={`/agenda?patientId=${r.patientId}`}
+                          href={`/agenda?patientId=${r.patientId}${r.appointmentDate ? `&date=${r.appointmentDate}` : ""}`}
                           className="text-indigo-700 underline"
                         >
                           Sessão #{r.appointmentId}

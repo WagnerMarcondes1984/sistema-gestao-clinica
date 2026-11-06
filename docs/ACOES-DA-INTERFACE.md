@@ -2,7 +2,7 @@
 
 Levantamento estático das ações atuais da interface. Gere novamente com `node scripts/inventory-actions.mjs`. Rotas em `INVENTARIO-FUNCIONAL.md`; evidências efetivas em `EXECUCAO-DO-PLANO.md`.
 
-Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **159 handlers**.
+Cada linha registra um clique ou envio de formulário fora dos componentes genéricos de UI. A classificação é conservadora e não substitui homologação. Total: **183 handlers**.
 
 | Local | Evento | Situação estática | Handler (até 240 caracteres) |
 |---|---|---|---|
@@ -39,6 +39,30 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/ClinicalRecord.tsx:366 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (finalizing) update.mutate({ recordId: finalizing.id, revision: finalizing.revision, finalize: true, }); }` |
 | client/src/pages/ClinicalRecord.tsx:451 | onClick | Ação local — conferir fluxo completo | `() => { selectPatient(pendingPatient); setPendingPatient(null); setDirty(false); }` |
 | client/src/pages/ClinicalRecord.tsx:461 | onClick | Ação local — conferir fluxo completo | `() => setPendingPatient(null)` |
+| client/src/pages/Commercial.tsx:295 | onClick | Revisar fluxo chamado | `() => open({ kind: "create" })` |
+| client/src/pages/Commercial.tsx:339 | onClick | Ação local — conferir fluxo completo | `() => { setTab(id); setSelected(null); setError(""); }` |
+| client/src/pages/Commercial.tsx:352 | onClick | Revisar fluxo chamado | `() => void refresh()` |
+| client/src/pages/Commercial.tsx:538 | onClick | Ação local — conferir fluxo completo | `() => { setSelected(item.id); setError(""); }` |
+| client/src/pages/Commercial.tsx:584 | onClick | Ação local — conferir fluxo completo | `() => setFilters(f => ({ ...f, page: (f.page &#124;&#124; 0) - 1 }))` |
+| client/src/pages/Commercial.tsx:593 | onClick | Ação local — conferir fluxo completo | `() => setFilters(f => ({ ...f, page: (f.page &#124;&#124; 0) + 1 }))` |
+| client/src/pages/Commercial.tsx:642 | onClick | Revisar fluxo chamado | `() => open({ kind: "edit", revision: o.revision, })` |
+| client/src/pages/Commercial.tsx:654 | onClick | Revisar fluxo chamado | `() => open({ kind: "proposal", revision: o.revision, })` |
+| client/src/pages/Commercial.tsx:669 | onClick | Revisar fluxo chamado | `() => open({ kind: "move", revision: o.revision })` |
+| client/src/pages/Commercial.tsx:680 | onClick | Ação local — conferir fluxo completo | `() => setSelected(null)` |
+| client/src/pages/Commercial.tsx:728 | onClick | Revisar fluxo chamado | `() => printProposal( p, data.clinicName, details.data!.lead.fullName )` |
+| client/src/pages/Commercial.tsx:745 | onClick | Revisar fluxo chamado | `() => open({ kind: "decision", id: p.id, revision: p.revision, status: "PRESENTED", })` |
+| client/src/pages/Commercial.tsx:762 | onClick | Revisar fluxo chamado | `() => open({ kind: "decision", id: p.id, revision: p.revision, status: "ACCEPTED", })` |
+| client/src/pages/Commercial.tsx:776 | onClick | Revisar fluxo chamado | `() => open({ kind: "decision", id: p.id, revision: p.revision, status: "DECLINED", })` |
+| client/src/pages/Commercial.tsx:795 | onClick | Revisar fluxo chamado | `() => open({ kind: "decision", id: p.id, revision: p.revision, status: "CANCELLED", })` |
+| client/src/pages/Commercial.tsx:841 | onSubmit | Revisar fluxo chamado | `savePreferences` |
+| client/src/pages/Commercial.tsx:975 | onClick | Revisar fluxo chamado | `() => open({ kind: "goal", revision: g.revision, ownerUserId: g.ownerUserId, amount: g.targetAmount, })` |
+| client/src/pages/Commercial.tsx:994 | onClick | Revisar fluxo chamado | `() => open({ kind: "goal", revision: report.goals.find(g => g.ownerUserId === 0) ?.revision &#124;&#124; 0, amount: report.goals.find( g => g.ownerUserId === 0 )?.targetAmount, })` |
+| client/src/pages/Commercial.tsx:1020 | onClick | Revisar fluxo chamado | `() => open({ kind: "goal", ownerUserId: m.id, revision: report.goals.find( g => g.ownerUserId === m.id )?.revision &#124;&#124; 0, amount: report.goals.find( g => g.ownerUserId === m.id )?.targetAmount, })` |
+| client/src/pages/Commercial.tsx:1135 | onClick | Revisar fluxo chamado | `() => open({ kind: "rule" })` |
+| client/src/pages/Commercial.tsx:1142 | onClick | Chama persistência — conferir evidência do módulo | `() => void run(async () => { const result = await apply.mutateAsync(); toast.info( '${result.created} tarefa(s) criada(s); ${result.blocked} regra(s) sem autorização ou responsável ativo.' ); })` |
+| client/src/pages/Commercial.tsx:1173 | onClick | Revisar fluxo chamado | `() => open({ kind: "rule", id: r.id, revision: r.revision, name: r.name, stage: r.stage, channel: r.channel, delayDays: r.delayDays, enabled: r.enabled, })` |
+| client/src/pages/Commercial.tsx:1235 | onSubmit | Revisar fluxo chamado | `submit` |
+| client/src/pages/Commercial.tsx:1522 | onClick | Ação local — conferir fluxo completo | `() => setModal(null)` |
 | client/src/pages/ComponentShowcase.tsx:236 | onClick | Revisar fluxo chamado | `toggleTheme` |
 | client/src/pages/ComponentShowcase.tsx:714 | onClick | Ação local — conferir fluxo completo | `() => setProgress(Math.max(0, progress - 10))` |
 | client/src/pages/ComponentShowcase.tsx:720 | onClick | Ação local — conferir fluxo completo | `() => setProgress(Math.min(100, progress + 10))` |
@@ -62,21 +86,21 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/pages/ConsentTemplates.tsx:265 | onClick | Chama persistência — conferir evidência do módulo | `() => { if (action) publish.mutate({ id: action.id, revision: action.revision, retire: action.retire, }); }` |
 | client/src/pages/CRM.tsx:119 | onClick | Revisar fluxo chamado | `() => toggle("emailAllowed")` |
 | client/src/pages/CRM.tsx:128 | onClick | Revisar fluxo chamado | `() => toggle("whatsappAllowed")` |
-| client/src/pages/CRM.tsx:372 | onClick | Ação local — conferir fluxo completo | `() => setTab(id)` |
-| client/src/pages/CRM.tsx:427 | onClick | Revisar fluxo chamado | `() => open({ kind: "create" })` |
-| client/src/pages/CRM.tsx:465 | onClick | Ação local — conferir fluxo completo | `() => setSubject({ leadId: l.id })` |
-| client/src/pages/CRM.tsx:473 | onClick | Revisar fluxo chamado | `() => open({ kind: "interaction", leadId: l.id, name: l.fullName, })` |
-| client/src/pages/CRM.tsx:487 | onClick | Revisar fluxo chamado | `() => open({ kind: "edit", leadId: l.id, revision: l.revision, name: l.fullName, owner: l.ownerUserId ? String(l.ownerUserId) : "", stage: l.stage, allowed: l.contactAllowed, next: local(l.nextContactAt), })` |
-| client/src/pages/CRM.tsx:506 | onClick | Revisar fluxo chamado | `() => open({ kind: "task", leadId: l.id, name: l.fullName, })` |
-| client/src/pages/CRM.tsx:522 | onClick | Revisar fluxo chamado | `() => open({ kind: "convert", leadId: l.id, revision: l.revision, name: l.fullName, })` |
-| client/src/pages/CRM.tsx:564 | onClick | Revisar fluxo chamado | `() => open({ kind: "import", requestId: r.id, name: r.name, })` |
-| client/src/pages/CRM.tsx:613 | onClick | Revisar fluxo chamado | `() => open({ kind: "editTask", taskId: t.id, revision: t.revision, title: t.title, owner: String(t.ownerUserId), date: local(t.dueAt), })` |
-| client/src/pages/CRM.tsx:628 | onClick | Revisar fluxo chamado | `() => open({ kind: "resolve", taskId: t.id, revision: t.revision, name: t.title, })` |
-| client/src/pages/CRM.tsx:668 | onClick | Ação local — conferir fluxo completo | `() => setSubject({ patientId: Number(patient) })` |
-| client/src/pages/CRM.tsx:678 | onClick | Revisar fluxo chamado | `() => open({ kind: "task", patientId: Number(patient), name: subjectName(null, Number(patient)), })` |
-| client/src/pages/CRM.tsx:690 | onClick | Revisar fluxo chamado | `() => open({ kind: "interaction", patientId: Number(patient), })` |
-| client/src/pages/CRM.tsx:723 | onClick | Chama persistência — conferir evidência do módulo | `() => run(() => prepare.mutateAsync())` |
-| client/src/pages/CRM.tsx:851 | onSubmit | Revisar fluxo chamado | `submit` |
+| client/src/pages/CRM.tsx:379 | onClick | Ação local — conferir fluxo completo | `() => setTab(id)` |
+| client/src/pages/CRM.tsx:434 | onClick | Revisar fluxo chamado | `() => open({ kind: "create" })` |
+| client/src/pages/CRM.tsx:472 | onClick | Ação local — conferir fluxo completo | `() => setSubject({ leadId: l.id })` |
+| client/src/pages/CRM.tsx:480 | onClick | Revisar fluxo chamado | `() => open({ kind: "interaction", leadId: l.id, name: l.fullName, })` |
+| client/src/pages/CRM.tsx:494 | onClick | Revisar fluxo chamado | `() => open({ kind: "edit", leadId: l.id, revision: l.revision, name: l.fullName, owner: l.ownerUserId ? String(l.ownerUserId) : "", stage: l.stage, allowed: l.contactAllowed, next: local(l.nextContactAt), })` |
+| client/src/pages/CRM.tsx:513 | onClick | Revisar fluxo chamado | `() => open({ kind: "task", leadId: l.id, name: l.fullName, })` |
+| client/src/pages/CRM.tsx:529 | onClick | Revisar fluxo chamado | `() => open({ kind: "convert", leadId: l.id, revision: l.revision, name: l.fullName, })` |
+| client/src/pages/CRM.tsx:571 | onClick | Revisar fluxo chamado | `() => open({ kind: "import", requestId: r.id, name: r.name, })` |
+| client/src/pages/CRM.tsx:620 | onClick | Revisar fluxo chamado | `() => open({ kind: "editTask", taskId: t.id, revision: t.revision, title: t.title, owner: String(t.ownerUserId), date: local(t.dueAt), })` |
+| client/src/pages/CRM.tsx:635 | onClick | Revisar fluxo chamado | `() => open({ kind: "resolve", taskId: t.id, revision: t.revision, name: t.title, })` |
+| client/src/pages/CRM.tsx:675 | onClick | Ação local — conferir fluxo completo | `() => setSubject({ patientId: Number(patient) })` |
+| client/src/pages/CRM.tsx:685 | onClick | Revisar fluxo chamado | `() => open({ kind: "task", patientId: Number(patient), name: subjectName(null, Number(patient)), })` |
+| client/src/pages/CRM.tsx:697 | onClick | Revisar fluxo chamado | `() => open({ kind: "interaction", patientId: Number(patient), })` |
+| client/src/pages/CRM.tsx:730 | onClick | Chama persistência — conferir evidência do módulo | `() => run(() => prepare.mutateAsync())` |
+| client/src/pages/CRM.tsx:858 | onSubmit | Revisar fluxo chamado | `submit` |
 | client/src/pages/FinancialWorkspace.tsx:151 | onClick | Revisar fluxo chamado | `onConfirm` |
 | client/src/pages/FinancialWorkspace.tsx:158 | onClick | Revisar fluxo chamado | `onClose` |
 | client/src/pages/FinancialWorkspace.tsx:232 | onSubmit | Revisar fluxo chamado | `submit` |
@@ -157,7 +181,7 @@ Cada linha registra um clique ou envio de formulário fora dos componentes gené
 | client/src/components/DashboardLayout.tsx:187 | onClick | Ação local — conferir fluxo completo | `() => setLocation(item.path)` |
 | client/src/components/DashboardLayout.tsx:223 | onClick | Revisar fluxo chamado | `logout` |
 | client/src/components/ErrorBoundary.tsx:43 | onClick | Revisar fluxo chamado | `() => window.location.reload()` |
-| client/src/components/FinancialLayout.tsx:136 | onClick | Revisar fluxo chamado | `toggleTheme` |
+| client/src/components/FinancialLayout.tsx:137 | onClick | Revisar fluxo chamado | `toggleTheme` |
 | client/src/components/ManusDialog.tsx:80 | onClick | Revisar fluxo chamado | `onLogin` |
 | client/src/components/patients/PatientSelector.tsx:40 | onClick | Revisar fluxo chamado | `() => startLogin()` |
 | client/src/components/patients/PatientSelector.tsx:92 | onClick | Ação local — conferir fluxo completo | `() => setSearch(text.trim())` |

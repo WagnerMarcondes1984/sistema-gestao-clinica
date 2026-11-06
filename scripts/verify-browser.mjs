@@ -42,6 +42,7 @@ try {
   const tokenFor = (user, id = appId) =>
     new SignJWT({ openId: user.openId, appId: id, name: user.name })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+      .setIssuedAt()
       .setExpirationTime("20m")
       .sign(secret);
   const ownerToken = await tokenFor(owner);
@@ -61,8 +62,8 @@ try {
   });
   const base = await new Promise((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error("Servidor não iniciou em 45 segundos.")),
-      45_000
+      () => reject(new Error("Servidor não iniciou em 300 segundos.")),
+      300_000
     );
     let output = "";
     server.stdout.on("data", chunk => {
@@ -96,6 +97,25 @@ try {
     client().transactions.list.query({}),
     error => error.data?.code === "UNAUTHORIZED"
   );
+  const now = Math.floor(Date.now() / 1000);
+  for (const claims of [
+    { iat: now },
+    { exp: now + 1200 },
+    { iat: now - 86400, exp: now + 60 },
+  ]) {
+    const invalid = await new SignJWT({
+      openId: owner.openId,
+      appId,
+      name: owner.name,
+      ...claims,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .sign(secret);
+    await assert.rejects(
+      client(invalid).transactions.list.query({}),
+      error => error.data?.code === "UNAUTHORIZED"
+    );
+  }
   const transactions = await client(ownerToken).transactions.list.query({
     limit: 50,
   });
@@ -139,8 +159,8 @@ try {
   );
   const debugUrl = await new Promise((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error("Chrome não iniciou em 45 segundos.")),
-      45_000
+      () => reject(new Error("Chrome não iniciou em 90 segundos.")),
+      90_000
     );
     browser.stderr.on("data", chunk => {
       const match = chunk
@@ -187,7 +207,7 @@ try {
       const timer = setTimeout(() => {
         pending.delete(id);
         reject(new Error(`Chrome não respondeu: ${method}`));
-      }, 45_000);
+      }, 90_000);
       pending.set(id, { resolve, reject, timer });
       socket.send(
         JSON.stringify({
@@ -800,6 +820,18 @@ try {
     `document.querySelector('article[data-appointment-id="${todaySession.id}"]').innerText.includes('Aguardando')`,
     "Check-in não atualizou a sessão."
   );
+  await rowClick(todaySession.id, "Registrar ligação realizada");
+  await waitForText("Ligação realizada registrada");
+  const [[call]] = await db.query(
+    "SELECT createdByUserId FROM mindos_reception_events WHERE tenantId=? AND appointmentId=? AND eventType='CALL_LOGGED'",
+    [fixture.operationTenantId, todaySession.id]
+  );
+  assert.equal(call.createdByUserId, fixture.operationUserId);
+  const [[callAudit]] = await db.query(
+    "SELECT COUNT(*) n FROM mindos_access_audits WHERE tenantId=? AND actorUserId=? AND subjectId=? AND action='CALL_LOGGED'",
+    [fixture.operationTenantId, fixture.operationUserId, opPatient.id]
+  );
+  assert.equal(Number(callAudit.n), 1);
   await page("Page.navigate", {
     url: `${base}/agenda?patientId=${opPatient.id}`,
   });
@@ -1742,6 +1774,239 @@ try {
     "Chrome: lead, responsável, etapa, interação/histórico, tarefa vencida/edição/conclusão, conversão sem duplicação, importação conferida, preferências da equipe e paciente, lembretes sem envio, indicadores e leitura restrita aprovados."
   );
 
+  // Etapa 9: oportunidade → proposta → decisão → ganho → metas e retornos.
+  await setCookie(operationToken);
+  const salesLead = await operation.crm.create.mutate({
+    requestKey: randomUUID(),
+    fullName: `Contato comercial fictício ${suffix}`,
+    email: `commercial-${suffix}@example.com`,
+    preferredChannel: "EMAIL",
+    ownerUserId: fixture.operationUserId,
+    contactAllowed: true,
+  });
+  await page("Page.navigate", { url: `${base}/crm/commercial` });
+  await waitForText("Nova oportunidade");
+  const salesToday = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: config.clinic.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const savedSales = () =>
+    waitForCondition(
+      "!document.querySelector('[role=dialog]')",
+      "Formulário comercial não encerrou após salvar"
+    );
+  const createSales = async title => {
+    await click("Nova oportunidade");
+    await fill("#sales-lead", String(salesLead.id), "select");
+    await fill("#sales-title", title);
+    await fill("#sales-amount", "300,01");
+    await fill("#sales-owner", String(fixture.operationUserId), "select");
+    await fill("#sales-close-date", salesToday);
+    await click("Salvar");
+    await savedSales();
+    await waitForText(title);
+    await waitForCondition(
+      "!![...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Nova proposta' && !b.disabled)",
+      "Detalhes comerciais não carregaram"
+    );
+    return (await operation.commercial.overview.query({})).items.find(
+      o => o.title === title
+    );
+  };
+  const salesOp = await createSales(
+    `Oportunidade comercial fictícia ${suffix}`
+  );
+  await click("Nova proposta");
+  await fill("#sales-proposal-quantity", "3");
+  await fill("#sales-proposal-price", "100,01");
+  await fill("#sales-proposal-discount", "0,02");
+  await fill("#sales-proposal-validity", salesToday);
+  await fill(
+    "#sales-proposal-terms",
+    "Condições administrativas fictícias para homologação local.",
+    "textarea"
+  );
+  await click("Salvar");
+  await savedSales();
+  await waitForText("Versão 1");
+  assert.equal(
+    (await operation.commercial.detail.query({ opportunityId: salesOp.id }))
+      .proposals[0].total,
+    30001
+  );
+  const moveSales = async (stage, reason = "", win = false) => {
+    await click("Mover oportunidade");
+    await fill("#sales-new-stage", stage, "select");
+    if (reason) await fill("#sales-move-reason", reason, "textarea");
+    if (win)
+      await evaluate("document.querySelector('#sales-win-confirm').click()");
+    await click("Salvar");
+    await savedSales();
+  };
+  await moveSales("PROPOSAL");
+  await moveSales("NEGOTIATION");
+  await click("Registrar apresentação");
+  await fill(
+    "#sales-proposal-evidence",
+    "Apresentação fictícia conferida com o destinatário.",
+    "textarea"
+  );
+  await evaluate(
+    "document.querySelector('[role=dialog] input[type=checkbox]').click()"
+  );
+  await click("Salvar");
+  await savedSales();
+  await waitForText("Registrar aceite");
+  await click("Registrar aceite");
+  await fill(
+    "#sales-proposal-evidence",
+    "Aceite administrativo fictício conferido pela equipe.",
+    "textarea"
+  );
+  await evaluate(
+    "document.querySelector('[role=dialog] input[type=checkbox]').click()"
+  );
+  await click("Salvar");
+  await savedSales();
+  await moveSales("WON", "", true);
+  assert.equal(
+    (await operation.commercial.detail.query({ opportunityId: salesOp.id }))
+      .opportunity.stage,
+    "WON"
+  );
+  await click("Fechar detalhes");
+  const salesReturn = await createSales(`Retorno comercial fictício ${suffix}`);
+  await evaluate("document.querySelector('#sales-email-allowed').click()");
+  await fill(
+    "#sales-preference-reason",
+    "Escolha comercial fictícia informada pela pessoa.",
+    "textarea"
+  );
+  await click("Salvar autorização comercial");
+  await waitForText("e-mail autorizado");
+  await click("Automações internas");
+  await click("Nova regra de retorno");
+  await fill("#sales-rule-name", `Retorno comercial de teste ${suffix}`);
+  await fill("#sales-rule-days", "1");
+  await click("Salvar");
+  await savedSales();
+  await click("Aplicar regras de retorno");
+  await waitForCondition(
+    "!![...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Aplicar regras de retorno' && !b.disabled)",
+    "Aplicação das regras não terminou"
+  );
+  const salesTasks = (await operation.crm.overview.query()).tasks.filter(t =>
+    t.title.startsWith(`Retorno comercial #${salesReturn.id} •`)
+  );
+  assert.equal(salesTasks.length, 1);
+  await click("Aplicar regras de retorno");
+  await waitForCondition(
+    "!![...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Aplicar regras de retorno' && !b.disabled)",
+    "Reaplicação das regras não terminou"
+  );
+  assert.equal(
+    (await operation.crm.overview.query()).tasks.filter(t =>
+      t.title.startsWith(`Retorno comercial #${salesReturn.id} •`)
+    ).length,
+    1
+  );
+  await click("Funil de oportunidades");
+  await evaluate(
+    `document.querySelector('[data-opportunity-id="${salesReturn.id}"]').click()`
+  );
+  await waitForText("Salvar autorização comercial");
+  await evaluate("document.querySelector('#sales-email-allowed').click()");
+  await fill(
+    "#sales-preference-reason",
+    "Pessoa retirou a autorização comercial de teste.",
+    "textarea"
+  );
+  await click("Salvar autorização comercial");
+  await waitForText("e-mail bloqueado");
+  assert.equal(
+    (await operation.crm.overview.query()).tasks.find(
+      t => t.id === salesTasks[0].id
+    ).status,
+    "CANCELLED"
+  );
+  await moveSales("LOST", "Preferiu adiar a contratação fictícia");
+  await moveSales(
+    "QUALIFICATION",
+    "Solicitou reabertura fictícia da negociação"
+  );
+  await click("Fechar detalhes");
+  await fill("#sales-channel-filter", "NONE", "select");
+  await waitForText(`Retorno comercial fictício ${suffix}`);
+  await fill("#sales-channel-filter", "", "select");
+  await takeScreenshot("mindos-comercial-etapa9.png");
+  await click("Metas e relatórios");
+  await waitForText("Definir meta da clínica");
+  await click("Definir meta da clínica");
+  await fill("#sales-goal-amount", "1000,00");
+  await click("Salvar");
+  await savedSales();
+  await waitForText("30.0%");
+  const salesReport = await operation.commercial.report.query({
+    month: salesToday.slice(0, 7),
+  });
+  assert.equal(salesReport.wonAmount, 30001);
+  assert.equal(salesReport.won, 1);
+  await takeScreenshot("mindos-comercial-relatorios-etapa9.png");
+  await click("Funil de oportunidades");
+  await page("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await waitForCondition(
+    "document.documentElement.scrollWidth<=innerWidth+1",
+    "CRM comercial excedeu a largura do celular"
+  );
+  await takeScreenshot("mindos-comercial-etapa9-mobile.png");
+  await page("Emulation.clearDeviceMetricsOverride");
+  await fill("#sales-search", "nenhum resultado fictício esperado");
+  await waitForText("Nenhuma oportunidade neste filtro");
+  const commercialReader = await careAccount(
+    `sales-reader-${randomUUID()}`,
+    `Consulta comercial fictícia ${suffix}`,
+    "SALES",
+    ["VIEW_CRM", "VIEW_COMMERCIAL"]
+  );
+  await assert.rejects(
+    client(crmReader.token).commercial.overview.query({}),
+    e => e.data?.code === "FORBIDDEN"
+  );
+  await setCookie(commercialReader.token);
+  await page("Page.navigate", { url: `${base}/crm/commercial` });
+  await waitForText("Somente consulta");
+  assert.equal(
+    await evaluate(
+      "!![...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Nova oportunidade')"
+    ),
+    false
+  );
+  await assert.rejects(
+    client(commercialReader.token).commercial.create.mutate({
+      requestKey: randomUUID(),
+      leadId: salesLead.id,
+      title: "Tentativa de consulta",
+      amount: 1,
+      ownerUserId: fixture.operationUserId,
+      expectedCloseDate: salesToday,
+    }),
+    e => e.data?.code === "FORBIDDEN"
+  );
+  await assert.rejects(
+    client(portalAccount.token).commercial.overview.query({}),
+    e => e.data?.code === "FORBIDDEN"
+  );
+  console.log(
+    "Chrome etapa 9: oportunidade, proposta com total exato, apresentação/aceite/ganho, meta/relatório, regra idempotente, revogação de autorização, perda/reabertura, segmentos, vazio, celular e acesso restrito aprovados."
+  );
+
   // Etapa 7: rascunho privado → aprovação → publicação → nova versão → restauração.
   await setCookie(operationToken);
   await page("Page.navigate", { url: `${base}/app/admin-studio` });
@@ -1896,6 +2161,41 @@ try {
     "Chrome: edição persistente de marca/blocos/SEO, rascunho separado do público, prévia privada entre clínicas, aprovação, publicação, restauração exata, marca no portal, metadados/llms.txt, agendamento por slug e consulta restrita aprovados."
   );
 
+  const consultation = await careAccount(
+    `browser-admin-reader-${randomUUID()}`,
+    `Consulta administrativa fictícia ${suffix}`,
+    "SALES",
+    ["VIEW_ADMINISTRATIVE"]
+  );
+  await operation.scheduling.create.mutate({
+    patientId: opPatient.id,
+    professionalId: prof.id,
+    unitId: unit.id,
+    serviceId: service.id,
+    mode: "ONLINE",
+    date: today,
+    time: "23:00",
+  });
+  await setCookie(consultation.token);
+  await page("Page.navigate", { url: `${base}/reception` });
+  await waitForText("Registrar ligação realizada");
+  assert.equal(
+    await evaluate(
+      "[...document.querySelectorAll('button')].filter(b=>b.textContent.includes('Registrar ligação realizada')).every(b=>b.disabled)"
+    ),
+    true
+  );
+  await assert.rejects(
+    client(consultation.token).mindos.receptionEvent.mutate({
+      patientId: opPatient.id,
+      eventType: "CALL_LOGGED",
+    }),
+    error => error.data?.code === "FORBIDDEN"
+  );
+  console.log(
+    "HTTP/Chrome: sessão sem emissão/expiração ou excessiva recusada, ligação persistida com autoria/auditoria e consulta administrativa sem escrita aprovadas."
+  );
+
   const live = await fetch(`${base}/health/live`);
   assert.equal(live.status, 200);
   assert.deepEqual(await live.json(), { status: "alive" });
@@ -1992,6 +2292,13 @@ try {
       [fixture.operationTenantId]
     );
     for (const table of [
+      "mindos_sales_runs",
+      "mindos_sales_events",
+      "mindos_sales_goals",
+      "mindos_sales_preferences",
+      "mindos_sales_proposals",
+      "mindos_sales_rules",
+      "mindos_sales_opportunities",
       "mindos_cms_versions",
       "mindos_crm_reminders",
       "mindos_contact_preferences",

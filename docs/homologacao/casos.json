@@ -1,0 +1,282 @@
+[
+  {
+    "ID": "C01",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Escolher um contato fictício no CRM e criar uma oportunidade com valor de R$ 300,01, responsável e previsão de fechamento.",
+    "Resultado esperado": "Oportunidade aparece na qualificação com os dados informados. Atualizar a página e conferir a persistência."
+  },
+  {
+    "ID": "C02",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Abrir a oportunidade, criar proposta com quantidade 3, preço unitário R$ 100,01 e desconto total R$ 0,02.",
+    "Resultado esperado": "Total de R$ 300,01. Valor da oportunidade atualizado. A proposta é um rascunho, sem pagamento ou assinatura."
+  },
+  {
+    "ID": "C03",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Registrar apresentação com evidência fictícia. Criar nova versão antes do aceite.",
+    "Resultado esperado": "Versão anterior cancelada e preservada; nova versão aberta. Conteúdo anterior continua consultável."
+  },
+  {
+    "ID": "C04",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Na versão atual, registrar apresentação e aceite fictícios. Avançar pelas etapas até negociação e confirmar contratação administrativa.",
+    "Resultado esperado": "Ganho exige proposta aceita no mesmo valor. Registro aparece como ganho; não cria recebimento ou paciente automaticamente."
+  },
+  {
+    "ID": "C05",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Em outra oportunidade fictícia, registrar perda com motivo e depois reabrir com justificativa.",
+    "Resultado esperado": "Motivo obrigatório, propostas ativas canceladas e histórico preservado. Reabertura volta à qualificação sem restaurar aceite antigo."
+  },
+  {
+    "ID": "C06",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Gestor comercial",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Abrir Metas e relatórios, selecionar o mês atual e definir uma meta fictícia. Conferir origem, responsável e valores com os ganhos cadastrados.",
+    "Resultado esperado": "Metas da clínica e individuais separadas. Conversão considera ganhas e perdidas encerradas no mês. Não comparar o valor comercial com recebimentos."
+  },
+  {
+    "ID": "C07",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Usar uma oportunidade aberta de um lead sem paciente vinculado. Conferir autorização geral no CRM, registrar autorização comercial fictícia de e-mail, criar regra para a etapa e aplicar duas vezes.",
+    "Resultado esperado": "Uma tarefa por entrada de etapa e versão da regra. Reaplicar não duplica. Nenhuma mensagem é enviada. Ver a tarefa em Contatos e tarefas."
+  },
+  {
+    "ID": "C08",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Retirar a autorização comercial do contato de C07 e salvar. Consultar a tarefa criada.",
+    "Resultado esperado": "Retorno automático ainda aberto é cancelado. O contato deixa de aparecer no segmento de e-mail autorizado."
+  },
+  {
+    "ID": "C09",
+    "Frente": "1. CRM comercial",
+    "Perfil": "Comercial autorizado",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Abrir uma proposta fictícia e usar Abrir para impressão. Conferir destinatário, condições, versão, validade e total.",
+    "Resultado esperado": "Documento corresponde à proposta e informa que não comprova pagamento ou assinatura. A impressão fica sob controle da pessoa que usa o navegador."
+  },
+  {
+    "ID": "R01",
+    "Frente": "2. Recepção e agenda",
+    "Perfil": "Recepção",
+    "Tela": "/patients",
+    "Ação a executar": "Localizar um paciente fictício antes de cadastrar outro. Conferir dados básicos e editar um contato.",
+    "Resultado esperado": "Busca encontra o cadastro correto; possível duplicidade é sinalizada; alteração permanece após atualizar."
+  },
+  {
+    "ID": "R02",
+    "Frente": "2. Recepção e agenda",
+    "Perfil": "Recepção",
+    "Tela": "/agenda",
+    "Ação a executar": "Escolher serviço, profissional, unidade e horário disponível. Agendar uma sessão e uma sequência fictícia.",
+    "Resultado esperado": "Datas, duração e profissional corretos; sequência identificada. Usar o fuso da clínica."
+  },
+  {
+    "ID": "R03",
+    "Frente": "2. Recepção e agenda",
+    "Perfil": "Recepção",
+    "Tela": "/agenda",
+    "Ação a executar": "Tentar reservar outro atendimento sobreposto do mesmo profissional ou paciente. Reagendar uma ocorrência.",
+    "Resultado esperado": "Conflito recusado sem criar reserva dupla. Reagendamento preserva a sessão anterior e o histórico."
+  },
+  {
+    "ID": "R04",
+    "Frente": "2. Recepção e agenda",
+    "Perfil": "Recepção",
+    "Tela": "/reception",
+    "Ação a executar": "Confirmar a sessão de teste e registrar chegada na sessão correta. Conferir fila e situação do dia.",
+    "Resultado esperado": "Paciente aparece na fila correta; chegada não é lançada em outra sessão."
+  },
+  {
+    "ID": "R05",
+    "Frente": "2. Recepção e agenda",
+    "Perfil": "Recepção",
+    "Tela": "/book",
+    "Ação a executar": "Enviar uma solicitação pública fictícia para a clínica explícita e tratá-la na recepção.",
+    "Resultado esperado": "Pedido chega à clínica correta e precisa de análise. Não existe confirmação automática do horário."
+  },
+  {
+    "ID": "P01",
+    "Frente": "3. Atendimento e documentos",
+    "Perfil": "Profissional autorizado",
+    "Tela": "/clinical-records",
+    "Ação a executar": "Selecionar o paciente fictício acompanhado. Criar rascunho, revisar e finalizar um registro identificado como fictício.",
+    "Resultado esperado": "Registro pertence ao paciente correto e mantém autoria. Finalização preserva o texto."
+  },
+  {
+    "ID": "P02",
+    "Frente": "3. Atendimento e documentos",
+    "Perfil": "Profissional autorizado",
+    "Tela": "/clinical-records",
+    "Ação a executar": "Após finalizar P01, acrescentar uma correção ou complemento fictício.",
+    "Resultado esperado": "Texto anterior não é sobrescrito. Complemento, autor e data aparecem no histórico."
+  },
+  {
+    "ID": "P03",
+    "Frente": "3. Atendimento e documentos",
+    "Perfil": "Profissional autorizado",
+    "Tela": "/patient-care",
+    "Ação a executar": "Enviar documento fictício sem dados reais. Liberar para o paciente e depois retirar a liberação.",
+    "Resultado esperado": "Documento é privado; paciente acessa somente quando liberado. Revogação bloqueia novos acessos, sem recolher cópias já baixadas."
+  },
+  {
+    "ID": "P04",
+    "Frente": "3. Atendimento e documentos",
+    "Perfil": "Profissional autorizado",
+    "Tela": "/clinical-records",
+    "Ação a executar": "Em sessão individual autorizada para o teste, conferir acesso ao paciente acompanhado e recusa ao paciente sem vínculo.",
+    "Resultado esperado": "Vínculo clínico e permissão são respeitados. Executar com a conta do profissional, não com o administrador."
+  },
+  {
+    "ID": "F01",
+    "Frente": "4. Financeiro interno",
+    "Perfil": "Financeiro",
+    "Tela": "/checkout",
+    "Ação a executar": "Criar cobrança fictícia de R$ 100,00 dividida em três parcelas, após conferir paciente e dados.",
+    "Resultado esperado": "Parcelas de R$ 33,34, R$ 33,33 e R$ 33,33; soma R$ 100,00. Não existe pagamento ou nota fiscal automática."
+  },
+  {
+    "ID": "F02",
+    "Frente": "4. Financeiro interno",
+    "Perfil": "Financeiro",
+    "Tela": "/transactions",
+    "Ação a executar": "Registrar recebimento manual fictício e conferir saldo e histórico. Testar repetição acidental sem confirmar uma nova operação diferente.",
+    "Resultado esperado": "Saldo e autoria correspondem ao registro. Não assumir que um registro manual confirma dinheiro no banco."
+  },
+  {
+    "ID": "F03",
+    "Frente": "4. Financeiro interno",
+    "Perfil": "Financeiro",
+    "Tela": "/transactions",
+    "Ação a executar": "Realizar uma reversão manual fictícia com justificativa e verificar o histórico.",
+    "Resultado esperado": "Histórico do recebimento preservado; saldo recalculado. Reversão interna não é estorno bancário."
+  },
+  {
+    "ID": "F04",
+    "Frente": "4. Financeiro interno",
+    "Perfil": "Financeiro",
+    "Tela": "/cash",
+    "Ação a executar": "Abrir caixa fictício, registrar movimento em dinheiro, conferir os lançamentos e fechar. Se houver diferença, justificar.",
+    "Resultado esperado": "Saldos e diferença correspondem aos lançamentos. Fechamento registra responsável e justificativa."
+  },
+  {
+    "ID": "F05",
+    "Frente": "4. Financeiro interno",
+    "Perfil": "Financeiro",
+    "Tela": "/finance",
+    "Ação a executar": "Comparar resumo financeiro, parcelas e caixa com os lançamentos de F01 a F04.",
+    "Resultado esperado": "Números têm origem nos lançamentos. Valores do CRM comercial não aparecem como receita recebida automaticamente."
+  },
+  {
+    "ID": "U01",
+    "Frente": "5. Portal do paciente",
+    "Perfil": "Paciente de teste",
+    "Tela": "/portal",
+    "Ação a executar": "Usar a janela de paciente com sessão separada. Conferir identificação e sessões.",
+    "Resultado esperado": "Exibe somente a área desse paciente. Conta administrativa não comprova este teste."
+  },
+  {
+    "ID": "U02",
+    "Frente": "5. Portal do paciente",
+    "Perfil": "Paciente de teste",
+    "Tela": "/portal",
+    "Ação a executar": "Conferir documento de P03 quando liberado e tentar novo acesso após revogação.",
+    "Resultado esperado": "Apenas documentos liberados são acessíveis. Após revogar, o novo acesso é recusado."
+  },
+  {
+    "ID": "U03",
+    "Frente": "5. Portal do paciente",
+    "Perfil": "Paciente de teste",
+    "Tela": "/portal",
+    "Ação a executar": "Ler um termo fictício, registrar decisão e depois retirar o aceite quando permitido.",
+    "Resultado esperado": "Decisão, versão e histórico ficam registrados. Aceite simples não é assinatura com certificado."
+  },
+  {
+    "ID": "U04",
+    "Frente": "5. Portal do paciente",
+    "Perfil": "Paciente de teste",
+    "Tela": "/portal",
+    "Ação a executar": "Solicitar mudança de horário e revisar preferências de contato. Encaminhar o pedido à recepção.",
+    "Resultado esperado": "Pedido permanece pendente até análise. Preferências são salvas; autorizar lembrete não autoriza contato comercial por si só."
+  },
+  {
+    "ID": "A01",
+    "Frente": "6. Administração e acessos",
+    "Perfil": "Administrador",
+    "Tela": "/app/team",
+    "Ação a executar": "Conferir papéis e permissões. Em conta fictícia separada, conceder somente consulta comercial; testar acesso de CRM antigo sem concessão comercial.",
+    "Resultado esperado": "Consulta comercial não altera registros. CRM administrativo sozinho não libera valores, propostas ou metas."
+  },
+  {
+    "ID": "A02",
+    "Frente": "6. Administração e acessos",
+    "Perfil": "Administrador",
+    "Tela": "/app/team",
+    "Ação a executar": "Desativar um integrante fictício de teste e conferir nova tentativa de acesso na sessão desse integrante.",
+    "Resultado esperado": "Acesso revogado é recusado. Não desativar a conta administrativa usada para conduzir a revisão."
+  },
+  {
+    "ID": "A03",
+    "Frente": "6. Administração e acessos",
+    "Perfil": "Administrador do site",
+    "Tela": "/app/admin-studio",
+    "Ação a executar": "Editar rascunho fictício, conferir prévia, aprovar, publicar e restaurar uma versão publicada anterior.",
+    "Resultado esperado": "Rascunho não muda o site público. Publicação e restauração correspondem às versões aprovadas da clínica."
+  },
+  {
+    "ID": "A04",
+    "Frente": "6. Administração e acessos",
+    "Perfil": "Administrador",
+    "Tela": "/app/readiness",
+    "Ação a executar": "Conferir verificações locais e avisos de preparação.",
+    "Resultado esperado": "Tela informa pendências de produção. Ensaio de backup antigo não comprova restauração da versão atual ou recuperação externa."
+  },
+  {
+    "ID": "X01",
+    "Frente": "7. Uso e acessibilidade",
+    "Perfil": "Representantes da equipe",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Percorrer formulários com Tab, Shift+Tab, Enter e Escape. Repetir em agenda e portal.",
+    "Resultado esperado": "Foco visível, sequência compreensível, campos identificados e diálogo utilizável. Registrar aparelho e navegador."
+  },
+  {
+    "ID": "X02",
+    "Frente": "7. Uso e acessibilidade",
+    "Perfil": "Representantes da equipe",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Usar celular real autorizado na rede/configuração de homologação apropriada, zoom do navegador e tela pequena.",
+    "Resultado esperado": "Informações e botões continuam utilizáveis. Simulação de tela pequena no computador não substitui aparelho real. Não expor o servidor local à rede para fazer este teste."
+  },
+  {
+    "ID": "X03",
+    "Frente": "7. Uso e acessibilidade",
+    "Perfil": "Representantes da equipe",
+    "Tela": "/crm/commercial",
+    "Ação a executar": "Buscar termo inexistente e enviar formulário incompleto ou valor inválido em ambiente fictício.",
+    "Resultado esperado": "Estados vazios compreensíveis e erro explica o ajuste necessário; nada é salvo indevidamente."
+  },
+  {
+    "ID": "X04",
+    "Frente": "7. Uso e acessibilidade",
+    "Perfil": "Representantes da equipe",
+    "Tela": "/agenda",
+    "Ação a executar": "Observar clareza, tempo de resposta e interrupções durante a rotina fictícia. Anotar cenário e volume.",
+    "Resultado esperado": "Registrar dificuldades observadas. Esta avaliação não substitui ensaio de carga ou aprovação de infraestrutura."
+  }
+]

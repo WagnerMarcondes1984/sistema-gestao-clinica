@@ -22,6 +22,13 @@ const slug = "mindos-revisao-local",
   clinicName = "Clínica fictícia — revisão local",
   openId = "mindos-local-review-owner";
 const appId = "mindos-local-review";
+const sessionHours = Number(process.env.SESSION_TTL_HOURS || 8);
+assert.ok(
+  Number.isFinite(sessionHours) && sessionHours >= 1 && sessionHours <= 24,
+  "Validade de sessão local inválida."
+);
+const reviewHours = Math.min(2, sessionHours);
+const commercialReview = process.argv.includes("--commercial");
 const opsReview = process.argv.includes("--ops");
 const studioReview = process.argv.includes("--studio");
 const crmReview = process.argv.includes("--crm");
@@ -178,13 +185,16 @@ try {
       reject(new Error("Servidor de revisão encerrou."));
     });
   });
+  const reviewIssuedAt = Math.floor(Date.now() / 1000);
+  const reviewExpiresAt = reviewIssuedAt + Math.floor(reviewHours * 3600);
   const token = await new SignJWT({
     openId,
     appId,
     name: "Administrador fictício — revisão local",
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-    .setExpirationTime("2h")
+    .setIssuedAt(reviewIssuedAt)
+    .setExpirationTime(reviewExpiresAt)
     .sign(new TextEncoder().encode(process.env.JWT_SECRET));
   const api = createTRPCProxyClient({
     links: [
@@ -369,7 +379,8 @@ try {
         name: "Paciente fictício — revisão local",
       })
         .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-        .setExpirationTime("2h")
+        .setIssuedAt(reviewIssuedAt)
+        .setExpirationTime(reviewExpiresAt)
         .sign(new TextEncoder().encode(process.env.JWT_SECRET));
     } catch (error) {
       await setup.rollback();
@@ -709,6 +720,79 @@ try {
       });
     await api.crm.prepareReminders.mutate();
   }
+  if (commercialReview) {
+    const account = await api.auth.me.query();
+    const context = await api.commercial.overview.query({});
+    if (!context.total) {
+      const today = new Intl.DateTimeFormat("sv-SE", {
+        timeZone: context.timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      for (const [name, amount, stage, source] of [
+        ["Primeira conversa fictícia", 18000, "QUALIFICATION", "MANUAL"],
+        ["Proposta fictícia em análise", 45000, "PROPOSAL", "REFERRAL"],
+        ["Negociação fictícia de serviços", 60000, "NEGOTIATION", "OTHER"],
+      ]) {
+        const lead = await api.crm.create.mutate({
+          requestKey: randomUUID(),
+          fullName: name,
+          email: `revisao-${randomUUID().slice(0, 8)}@example.com`,
+          preferredChannel: "EMAIL",
+          source,
+          ownerUserId: account.id,
+          contactAllowed: true,
+        });
+        const opportunity = await api.commercial.create.mutate({
+          requestKey: randomUUID(),
+          leadId: lead.id,
+          title: name,
+          amount,
+          ownerUserId: account.id,
+          expectedCloseDate: today,
+        });
+        if (stage !== "QUALIFICATION") {
+          await api.commercial.createProposal.mutate({
+            requestKey: randomUUID(),
+            opportunityId: opportunity.id,
+            revision: 1,
+            title: name,
+            quantity: 1,
+            unitPrice: amount,
+            discount: 0,
+            validUntil: today,
+            terms:
+              "Condições exclusivamente fictícias para demonstração. Não corresponde a contratação ou cobrança real.",
+          });
+          let current = await api.commercial.detail.query({
+            opportunityId: opportunity.id,
+          });
+          await api.commercial.move.mutate({
+            opportunityId: opportunity.id,
+            revision: current.opportunity.revision,
+            stage: "PROPOSAL",
+          });
+          if (stage === "NEGOTIATION") {
+            current = await api.commercial.detail.query({
+              opportunityId: opportunity.id,
+            });
+            await api.commercial.move.mutate({
+              opportunityId: opportunity.id,
+              revision: current.opportunity.revision,
+              stage: "NEGOTIATION",
+            });
+          }
+        }
+      }
+      await api.commercial.saveGoal.mutate({
+        month: today.slice(0, 7),
+        ownerUserId: null,
+        targetAmount: 150000,
+        revision: 0,
+      });
+    }
+  }
   profile = await mkdtemp(join(tmpdir(), "mindos-review-"));
   browser = spawn(
     "google-chrome",
@@ -796,17 +880,19 @@ try {
     },
     sessionId
   );
-  const reviewPath = opsReview
-    ? "/app/readiness"
-    : studioReview
-      ? "/app/admin-studio"
-      : crmReview
-        ? "/crm"
-        : financeReview
-          ? "/finance"
-          : careReview
-            ? `/clinical-records?patientId=${reviewPatientId}`
-            : "/agenda";
+  const reviewPath = commercialReview
+    ? "/crm/commercial"
+    : opsReview
+      ? "/app/readiness"
+      : studioReview
+        ? "/app/admin-studio"
+        : crmReview
+          ? "/crm"
+          : financeReview
+            ? "/finance"
+            : careReview
+              ? `/clinical-records?patientId=${reviewPatientId}`
+              : "/agenda";
   await cdp("Page.navigate", { url: `${base}${reviewPath}` }, sessionId);
   await cdp("Page.bringToFront", {}, sessionId);
   const deadline = Date.now() + 30000;
@@ -819,17 +905,19 @@ try {
     );
     if (
       result.result.value?.includes(
-        opsReview
-          ? "Restauração local de backup"
-          : studioReview
-            ? "Admin Studio"
-            : crmReview
-              ? "CRM administrativo"
-              : financeReview
-                ? "Resumo financeiro"
-                : careReview
-                  ? "Prontuário psicológico"
-                  : "Novo agendamento"
+        commercialReview
+          ? "CRM comercial"
+          : opsReview
+            ? "Restauração local de backup"
+            : studioReview
+              ? "Admin Studio"
+              : crmReview
+                ? "CRM administrativo"
+                : financeReview
+                  ? "Resumo financeiro"
+                  : careReview
+                    ? "Prontuário psicológico"
+                    : "Novo agendamento"
       ) &&
       result.result.value.includes("Administrador fictício")
     ) {
@@ -935,7 +1023,7 @@ try {
   }
   console.log(`MindOS aberto para revisão: ${base}${reviewPath}`);
   console.log(
-    "Clínica e contas fictícias separadas. Sessão temporária de 2 horas; dados de revisão preservados. Nenhuma credencial Manus alterada."
+    `Clínica e contas fictícias separadas. Sessão temporária de até ${reviewHours} hora(s); dados de revisão preservados. Nenhuma credencial Manus alterada.`
   );
   if (careReview && patientToken) {
     const { browserContextId } = await cdp("Target.createBrowserContext", {

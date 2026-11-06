@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import mysql, {
   type Connection,
   type ResultSetHeader,
@@ -7,6 +7,8 @@ import mysql, {
 } from "mysql2/promise";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import * as databaseModule from "./db";
+import { mindosAccessAudits } from "../drizzle/schema";
 // @ts-expect-error Guard compartilhado com o seed JavaScript.
 import { assertDemoSeedAllowed } from "./seed-safety.mjs";
 
@@ -26,6 +28,8 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
   let clinician: ReturnType<typeof appRouter.createCaller>;
   let patient: ReturnType<typeof appRouter.createCaller>;
   let revoked: ReturnType<typeof appRouter.createCaller>;
+  let administrativeReader: typeof ownerA, reception: typeof ownerA;
+  const sessions: number[] = [];
   const memberIds: number[] = [];
 
   async function insert(sql: string, params: unknown[]) {
@@ -101,6 +105,30 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
       [users[4], patients[0]]
     );
     revoked = await user(tenants[0], "OWNER", [], false);
+    administrativeReader = await user(tenants[0], "SALES", [
+      "VIEW_ADMINISTRATIVE",
+    ]);
+    reception = await user(tenants[0], "RECEPTIONIST", [
+      "VIEW_ADMINISTRATIVE",
+      "MANAGE_APPOINTMENTS",
+    ]);
+    patients.push(
+      await insert(
+        "INSERT INTO mindos_patients(tenantId,fullName) VALUES(?,?)",
+        [tenants[0], "Segundo paciente fictício A"]
+      )
+    );
+    for (const [tenantId, patientId] of [
+      [tenants[0], patients[0]],
+      [tenants[1], patients[1]],
+      [tenants[0], patients[2]],
+    ])
+      sessions.push(
+        await insert(
+          "INSERT INTO mindos_appointments(tenantId,patientId,professionalName,unitName,serviceType,startsAt,endsAt) VALUES(?,?, 'Profissional fictício','Unidade fictícia','Sessão fictícia',?,?)",
+          [tenantId, patientId, new Date(), new Date(Date.now() + 3600000)]
+        )
+      );
     for (const [i, code] of [codeA, codeB].entries()) {
       await insert(
         "INSERT INTO transactions (tenantId, code, verticalCode, patientName, patientDocument, professionalName, title, category, subtotal, totalAmount, status, paidAmount, dueDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -352,5 +380,218 @@ describe("isolamento real entre clínicas, papéis e pacientes", () => {
     expect(
       (await ownerB.audit.list({})).some(row => row.tenantId === tenants[0])
     ).toBe(false);
+  });
+
+  it("separa consulta administrativa de gravação e recusa paciente ou sessão incompatíveis", async () => {
+    const event = {
+      patientId: patients[0],
+      appointmentId: sessions[0],
+      eventType: "CALL_LOGGED" as const,
+    };
+    await expect(
+      administrativeReader.mindos.receptionEvent(event)
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(revoked.mindos.receptionEvent(event)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    for (const appointmentId of [sessions[1], sessions[2]])
+      await expect(
+        reception.mindos.receptionEvent({ ...event, appointmentId })
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const id = await reception.mindos.receptionEvent(event);
+    const [[saved]] = await db.query<RowDataPacket[]>(
+      "SELECT * FROM mindos_reception_events WHERE id=?",
+      [id]
+    );
+    expect(saved.createdByUserId).toBe(users[7]);
+    expect(saved.tenantId).toBe(tenants[0]);
+    expect(saved.appointmentId).toBe(sessions[0]);
+    const [audits] = await db.query<RowDataPacket[]>(
+      "SELECT actorUserId FROM mindos_access_audits WHERE tenantId=? AND action='CALL_LOGGED'",
+      [tenants[0]]
+    );
+    expect(audits.map(a => a.actorUserId)).toContain(users[7]);
+  });
+
+  it("recusa campos de autoria e clínica enviados junto do evento", async () => {
+    await expect(
+      ownerA.mindos.receptionEvent({
+        patientId: patients[0],
+        eventType: "CALL_LOGGED",
+        tenantId: tenants[1],
+        createdByUserId: users[1],
+        actorUserId: users[1],
+      } as Parameters<typeof ownerA.mindos.receptionEvent>[0])
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("desfaz o evento inteiro quando a auditoria falha", async () => {
+    const real = (await databaseModule.getDb())!;
+    const [[before]] = await db.query<RowDataPacket[]>(
+      "SELECT COUNT(*) n FROM mindos_reception_events WHERE tenantId=?",
+      [tenants[0]]
+    );
+    const proxy = new Proxy(real, {
+      get(target, prop) {
+        if (prop === "transaction")
+          return async (work: any) =>
+            target.transaction(async tx =>
+              work(
+                new Proxy(tx, {
+                  get(t, k) {
+                    if (k === "insert")
+                      return (table: unknown) => {
+                        if (table === mindosAccessAudits)
+                          throw new Error("Falha fictícia de auditoria");
+                        return t.insert(table as any);
+                      };
+                    const v = Reflect.get(t, k);
+                    return typeof v === "function" ? v.bind(t) : v;
+                  },
+                })
+              )
+            );
+        const v = Reflect.get(target, prop);
+        return typeof v === "function" ? v.bind(target) : v;
+      },
+    });
+    const spy = vi.spyOn(databaseModule, "getDb").mockResolvedValue(proxy);
+    try {
+      await expect(
+        reception.mindos.receptionEvent({
+          patientId: patients[0],
+          appointmentId: sessions[0],
+          eventType: "CALL_LOGGED",
+        })
+      ).rejects.toThrow("Falha fictícia de auditoria");
+      const [[after]] = await db.query<RowDataPacket[]>(
+        "SELECT COUNT(*) n FROM mindos_reception_events WHERE tenantId=?",
+        [tenants[0]]
+      );
+      expect(after.n).toBe(before.n);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("revalida o vínculo dentro da transação após a autorização inicial", async () => {
+    const original = databaseModule.assertMindosPermission;
+    const spy = vi
+      .spyOn(databaseModule, "assertMindosPermission")
+      .mockImplementation(async (...args) => {
+        const result = await original(...args);
+        if (args[0] === users[7])
+          await db.execute(
+            "UPDATE mindos_memberships SET active=0 WHERE id=?",
+            [memberIds[7]]
+          );
+        return result;
+      });
+    try {
+      await expect(
+        reception.mindos.receptionEvent({
+          patientId: patients[0],
+          eventType: "CALL_LOGGED",
+        })
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    } finally {
+      spy.mockRestore();
+      await db.execute("UPDATE mindos_memberships SET active=1 WHERE id=?", [
+        memberIds[7],
+      ]);
+    }
+  });
+
+  it("oculta a identidade da conta do portal também nos endpoints antigos", async () => {
+    const dashboard = await ownerA.mindos.dashboard();
+    expect(dashboard.patients.length).toBeGreaterThan(0);
+    for (const p of dashboard.patients)
+      expect(p).not.toHaveProperty("portalUserId");
+    const appointments = await ownerA.mindos.appointments();
+    expect(appointments.length).toBeGreaterThan(0);
+    for (const a of appointments)
+      expect(a.patient).not.toHaveProperty("portalUserId");
+  });
+
+  it("valida sessão e paciente conjuntamente no prontuário e no financeiro", async () => {
+    for (const appointmentId of [sessions[1], sessions[2]]) {
+      await expect(
+        ownerA.care.createRecord({
+          patientId: patients[0],
+          appointmentId,
+          recordType: "EVOLUTION",
+          content: "Referência fictícia incompatível",
+        })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      await expect(
+        ownerA.transactions.create({
+          requestId: randomUUID(),
+          patientId: patients[0],
+          appointmentId,
+          verticalCode: "PSYCHOLOGY_CLINIC",
+          title: "Teste de referência",
+          category: "TEST",
+          paymentMethod: "TRANSFER",
+          installments: 1,
+          dueDate: new Date(),
+          items: [{ name: "Sessão fictícia", quantity: 1, unitPrice: 100 }],
+        })
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    }
+    const foreign = await ownerB.care.createRecord({
+      patientId: patients[1],
+      recordType: "EVOLUTION",
+      content: "Registro fictício da clínica B",
+    });
+    await expect(
+      ownerA.care.updateRecord({
+        recordId: foreign,
+        revision: 1,
+        finalize: true,
+      })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      ownerA.care.createRecord({
+        patientId: patients[0],
+        parentRecordId: foreign,
+        recordType: "EVOLUTION",
+        content: "Adendo fictício incompatível",
+      })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      ownerA.care.assign({
+        patientId: patients[0],
+        userId: users[1],
+        active: true,
+      })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("recusa referências externas também em tarefas, interações e liberação financeira", async () => {
+    await expect(
+      ownerA.crm.addTask({
+        requestKey: randomUUID(),
+        patientId: patients[1],
+        title: "Tarefa fictícia",
+        ownerUserId: users[0],
+        dueAt: new Date(),
+      })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      ownerA.crm.addInteraction({
+        requestKey: randomUUID(),
+        patientId: patients[1],
+        channel: "INTERNAL",
+        outcome: "NOTE",
+        summary: "Interação fictícia",
+      })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      ownerA.care.financialAccess({
+        patientId: patients[1],
+        code: codeA,
+        visible: true,
+      })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

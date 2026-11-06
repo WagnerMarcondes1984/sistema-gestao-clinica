@@ -1,6 +1,8 @@
 # Etapa 8 — validação operacional e preparação para produção
 
-Status: **em andamento; primeiro bloco técnico para revisão local**. A etapa 9 não foi iniciada. Hospedagem escolhida: servidor/VPS com Docker. Destino externo de backup: a definir. Não houve implantação em um servidor externo.
+Status: **em andamento; liberação de produção pendente**. A entrega interna da etapa 9 foi validada em 21/10; a revisão humana está organizada no [roteiro de homologação](homologacao/ROTEIRO-DE-HOMOLOGACAO.md), com 35 casos ainda não executados pela equipe. Hospedagem escolhida: servidor/VPS com Docker. Destino externo de backup: a definir. Não houve implantação em um servidor externo.
+
+Revisão interna de segurança de 19/10: sessões, recepção e respostas antigas corrigidas; 187 testes unitários/HTTP (um ignorado), 125 integrações e Chrome aprovados. Relatório em [revisão interna](REVISAO-SEGURANCA-INTERNA.md). A montagem Docker desta revisão foi adiada a pedido do usuário por lentidão; a imagem aprovada no bloco anterior não valida as novas alterações dentro do contêiner.
 
 ## Entregas deste bloco
 
@@ -14,6 +16,10 @@ Status: **em andamento; primeiro bloco técnico para revisão local**. A etapa 9
 - Ensaio restaura exclusivamente em um novo MySQL descartável com usuário limitado ao banco novo. Confere hashes/contagens de todas as tabelas, arquivos, abertura dos documentos cifrados e histórico clínico autenticado; remove o destino e grava recibo local assinado. Registros legados sem selo continuam legados, sem certificação retroativa.
 - Tela `/app/readiness`: gestores com `MANAGE_TEAM` consultam verificações reais e a evidência local de recuperação. Paciente e consulta sem essa permissão recebem recusa no servidor. Sem botões de restauração, exclusão ou exposição de chaves. Sem agregados de outros pacientes/clínicas. Evidência com mais de sete dias pede repetição; isso não define a política de backup da clínica.
 - Dockerfile, Compose de produção, modelo de proxy, migração sem seed e runbooks separados. São preparação técnica, sem publicação automática.
+
+## Situação atual de validação humana
+
+Roteiro, modelo de resultados, cópia local para preenchimento e decisões do piloto preparados em 21/10. Nenhum aceite humano foi presumido. A última entrega técnica registrou 194 testes unitários/HTTP aprovados (um caso antigo ignorado), 146 integrações MySQL e regressão integral no Chrome; as contagens abaixo descrevem o bloco histórico anterior. As permissões comerciais agora são específicas. A imagem e a recuperação do bloco antigo não validam automaticamente a versão atual.
 
 ## Revisão local
 

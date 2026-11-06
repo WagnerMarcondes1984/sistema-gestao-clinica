@@ -1,9 +1,4 @@
-import {
-  AXIOS_TIMEOUT_MS,
-  COOKIE_NAME,
-  ONE_YEAR_MS,
-  decodeOAuthState,
-} from "@shared/const";
+import { AXIOS_TIMEOUT_MS, COOKIE_NAME, decodeOAuthState } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
@@ -12,6 +7,7 @@ import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
+import { sessionTtlMs } from "../session-policy";
 import type {
   ExchangeTokenRequest,
   ExchangeTokenResponse,
@@ -190,7 +186,14 @@ class SDKServer {
     options: { expiresInMs?: number } = {}
   ): Promise<string> {
     const issuedAt = Date.now();
-    const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
+    const maximumTtl = sessionTtlMs();
+    const expiresInMs = options.expiresInMs ?? maximumTtl;
+    if (
+      !Number.isFinite(expiresInMs) ||
+      expiresInMs <= 0 ||
+      expiresInMs > maximumTtl
+    )
+      throw new Error("Prazo da sessão fora do limite configurado");
     const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
     const secretKey = this.getSessionSecret();
 
@@ -200,6 +203,7 @@ class SDKServer {
       name: payload.name,
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+      .setIssuedAt(Math.floor(issuedAt / 1000))
       .setExpirationTime(expirationSeconds)
       .sign(secretKey);
   }
@@ -215,7 +219,20 @@ class SDKServer {
       const secretKey = this.getSessionSecret();
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
+        requiredClaims: ["exp", "iat"],
       });
+      // Recusa também sessões antigas excessivamente longas. A troca da política
+      // exige nova entrada; o nome/identidade efetivos continuam vindo do banco.
+      if (
+        typeof payload.exp !== "number" ||
+        typeof payload.iat !== "number" ||
+        !Number.isSafeInteger(payload.exp) ||
+        !Number.isSafeInteger(payload.iat) ||
+        payload.iat > Math.floor(Date.now() / 1000) + 30 ||
+        payload.exp <= payload.iat ||
+        payload.exp - payload.iat > sessionTtlMs() / 1000
+      )
+        return null;
       const { openId, appId, name } = payload as Record<string, unknown>;
 
       if (

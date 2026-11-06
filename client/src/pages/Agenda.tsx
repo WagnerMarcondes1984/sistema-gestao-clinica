@@ -23,6 +23,7 @@ import {
   STATUS_LABELS,
   TRANSITIONS,
   clinicParts,
+  civilDate,
 } from "../../../shared/scheduling";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
@@ -36,7 +37,12 @@ export default function Agenda() {
     retry: false,
   });
   const zone = context.data?.clinic.timezone || "America/Sao_Paulo";
-  const [day, setDay] = useState("");
+  const [day, setDay] = useState(() => {
+    const date = civilDate.safeParse(
+      new URLSearchParams(window.location.search).get("date")
+    );
+    return date.success ? date.data : "";
+  });
   const [allDates, setAllDates] = useState(false);
   const [professional, setProfessional] = useState(0);
   const selectedDate = allDates
